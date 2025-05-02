@@ -63,6 +63,9 @@ void setup() {
   ledcSetup(PWM_CHANNEL_RIGHT, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(MOTOR34_EN, PWM_CHANNEL_RIGHT);
 
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
   // Wi-Fi 연결
   WiFi.begin(ssid, password);
   Serial.print("WiFi 연결 중");
@@ -177,8 +180,9 @@ bool obstacle_detected() {
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  duration = pulseIn(ECHO_PIN, HIGH, 20000); // timeout 20ms
-  if (duration == 0){
+  duration = pulseIn(ECHO_PIN, HIGH); // timeout 20ms
+  if (duration == 0)
+  {
     Serial.println("Hello");
     return false;  // 실패했으면 장애물 없음
   }
