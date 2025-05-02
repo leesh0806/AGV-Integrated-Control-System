@@ -6,11 +6,11 @@ if __name__ == "__main__":
     client.connect()
     client.send_command(
         sender="TRUCK01",
-        receiver="GATE_A",
-        cmd="OPEN_GATE",
+        receiver="SERVER",
+        cmd="OBSTACLE_DETECTED",
         payload={
-            "mission_id": "M0001",
             "position": "checkpoint_A",
+            "distance_cm": "10",
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")
         }
     )

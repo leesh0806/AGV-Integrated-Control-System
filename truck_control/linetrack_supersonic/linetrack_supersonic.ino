@@ -11,7 +11,7 @@ WiFiServer server(8000);
 WiFiClient client;
 
 String incoming_msg = "";
-bool run_command = false;  // PC 명령으로 주행 여부 결정
+bool run_command = true;  // PC 명령으로 주행 여부 결정
 bool obstacle_block = false;
 float last_distance_cm = 0;
 
@@ -107,23 +107,17 @@ void loop()
 
   obstacle_block = obstacle_detected();
 
-  if(run_command && !obstacle_block)
+  Serial.println(obstacle_block);
+
+  if(!obstacle_block)
   {
     line_trace();
+    send_obstacle_status(last_distance_cm, false, "sectorA");
   }
   else
   {
     stop_motors();
-  }
-  
-  if (obstacle_block) 
-  {
     send_obstacle_status(last_distance_cm, true, "sectorA");
-  }
-
-  else 
-  {
-    send_obstacle_status(last_distance_cm, false, "sectorA");
   }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -184,7 +178,11 @@ bool obstacle_detected() {
   digitalWrite(TRIG_PIN, LOW);
 
   duration = pulseIn(ECHO_PIN, HIGH, 20000); // timeout 20ms
-  if (duration == 0) return false;  // 실패했으면 장애물 없음
+  if (duration == 0){
+    Serial.println("Hello");
+    return false;  // 실패했으면 장애물 없음
+  }
+  
 
   distance_cm = duration * 0.034 / 2.0;  // 거리 계산
   last_distance_cm = distance_cm;  // 전역 변수 업데이트
@@ -199,26 +197,29 @@ bool obstacle_detected() {
 
 ///////////////////////==전송 함수 만들기==/////////////////////////////////////////////////////////////
 void send_obstacle_status(float distance_cm, bool detected, const char* position) {
-  // JSON 문서 생성
   StaticJsonDocument<256> doc;
 
-  doc["sender"] = "truck";
-  doc["receiver"] = "server";
-  doc["cmd"] = "obstacle";
+  doc["sender"] = "TRUCK";
+  doc["receiver"] = "SERVER";
+  doc["cmd"] = "OBSTACLE";
 
   JsonObject payload = doc.createNestedObject("payload");
   payload["position"] = position;
   payload["distance_cm"] = distance_cm;
-  payload["timestamp"] = millis();  // 또는 현재 시간
-  payload["detected"] = detected;
 
-  // JSON 직렬화 후 전송
+  // 간단한 timestamp (ISO가 아니라 millis로 보냄)
+  payload["timestamp"] = millis();  
+
+  // 감지 여부: true/false → "DETECTED"/"CLEARED"
+  payload["detected"] = detected ? "DETECTED" : "CLEARED";
+
   if (client && client.connected()) {
     serializeJson(doc, client);
-    client.print("\n");  // 메시지 구분용 줄바꿈
+    client.print("\n");
     Serial.println("[송신] 장애물 상태 전송됨");
   }
 }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 

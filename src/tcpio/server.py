@@ -12,11 +12,14 @@ class TCPServer:
         self.clients = {}
         self.running = False
         self.serial_manager = SerialManager(port_map or {
-            "GATE_A": "/dev/ttyUSB0"
+            #"GATE_A": "/dev/ttyUSB0"
         })
         self.command_handlers = {
+            # 게이트
             "GATE_OPEN": self.handle_gate_open,
             "GATE_CLOSED": self.handle_gate_close,
+            # 트럭
+            "OBSTACLE": self.handle_obstacle
         }
 
     def start(self):
@@ -44,6 +47,8 @@ class TCPServer:
 
     def handle_client(self, client_sock, addr):
         with client_sock:
+            client_sock.sendall(b"RUN\n")  # 여기 추가
+            print(f"[자동 명령] RUN 전송 → {addr}")
             while True:
                 try:
                     data = client_sock.recv(4096).decode().strip()
@@ -65,52 +70,46 @@ class TCPServer:
                     print(f"[오류] {addr} → {e}")
                     break
 
-
-
     # ---------------- 명령별 핸들러 -----------------------------
 
     def handle_gate_open(self, client_sock, addr, message):
-        gate = message['payload']['gate']
-        truck = message['sender']
-
-        self.serial_manager.send_command(gate, "OPEN")
-        ack = self.serial_manager.read_response(gate)
-
-        if ack and ack['type'] == "ACK" and ack['result'] == "OK":
-            response = TCPProtocol.build_message(
-                sender="SERVER",
-                receiver=truck,
-                cmd="GATE_PASS",
-                payload={
-                    'gate': gate,
-                    "result": "OK"
-                }
-            )
-            client_sock.sendall(response.encode())
-            print(f"[응답 to {addr}] {response.strip()}")
-        else:
-            print(f"[GATE 응답 오류] {ack}")
+        pass
 
     def handle_gate_close(self, client_sock, addr, message):
-        gate = message['payload']['gate']
-        truck = message['sender']
+        pass
 
-        self.serial_manager.send_command(gate, "CLOSE")
-        ack = self.serial_manager.read_response(gate)
+    # ---------------------------------------------------------
 
-        if ack and ack['type'] == "ACK" and ack['result'] == "OK":
-            response = TCPProtocol.build_message(
-                sender="SERVER",
-                receiver=truck,
-                cmd="GATE_CLOSED",  # 트럭에게 알릴 응답 명령어
-                payload={
-                    'gate': gate,
-                    "result": "OK"
-                }
-            )
-            client_sock.sendall(response.encode())
+    def handle_obstacle(self, client_sock, addr, message):
+        truck = message.get("sender", "UNKNOWN_TRUCK")
+        payload = message.get("payload", {})
+
+        position = payload.get("position", "UNKNOWN")
+        distance = payload.get("distance_cm", -1)
+        timestamp = payload.get("timestamp", "")
+        detected = payload.get("detected", "UNKNOWN")
+
+        if (detected == "DETECTED"):
+            print(f"[장애물 감지] 트럭={truck}, 위치={position}, 거리={distance}cm, 시간={timestamp}")
+        elif (detected == "CLEARED"):
+            print(f"[장애물 해제] 트럭={truck}, 위치={position}, 시간={timestamp}")
         else:
-            print(f"[GATE 응답 오류] {ack}")
+            print(f"[경고] 감지 여부 파악 불가: detected={detected}")
+
+        # # 응답 메시지 생성 및 전송
+        # response = TCPProtocol.build_message(
+        #     sender="SERVER",
+        #     receiver=truck,
+        #     cmd="ACK",
+        #     payload={
+        #         "ref_cmd": "OBSTACLE",
+        #         "detected": detected,
+        #         "received_at": timestamp
+        #     }
+        # )
+
+        # client_sock.sendall(response.encode())
+        # print(f"[응답 전송 완료] {response.strip()}")
 
     # ---------------------------------------------------------
 
