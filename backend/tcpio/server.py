@@ -47,28 +47,43 @@ class TCPServer:
 
     def handle_client(self, client_sock, addr):
         with client_sock:
-            client_sock.sendall(b"RUN\n")  # 여기 추가
+            client_sock.sendall(b"RUN\n")
             print(f"[자동 명령] RUN 전송 → {addr}")
+            
+            buffer = ""
+
             while True:
                 try:
-                    data = client_sock.recv(4096).decode().strip()
+                    data = client_sock.recv(4096).decode()
                     if not data:
                         print(f"[연결 종료] {addr}")
                         break
-                    message = TCPProtocol.parse_message(data)
-                    print(f"[수신 from {addr}] {message}")
-                    cmd = message.get("cmd", "").strip().upper()
-                    print(f"[수신 CMD] {cmd}")
 
-                    handler = self.command_handlers.get(cmd)
-                    if handler:
-                        handler(client_sock, addr, message)
-                    else:
-                        print(f"[알림] 알 수 없는 명령: {cmd}")
-                                        
+                    buffer += data
+
+                    # 줄바꿈 기준으로 JSON 메시지 분리
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
+                        if not line:
+                            continue
+
+                        message = TCPProtocol.parse_message(line)
+                        print(f"[수신 from {addr}] {message}")
+
+                        cmd = message.get("cmd", "").strip().upper()
+                        print(f"[수신 CMD] {cmd}")
+
+                        handler = self.command_handlers.get(cmd)
+                        if handler:
+                            handler(client_sock, addr, message)
+                        else:
+                            print(f"[알림] 알 수 없는 명령: {cmd}")
+
                 except Exception as e:
                     print(f"[오류] {addr} → {e}")
                     break
+
 
     # ---------------- 명령별 핸들러 -----------------------------
 
