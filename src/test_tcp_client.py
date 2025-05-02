@@ -4,7 +4,6 @@ import time
 if __name__ == "__main__":
     client = TCPClient(host="127.0.0.1", port=8000)
     client.connect()
-
     client.send_command(
         sender="TRUCK01",
         receiver="GATE_A",
