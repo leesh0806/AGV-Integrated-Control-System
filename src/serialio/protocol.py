@@ -8,7 +8,6 @@ class SerialProtocol:
     
     @staticmethod
     def parse_response(response: str) -> dict:
-        # 예: "ACK:GATE_A_OPEN:OK\n"
         parts = response.strip().split(":")
         if parts[0] == "ACK" and len(parts) == 3:
             return {

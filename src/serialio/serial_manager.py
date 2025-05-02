@@ -4,14 +4,6 @@ from serialio.controller import SerialController
 
 class SerialManager:
     def __init__(self, port_map: dict):
-        """
-        port_map 예시:
-        {
-            "GATE_A": "/dev/ttyUSB0",
-            "GATE_B": "/dev/ttyUSB1",
-            "BELT": "/dev/ttyUSB2"
-        }
-        """
         self.controllers = {
             facility: SerialController(port=port)
             for facility, port in port_map.items()

@@ -15,7 +15,8 @@ class TCPServer:
             "GATE_A": "/dev/ttyUSB0"
         })
         self.command_handlers = {
-            "GATE_PASS_REQUEST": self.handle_gate_pass,
+            "GATE_OPEN": self.handle_gate_open,
+            "GATE_CLOSED": self.handle_gate_close,
         }
 
     def start(self):
@@ -68,7 +69,7 @@ class TCPServer:
 
     # ---------------- 명령별 핸들러 -----------------------------
 
-    def handle_gate_pass(self, client_sock, addr, message):
+    def handle_gate_open(self, client_sock, addr, message):
         gate = message['payload']['gate']
         truck = message['sender']
 
@@ -87,6 +88,27 @@ class TCPServer:
             )
             client_sock.sendall(response.encode())
             print(f"[응답 to {addr}] {response.strip()}")
+        else:
+            print(f"[GATE 응답 오류] {ack}")
+
+    def handle_gate_close(self, client_sock, addr, message):
+        gate = message['payload']['gate']
+        truck = message['sender']
+
+        self.serial_manager.send_command(gate, "CLOSE")
+        ack = self.serial_manager.read_response(gate)
+
+        if ack and ack['type'] == "ACK" and ack['result'] == "OK":
+            response = TCPProtocol.build_message(
+                sender="SERVER",
+                receiver=truck,
+                cmd="GATE_CLOSED",  # 트럭에게 알릴 응답 명령어
+                payload={
+                    'gate': gate,
+                    "result": "OK"
+                }
+            )
+            client_sock.sendall(response.encode())
         else:
             print(f"[GATE 응답 오류] {ack}")
 
