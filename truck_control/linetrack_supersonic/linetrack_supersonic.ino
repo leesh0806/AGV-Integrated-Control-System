@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <ESP32Servo.h>
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 // ==== WiFi 설정 ====
 const char* ssid = "leesh0806";
@@ -10,7 +11,9 @@ WiFiServer server(8000);
 WiFiClient client;
 
 String incoming_msg = "";
-bool run = false;  // PC 명령으로 주행 여부 결정
+bool run_command = false;  // PC 명령으로 주행 여부 결정
+bool obstacle_block = false;
+float last_distance_cm = 0;
 
 // ==== 모터 제어 핀 및 PWM ====
 #define MOTOR12_EN 27    // PWM 채널 0
@@ -24,6 +27,9 @@ bool run = false;  // PC 명령으로 주행 여부 결정
 #define PWM_RESOLUTION 8
 #define PWM_CHANNEL_LEFT 0
 #define PWM_CHANNEL_RIGHT 1
+
+#define TRIG_PIN 33
+#define ECHO_PIN 32
 
 // ==== 적외선 센서 핀 ====
 #define LEFT_SENSOR 34
@@ -72,7 +78,8 @@ void setup() {
 }
 
 // ==== 메인 루프 ====
-void loop() {
+void loop() 
+{//////////////////////////////////////////Wifi///////////////////////////////////
   Serial.println(WiFi.localIP());
   // 클라이언트 연결 처리
   if (!client || !client.connected()) {
@@ -89,20 +96,39 @@ void loop() {
     Serial.println(incoming_msg);
 
     if (incoming_msg == "RUN") {
-      run = true;
+      run_command = true;
     } else if (incoming_msg == "STOP") {
-      run = false;
+      run_command = false;
       stop_motors();
     }
   }
+/////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////// 주행////////////////////////////////////////////
 
-  // 주행
-  if (run) {
+  obstacle_block = obstacle_detected();
+
+  if(run_command && !obstacle_block)
+  {
     line_trace();
   }
-}
+  else
+  {
+    stop_motors();
+  }
+  
+  if (obstacle_block) 
+  {
+    send_obstacle_status(last_distance_cm, true, "sectorA");
+  }
 
-// ==== 라인트레이서 제어 ====
+  else 
+  {
+    send_obstacle_status(last_distance_cm, false, "sectorA");
+  }
+}
+////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////// ==== 라인트레이서 제어 ====///////////////////////////////////
 void line_trace() {
   l_sensor_val = analogRead(LEFT_SENSOR);
   r_sensor_val = analogRead(RIGHT_SENSOR);
@@ -145,3 +171,55 @@ int speed_limit(int val, int minVal, int maxVal) {
   if (val > maxVal) return maxVal;
   return val;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////// 초음파 기반 장애물 감지 함수//////////////////////////////////////////
+bool obstacle_detected() {
+  long duration;
+  float distance_cm;
+
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  duration = pulseIn(ECHO_PIN, HIGH, 20000); // timeout 20ms
+  if (duration == 0) return false;  // 실패했으면 장애물 없음
+
+  distance_cm = duration * 0.034 / 2.0;  // 거리 계산
+  last_distance_cm = distance_cm;  // 전역 변수 업데이트
+
+  Serial.print("Distance: ");
+  Serial.print(distance_cm);
+  Serial.println(" cm");
+
+  return distance_cm < 10.0;  // 10cm 이내면 true
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////==전송 함수 만들기==/////////////////////////////////////////////////////////////
+void send_obstacle_status(float distance_cm, bool detected, const char* position) {
+  // JSON 문서 생성
+  StaticJsonDocument<256> doc;
+
+  doc["sender"] = "truck";
+  doc["receiver"] = "server";
+  doc["cmd"] = "obstacle";
+
+  JsonObject payload = doc.createNestedObject("payload");
+  payload["position"] = position;
+  payload["distance_cm"] = distance_cm;
+  payload["timestamp"] = millis();  // 또는 현재 시간
+  payload["detected"] = detected;
+
+  // JSON 직렬화 후 전송
+  if (client && client.connected()) {
+    serializeJson(doc, client);
+    client.print("\n");  // 메시지 구분용 줄바꿈
+    Serial.println("[송신] 장애물 상태 전송됨");
+  }
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
