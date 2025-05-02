@@ -1,5 +1,5 @@
 import mysql.connector
-from .mission import Mission
+from mission import Mission
 
 class MissionDB:
     def __init__(self, host, user, password, database):

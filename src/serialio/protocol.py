@@ -4,7 +4,7 @@ class SerialProtocol:
     @staticmethod
     def build_command(target: str, action: str) -> str:
         # 예: "GATE_A", "OPEN" -> "GATE_A_OPEN\n"
-        return f"{target.upper()}_{action.upper()}"
+        return f"{target.upper()}_{action.upper()}\n"
     
     @staticmethod
     def parse_response(response: str) -> dict:
