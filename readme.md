@@ -1,7 +1,7 @@
 
 # D.U.S.T. - IoT기반 자율 운송관제 시스템
 
-**D.U.S.T. (Dynamic Unified Smart Transport)**는 희토류 및 광물 자원의 자동 운송을 목표로 하는 IoT 기반 자율 운송 관제 시스템입니다.  
+**D.U.S.T. (Dynamic Unified Smart Transport)** 는 희토류 및 광물 자원의 자동 운송을 목표로 하는 IoT 기반 자율 운송 관제 시스템입니다.  
 RFID, 시리얼, TCP 통신을 기반으로 차량 위치 파악, 게이트 제어, 벨트 운송 등 복합 제어를 통합 관리합니다.
 
 ---
