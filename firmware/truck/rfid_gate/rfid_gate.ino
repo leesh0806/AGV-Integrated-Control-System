@@ -6,12 +6,10 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-
 #define SS_PIN 21    // SDA
 #define RST_PIN 22   // RST
 
 MFRC522 rfid(SS_PIN, RST_PIN);
-
 
 // ==== WiFi 설정 ====
 const char* ssid = "olleh_WiFi_ECDF";
@@ -66,6 +64,9 @@ void setup() {
   }
   Serial.println("✅ 시간 동기화 완료!");
 
+  // ✅ 미션 요청 자동 전송
+  delay(2000);  // 안정화 대기
+  send_assign_mission();
 }
 
 void loop() {
@@ -113,7 +114,7 @@ void checkAndPrintUID(byte* uid) {
       if (strcmp(desc, "게이트 A") == 0) {
         send_arrive_status("CHECKPOINT_A", "GATE_A");
       } else if (strcmp(desc, "게이트 B") == 0) {
-        send_arrive_status("CHECKPOINT_C", "GATE_B");
+        send_arrive_status("CHECKPOINT_B", "GATE_B");
       }
 
       return;
@@ -123,7 +124,7 @@ void checkAndPrintUID(byte* uid) {
   Serial.println("❌ 등록되지 않은 카드입니다!");
 }
 
-// ✅ 메시지 전송
+// ✅ 도착 메시지 전송
 void send_arrive_status(const char* position, const char* gate_id) {
   StaticJsonDocument<256> doc;
 
@@ -144,6 +145,26 @@ void send_arrive_status(const char* position, const char* gate_id) {
     Serial.println();
   } else {
     Serial.println("[❌ 오류] 서버와 연결되지 않음");
+  }
+}
+
+// ✅ 미션 요청 메시지 전송
+void send_assign_mission() {
+  StaticJsonDocument<192> doc;
+
+  doc["sender"] = "TRUCK_01";
+  doc["receiver"] = "SERVER";
+  doc["cmd"] = "ASSIGN_MISSION";
+  doc["payload"] = JsonObject();  // 빈 payload
+
+  if (client && client.connected()) {
+    serializeJson(doc, client);
+    client.print("\n");
+    Serial.println("[📤 송신] 미션 요청:");
+    serializeJsonPretty(doc, Serial);
+    Serial.println();
+  } else {
+    Serial.println("[❌ 오류] 서버와 연결되지 않음 (미션 요청 실패)");
   }
 }
 
