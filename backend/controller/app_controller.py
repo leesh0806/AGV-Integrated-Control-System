@@ -10,9 +10,9 @@ from tcpio.truck_commander import TruckCommandSender
 
 
 class AppController:
-    def __init__(self, port_map):
+    def __init__(self, port_map, use_fake=False):
         # Serial 연결
-        self.serial_manager = SerialManager(port_map)
+        self.serial_manager = SerialManager(port_map, use_fake=use_fake)
 
         # DB 연결
         self.db = MissionDB(
