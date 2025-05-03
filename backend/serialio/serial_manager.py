@@ -1,4 +1,4 @@
-# serialio/serial_manager.py
+# backend/serialio/serial_manager.py
 
 from serialio.controller import SerialController
 

@@ -1,3 +1,5 @@
+# backend/mission/db.py
+
 import mysql.connector
 from mission import Mission
 

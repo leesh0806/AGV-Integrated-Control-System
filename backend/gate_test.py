@@ -1,4 +1,4 @@
-# gate_test.py
+# backend/gate_test.py
 
 import time
 from serialio.serial_manager import SerialManager

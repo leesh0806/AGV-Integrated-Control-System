@@ -1,3 +1,4 @@
+# backend/serialio/protocol.py
 # 시리얼 명령 포맷 정의
 
 class SerialProtocol:
