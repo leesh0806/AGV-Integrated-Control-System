@@ -1,3 +1,5 @@
+# backend/fsm/fsm_manager.py
+
 from fsm.state_enum import TruckState
 from tcpio.truck_commander import TruckCommandSender
 from datetime import datetime
@@ -24,11 +26,19 @@ class TruckFSMManager:
         if self.command_sender:
             self.command_sender.send(truck_id, "RUN")
 
+    def _open_gate_and_log(self, gate_id: str, truck_id: str):
+        self.gate_controller.open_gate(gate_id)
+        print(f"[🔓 GATE OPEN] {gate_id} ← by {truck_id}")
+
+    def _close_gate_and_log(self, gate_id: str, truck_id: str):
+        self.gate_controller.close_gate(gate_id)
+        print(f"[🔒 GATE CLOSE] {gate_id} ← by {truck_id}")
+
     def handle_trigger(self, truck_id, cmd, payload):
         state = self.get_state(truck_id)
         print(f"[FSM] 트리거: {truck_id}, 상태={state.name}, 트리거={cmd}")
 
-        # 1. 미션 할당
+        # ✅ 상태 기반 FSM 흐름
         if state == TruckState.IDLE and cmd == "ASSIGN_MISSION":
             mission = self.mission_manager.assign_next_to_truck(truck_id)
             if mission:
@@ -41,7 +51,6 @@ class TruckFSMManager:
                         "MISSION_ASSIGNED",
                         {"mission_id": mission.mission_id, "source": mission.source}
                     )
-                    print(f"[📤 MISSION_ASSIGNED 전송] → {truck_id}, source={mission.source}")
             else:
                 print(f"[⚠️ 미션 없음] {truck_id}에게 할당할 미션이 없습니다.")
             return
@@ -49,7 +58,7 @@ class TruckFSMManager:
         elif state == TruckState.MOVE_TO_GATE_FOR_LOAD and cmd == "ARRIVED_AT_CHECKPOINT_A":
             self.set_state(truck_id, TruckState.WAIT_GATE_OPEN_FOR_LOAD)
             gate_id = payload.get("gate_id", "GATE_A")
-            self.gate_controller.open_gate(gate_id)
+            self._open_gate_and_log(gate_id, truck_id)
             return
 
         elif state == TruckState.WAIT_GATE_OPEN_FOR_LOAD and cmd == "ACK_GATE_OPENED":
@@ -58,7 +67,8 @@ class TruckFSMManager:
             return
 
         elif cmd == "ARRIVED_AT_CHECKPOINT_B":
-            print(f"[FSM] {truck_id}: CHECKPOINT_B 도착 감지 (상태 유지)")
+            gate_id = payload.get("gate_id", "GATE_A")
+            self._close_gate_and_log(gate_id, truck_id)
             return
 
         elif state == TruckState.MOVE_TO_LOAD and cmd in ["ARRIVED_AT_LOAD_A", "ARRIVED_AT_LOAD_B"]:
@@ -78,7 +88,7 @@ class TruckFSMManager:
         elif state == TruckState.MOVE_TO_GATE_FOR_UNLOAD and cmd == "ARRIVED_AT_CHECKPOINT_C":
             self.set_state(truck_id, TruckState.WAIT_GATE_OPEN_FOR_UNLOAD)
             gate_id = payload.get("gate_id", "GATE_B")
-            self.gate_controller.open_gate(gate_id)
+            self._open_gate_and_log(gate_id, truck_id)
             return
 
         elif state == TruckState.WAIT_GATE_OPEN_FOR_UNLOAD and cmd == "ACK_GATE_OPENED":
@@ -87,7 +97,8 @@ class TruckFSMManager:
             return
 
         elif cmd == "ARRIVED_AT_CHECKPOINT_D":
-            print(f"[FSM] {truck_id}: CHECKPOINT_D 도착 감지 (상태 유지)")
+            gate_id = payload.get("gate_id", "GATE_B")
+            self._close_gate_and_log(gate_id, truck_id)
             return
 
         elif state == TruckState.MOVE_TO_UNLOAD and cmd == "ARRIVED_AT_BELT":
@@ -102,22 +113,15 @@ class TruckFSMManager:
             self.set_state(truck_id, TruckState.MOVE_TO_STANDBY)
             self.send_run(truck_id)
 
-            # ✅ 미션 완료 처리
             mission = self.mission_manager.get_mission_by_truck(truck_id)
             if mission:
-                mission.status_code = "COMPLETED"
-                mission.status_label = "완료됨"
-                mission.timestamp_completed = datetime.now()
+                mission.update_status("COMPLETED")
                 print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")
 
-                # 방법 1
-                # self.mission_manager.save_to_db()
-
-                # 방법 2
                 self.mission_manager.db.update_mission_completion(
                     mission_id=mission.mission_id,
-                    status_code=mission.status_code,
-                    status_label=mission.status_label,
+                    status_code=mission.status.name,
+                    status_label=mission.status.value,
                     timestamp_completed=mission.timestamp_completed
                 )
             return
@@ -140,3 +144,4 @@ class TruckFSMManager:
             return
 
         print(f"[FSM] 상태 전이 없음: 상태={state.name}, 트리거={cmd}")
+

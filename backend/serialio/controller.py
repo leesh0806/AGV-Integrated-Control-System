@@ -2,11 +2,15 @@
 
 import serial
 import time
-from .protocol import SerialProtocol
+from backend.serialio.protocol import SerialProtocol
+from backend.serialio.fake_serial import FakeSerial
 
 class SerialController:
-    def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
-        self.ser = serial.Serial(port, baudrate, timeout=1)
+    def __init__(self, port="/dev/ttyUSB0", baudrate=9600, use_fake=False):
+        if use_fake:
+            self.ser = FakeSerial(name=port)  # ✅ 포트명으로 식별
+        else:
+            self.ser = serial.Serial(port, baudrate, timeout=1)
 
     def send_command(self, target: str, action: str):
         command = SerialProtocol.build_command(target, action)
@@ -28,6 +32,5 @@ class SerialController:
         print("[Serial Timeout] 응답 없음")
         return None
 
-    
     def close(self):
         self.ser.close()
