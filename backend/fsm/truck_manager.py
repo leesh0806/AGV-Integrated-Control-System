@@ -1,0 +1,45 @@
+# backend/fsm/truck_manager.py
+
+class TruckManager:
+    def __init__(self, fsm_manager):
+        self.fsm_manager = fsm_manager
+
+    def handle_message(self, msg: dict):
+        truck_id = msg.get("sender")
+        cmd = msg.get("cmd", "").upper()
+        payload = msg.get("payload", {})
+
+        if cmd == "ARRIVED":
+            position = payload.get("position", "UNKNOWN")
+            trigger = f"ARRIVED_AT_{position.upper()}"
+            self.fsm_manager.handle_trigger(truck_id, trigger, payload)
+
+        elif cmd == "OBSTACLE":
+            self.fsm_manager.handle_trigger(truck_id, "OBSTACLE", payload)
+
+        elif cmd == "ERROR":
+            self.fsm_manager.handle_trigger(truck_id, "EMERGENCY_TRIGGERED", payload)
+
+        elif cmd == "RESET":
+            self.fsm_manager.handle_trigger(truck_id, "RESET", payload)
+
+        elif cmd == "ASSIGN_MISSION":
+            self.fsm_manager.handle_trigger(truck_id, "ASSIGN_MISSION", payload)
+
+        elif cmd == "ACK_GATE_OPENED":
+            self.fsm_manager.handle_trigger(truck_id, "ACK_GATE_OPENED", payload)
+
+        elif cmd == "START_LOADING":
+            self.fsm_manager.handle_trigger(truck_id, "START_LOADING", payload)
+
+        elif cmd == "FINISH_LOADING":
+            self.fsm_manager.handle_trigger(truck_id, "FINISH_LOADING", payload)
+
+        elif cmd == "START_UNLOADING":
+            self.fsm_manager.handle_trigger(truck_id, "START_UNLOADING", payload)
+
+        elif cmd == "FINISH_UNLOADING":
+            self.fsm_manager.handle_trigger(truck_id, "FINISH_UNLOADING", payload)
+
+        else:
+            print(f"[TruckManager] 알 수 없는 명령: {cmd}")

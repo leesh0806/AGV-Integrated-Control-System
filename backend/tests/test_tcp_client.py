@@ -9,13 +9,13 @@ if __name__ == "__main__":
     client.send_command(
         sender="TRUCK01",
         receiver="SERVER",
-        cmd="OBSTACLE_DETECTED",
+        cmd="OBSTACLE",
         payload={
+            "detected": "DETECTED",
             "position": "checkpoint_A",
             "distance_cm": "10",
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")
         }
     )
-
     response = client.read_response()
     client.close()
