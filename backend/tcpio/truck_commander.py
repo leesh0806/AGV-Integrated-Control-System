@@ -14,7 +14,7 @@ class TruckCommandSender:
         
         msg = TCPProtocol.build_message("SERVER", truck_id, cmd, payload)
         try:
-            sock.sendall(msg.encode())
+            sock.sendall((msg + "\n").encode())
             print(f"[🚚 명령 전송] {truck_id} ← {cmd} | payload={payload}")
         except Exception as e:
             print(f"[❌ 전송 실패] {truck_id} → {e}")

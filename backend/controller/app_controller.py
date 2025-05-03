@@ -24,6 +24,7 @@ class AppController:
 
         self.gate_controller = GateController(self.serial_manager)
         self.mission_manager = MissionManager(self.db)
+        self.mission_manager.load_from_db()
         self.fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,
             mission_manager=self.mission_manager

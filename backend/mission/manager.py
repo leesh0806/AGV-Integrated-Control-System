@@ -58,3 +58,9 @@ class MissionManager:
             self.db.save_mission(mission)
             return mission
         return None
+    
+    def get_mission_by_truck(self, truck_id):
+        for mission in self.active_missions.values():
+            if mission.assigned_truck_id == truck_id:
+                return mission
+        return None
