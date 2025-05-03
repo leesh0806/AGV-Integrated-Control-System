@@ -53,6 +53,19 @@ class MissionDB:
         """)
         return self.cursor.fetchall()
     
+    def update_mission_completion(self, mission_id, status_code, status_label, timestamp_completed):
+        cursor = self.conn.cursor()
+        query = """
+            UPDATE missions
+            SET status_code = %s,
+                status_label = %s,
+                timestamp_completed = %s
+            WHERE mission_id = %s
+        """
+
+        cursor.execute(query, (status_code, status_label, timestamp_completed, mission_id))
+        self.conn.commit()
+    
     def close(self):
         self.cursor.close()
         self.conn.close()
