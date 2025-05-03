@@ -6,17 +6,19 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
+
 #define SS_PIN 21    // SDA
 #define RST_PIN 22   // RST
 
 MFRC522 rfid(SS_PIN, RST_PIN);
+
 
 // ==== WiFi 설정 ====
 const char* ssid = "olleh_WiFi_ECDF";
 const char* password = "0000000567";
 
 // ✅ PC 서버 주소 및 포트
-IPAddress serverIP(192, 168, 0, 100);  // ← PC IP로 바꾸세요
+IPAddress serverIP(172, 30, 1, 11);  // ← PC IP로 바꾸세요
 const int serverPort = 8000;
 
 WiFiClient client;
@@ -63,6 +65,7 @@ void setup() {
     Serial.println("...");
   }
   Serial.println("✅ 시간 동기화 완료!");
+
 }
 
 void loop() {
