@@ -1,7 +1,6 @@
 import socket
 import json
 import time
-import select
 
 HOST = '127.0.0.1'
 PORT = 8000
@@ -26,54 +25,54 @@ def send(cmd, payload=None, wait=True):
     if wait:
         input("▶ 엔터를 누르면 계속 진행합니다...")
 
-def wait_for_mission_response(timeout=3):
+def wait_for_mission_response(timeout=3.0):
     global source
-    client.setblocking(False)
-    start = time.time()
+    client.settimeout(timeout)
+    try:
+        while True:
+            data = client.recv(4096)
+            raw = data.decode('utf-8').strip()
+            for line in raw.splitlines():
+                print(f"[📩 수신 원문] {line}")
+                if not line.startswith("{"):
+                    print("[ℹ️ 비JSON 메시지 무시]")
+                    continue
 
-    buffer = ""
-    while time.time() - start < timeout:
-        ready, _, _ = select.select([client], [], [], 0.1)
-        if ready:
-            try:
-                data = client.recv(4096)
-                buffer += data.decode('utf-8')
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    raw = line.strip()
-                    print(f"[📩 수신 원문] {raw}")
-
-                    if not raw.startswith("{"):
-                        print("[ℹ️ 비JSON 메시지 무시]")
-                        continue
-
-                    msg = json.loads(raw)
-                    if msg.get("cmd") == "MISSION_ASSIGNED":
-                        source = msg["payload"]["source"].upper()
-                        print(f"[✅ 미션 수신] → source = {source}")
-                        return True
-                    else:
-                        print("[⚠️ 예상치 못한 응답]", msg)
-            except Exception as e:
-                print(f"[❌ 수신 중 오류] → {e}")
-    print("[⏰ 타임아웃] MISSION_ASSIGNED 수신 실패")
-    return False
-
-
+                msg = json.loads(line)
+                if msg.get("cmd") == "MISSION_ASSIGNED":
+                    source = msg["payload"]["source"].upper()
+                    print(f"[✅ 미션 수신] → source = {source}")
+                    return True
+                else:
+                    print("[⚠️ 예상치 못한 응답]", msg)
+        return False
+    except socket.timeout:
+        print("[⏰ 타임아웃] MISSION_ASSIGNED 수신 실패")
+        return False
+    except Exception as e:
+        print(f"[❌ JSON 파싱 오류] → {e}")
+        return False
+    finally:
+        client.settimeout(None)
 
 def run_full_mission():
-    # ✅ 트럭 소켓 등록을 유도하기 위한 더미 메시지
+    # ✅ 트럭 등록
     send("HELLO", {"msg": "register"}, wait=False)
     time.sleep(0.1)
 
+    # ✅ 상태 초기화 (IDLE로 리셋)
+    send("RESET", wait=False)
+    time.sleep(0.1)
 
+    # ✅ 미션 요청
     send("ASSIGN_MISSION", wait=False)
     if not wait_for_mission_response():
         return
 
+    # ✅ 전체 미션 수행
     send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
     send("ACK_GATE_OPENED")
-    send("ARRIVED", {"position": source})
+    send("ARRIVED", {"position": source})  # load_A or load_B
     send("START_LOADING")
     send("FINISH_LOADING")
     send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})

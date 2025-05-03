@@ -64,3 +64,13 @@ class MissionManager:
             if mission.assigned_truck_id == truck_id:
                 return mission
         return None
+
+    def save_to_db(self):
+        for mission in self.missions:
+            if mission.status_code == "COMPLETED" and mission.timestamp_completed:
+                self.db.update_mission_completion(
+                    mission_id = mission.mission_id,
+                    status_code="COMPLETED",
+                    status_label="완료됨",
+                    timestamp_completed=mission.timestamp_completed
+                )
