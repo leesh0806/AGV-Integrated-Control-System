@@ -4,15 +4,15 @@ from datetime import datetime
 from .status import MissionStatus
 
 class Mission:
-    def __init__(self, mission_id, cargo_type, cargo_amount, source, destination):
+    def __init__(self, mission_id, cargo_type, cargo_amount, source, destination, truck_id=None):
         self.mission_id = mission_id
         self.cargo_type = cargo_type
         self.cargo_amount = cargo_amount
         self.source = source
         self.destination = destination
+        self.assigned_truck_id = truck_id
 
         self.status = MissionStatus.WAITING
-        self.assigned_truck_id = None
 
         self.timestamp_created = datetime.now()
         self.timestamp_assigned = None
@@ -23,10 +23,14 @@ class Mission:
         self.status = MissionStatus.ASSIGNED
         self.timestamp_assigned = datetime.now()
 
-    def update_status(self, new_status: MissionStatus):
+    def update_status(self, new_status):
+        # ✅ 문자열이 들어올 경우 Enum으로 변환
+        if isinstance(new_status, str):
+            new_status = MissionStatus[new_status]
         self.status = new_status
         if new_status == MissionStatus.COMPLETED:
             self.timestamp_completed = datetime.now()
+
 
     def cancel(self):
         self.status = MissionStatus.CANCELED

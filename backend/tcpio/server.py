@@ -3,8 +3,9 @@
 import traceback
 import socket
 import threading
-from tcpio.protocol import TCPProtocol
-from controller.app_controller import AppController
+import json
+from backend.tcpio.protocol import TCPProtocol
+from backend.controller.app_controller import AppController
 
 
 class TCPServer:
@@ -99,3 +100,19 @@ class TCPServer:
             except:
                 pass
         print("[🔌 TCP 서버 종료됨]")
+
+    def send_command(self, client_socket, cmd, payload=None):
+        """
+        클라이언트에게 명령을 전송
+        """
+        msg = {
+            "sender": "SERVER",
+            "receiver": "TRUCK_01",
+            "cmd": cmd,
+            "payload": payload or {}
+        }
+        try:
+            client_socket.send((json.dumps(msg) + "\n").encode('utf-8'))
+            print(f"[📤 {cmd} 전송] {client_socket.getpeername()}")
+        except Exception as e:
+            print(f"[❌ 전송 오류] {e}")

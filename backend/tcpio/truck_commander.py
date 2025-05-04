@@ -1,6 +1,6 @@
 # backend/tcpio/truck_commander.py
 
-from tcpio.protocol import TCPProtocol
+from .protocol import TCPProtocol
 
 class TruckCommandSender:
     def __init__(self, truck_sockets: dict):
