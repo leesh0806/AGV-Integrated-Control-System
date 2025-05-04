@@ -1,4 +1,4 @@
-# backend/fsm/gate_controller.py
+# backend/serialio/gate_controller.py
 
 class GateController:
     def __init__(self, serial_manager):
