@@ -1,10 +1,10 @@
 # frontend/gui/login_window.py
 
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QMessageBox, QLineEdit
 from PyQt6 import uic
 import os
 from backend.auth.user_auth import UserAuthManager
-from gui.main_window import MainWindow  # 나중에 연결
+from gui.main_tab_window import MainTabWindow
 
 class LoginWindow(QMainWindow):
     def __init__(self):
@@ -16,6 +16,9 @@ class LoginWindow(QMainWindow):
 
         # 버튼 및 입력창 objectName이 login.ui에 있어야 합니다
         # 예: QLineEdit (input_id, input_pw), QPushButton (btn_login)
+
+        # 비밀번호 입력 필드 설정
+        self.input_pw.setEchoMode(QLineEdit.EchoMode.Password)
 
         # DB 인증 관리자 설정
         self.auth_manager = UserAuthManager({
@@ -39,7 +42,7 @@ class LoginWindow(QMainWindow):
             QMessageBox.warning(self, "로그인 실패", "❌ 아이디 또는 비밀번호가 잘못되었습니다.")
 
     def open_main(self, role):
-        # 로그인 성공 → 메인 창 열기 (나중에 구현)
-        self.main = MainWindow(role)
+        # 로그인 성공 → 메인 탭 창 열기
+        self.main = MainTabWindow(role)
         self.main.show()
         self.close()

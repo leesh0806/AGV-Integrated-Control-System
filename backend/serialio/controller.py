@@ -29,7 +29,7 @@ class SerialController:
         except Exception as e:
             print(f"[SerialController 오류] write 실패: {e}")
 
-    def read_response(self, timeout=3):
+    def read_response(self, timeout=5):
         """
         응답 수신 (ACK 또는 장치 상태 등) → 문자열로 반환
         ✅ 벨트의 BELTON/BELTOFF/ConA_FULL 같은 응답도 로깅
@@ -43,8 +43,12 @@ class SerialController:
                 if line.startswith("STATUS:"):
                     line = line.replace("STATUS:", "", 1)
 
+                # ✅ 게이트 응답 처리 개선
+                if "GATE_" in line:
+                    print(f"[🚪 게이트 응답] {line}")
+                    return line
                 # ✅ 벨트 상태 응답 로깅
-                if any(status in line for status in ["BELTON", "BELTOFF", "ConA_FULL"]):
+                elif any(status in line for status in ["BELTON", "BELTOFF", "ConA_FULL"]):
                     print(f"[🔄 벨트 상태] {line}")
                     return line
                 elif line.startswith("ACK:"):
@@ -52,8 +56,9 @@ class SerialController:
                     return line
                 else:
                     print(f"[ℹ️ 기타 응답] {line}")
+                    return line  # 알 수 없는 응답도 반환
 
-            time.sleep(0.05)
+            time.sleep(0.1)  # 대기 시간 증가
         print("[⏰ 응답 시간 초과]")
         return None
 

@@ -1,10 +1,19 @@
 import socket
 import json
 import time
+from backend.serialio.serial_manager import SerialManager
 
 # 서버 설정
 HOST = '127.0.0.1'
 PORT = 8001
+
+# 포트 매핑 설정
+port_map = {
+    "GATE_A": "GATE_A",  # 가상 시리얼 장치 이름
+    "GATE_B": "GATE_B"   # 가상 시리얼 장치 이름
+}
+
+manager = SerialManager(port_map=port_map, use_fake=True)  # use_fake=True 추가
 
 class TruckSimulator:
     def __init__(self):
@@ -80,7 +89,12 @@ class TruckSimulator:
     def wait_for_gate_response(self, timeout=5.0):
         self.client.settimeout(timeout)
         try:
+            start_time = time.time()
             while True:
+                if time.time() - start_time > timeout:
+                    print("[⏰ 타임아웃] GATE_OPENED 수신 실패")
+                    return False
+
                 data = self.client.recv(4096)
                 if not data:
                     print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
@@ -91,15 +105,28 @@ class TruckSimulator:
                     print(f"[📩 수신] {line}")
                     try:
                         msg = json.loads(line)
-                        if msg.get("cmd") == "GATE_OPENED":
+                        cmd = msg.get("cmd", "")
+                        
+                        # GATE_OPENED 명령을 받으면 성공
+                        if cmd == "GATE_OPENED":
                             print("[✅ 게이트 열림 확인]")
                             return True
+                        
+                        # RUN 명령은 무시하고 계속 대기
+                        elif cmd == "RUN":
+                            continue
+                        
+                        # GATE_CLOSED는 이전 게이트에 대한 것이므로 무시
+                        elif cmd == "GATE_CLOSED":
+                            continue
+                            
                         else:
                             print(f"[ℹ️ 기타 메시지] {msg}")
+                            
                     except json.JSONDecodeError:
                         print("[ℹ️ 비JSON 메시지 무시]")
                         continue
-            return False
+                    
         except socket.timeout:
             print("[⏰ 타임아웃] GATE_OPENED 수신 실패")
             return False
@@ -138,7 +165,7 @@ class TruckSimulator:
             time.sleep(2)  # 이동 시간
             self.send("ARRIVED", {"position": "CHECKPOINT_B", "gate_id": "GATE_A"})
 
-            print("\n[🚛 트럭 이동] LOAD_A로 이동 중...")
+            print(f"\n[🚛 트럭 이동] {self.source}로 이동 중...")
             time.sleep(2)  # 이동 시간
             self.send("ARRIVED", {"position": self.source})  # load_A or load_B
 

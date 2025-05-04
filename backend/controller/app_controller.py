@@ -19,14 +19,13 @@ class AppController:
         # ✅ Serial 연결
         self.serial_manager = SerialManager(port_map, use_fake=use_fake)
 
-        # ✅ DB 연결 (임시로 비활성화)
-        self.db = None
-        # self.db = MissionDB(
-        #     host="localhost",
-        #     user="root",
-        #     password="jinhyuk2dacibul",
-        #     database="dust"
-        # )
+        # ✅ DB 연결
+        self.db = MissionDB(
+            host="localhost",
+            user="root",
+            password="jinhyuk2dacibul",
+            database="dust"
+        )
 
         # ✅ 장치 컨트롤러들
         self.belt_controller = BeltController(self.serial_manager.controllers["BELT"])
@@ -34,7 +33,7 @@ class AppController:
 
         # ✅ 미션 및 FSM 관리자
         self.mission_manager = MissionManager(self.db)
-        # self.mission_manager.load_from_db()  # DB 로딩 비활성화
+        self.mission_manager.load_from_db()  # DB에서 미션 로드
 
         self.fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,

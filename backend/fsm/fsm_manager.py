@@ -81,7 +81,7 @@ class TruckFSMManager:
             return
 
         # 적재장 도착
-        elif state == TruckState.MOVE_TO_LOAD and cmd == "ARRIVED_AT_LOAD_A":
+        elif state == TruckState.MOVE_TO_LOAD and (cmd == "ARRIVED_AT_LOAD_A" or cmd == "ARRIVED_AT_LOAD_B"):
             self.set_state(truck_id, TruckState.WAIT_LOAD)
             return
 

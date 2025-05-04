@@ -17,7 +17,7 @@ const char* password = "0000000567";
 
 // ✅ PC 서버 주소 및 포트
 IPAddress serverIP(172, 30, 1, 11);  // ← PC IP로 바꾸세요
-const int serverPort = 8000;
+const int serverPort = 8001;  // 8000에서 8001로 변경
 
 WiFiClient client;
 String incoming_msg = "";
@@ -34,6 +34,9 @@ UIDEntry registeredCards[] = {
 };
 
 const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
+
+// 트럭 ID 설정
+const char* truck_id = "TRUCK_01";  // 설정 가능하도록 변경
 
 void setup() {
   Serial.begin(115200);
@@ -114,7 +117,7 @@ void checkAndPrintUID(byte* uid) {
       if (strcmp(desc, "게이트 A") == 0) {
         send_arrive_status("CHECKPOINT_A", "GATE_A");
       } else if (strcmp(desc, "게이트 B") == 0) {
-        send_arrive_status("CHECKPOINT_B", "GATE_B");
+        send_arrive_status("CHECKPOINT_C", "GATE_B");  // CHECKPOINT_B에서 CHECKPOINT_C로 변경
       }
 
       return;
@@ -128,7 +131,7 @@ void checkAndPrintUID(byte* uid) {
 void send_arrive_status(const char* position, const char* gate_id) {
   StaticJsonDocument<256> doc;
 
-  doc["sender"] = "TRUCK_01";  // 트럭 ID
+  doc["sender"] = truck_id;  // 하드코딩된 TRUCK_01 대신 truck_id 사용
   doc["receiver"] = "SERVER";
   doc["cmd"] = "ARRIVED";
 
@@ -152,7 +155,7 @@ void send_arrive_status(const char* position, const char* gate_id) {
 void send_assign_mission() {
   StaticJsonDocument<192> doc;
 
-  doc["sender"] = "TRUCK_01";
+  doc["sender"] = truck_id;  // 하드코딩된 TRUCK_01 대신 truck_id 사용
   doc["receiver"] = "SERVER";
   doc["cmd"] = "ASSIGN_MISSION";
   doc["payload"] = JsonObject();  // 빈 payload
