@@ -3,7 +3,10 @@ from backend.tcpio.server import TCPServer
 from backend.mission.mission import Mission
 from backend.mission.db import MissionDB
 import signal
-import sys
+import sys, os
+import threading
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from backend.truck_status_api import app as flask_app
 
 # 설정
 HOST = '0.0.0.0'
@@ -51,6 +54,9 @@ else:
 # ✅ TCP 서버 실행
 server = TCPServer(HOST, PORT, app)
 
+def run_flask():
+    flask_app.run(host="0.0.0.0", port=5001, debug=False, use_reloader=False)
+
 # 종료 신호 핸들링
 def signal_handler(sig, frame):
     print("[🛑 서버 종료 요청됨]")
@@ -63,4 +69,8 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 print(f"[✅ 서버 시작됨] {HOST}:{PORT}")
 print(f"[🚀 TCP 서버 시작] {HOST}:{PORT}")
-server.start()
+
+if __name__ == "__main__":
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    server.start()

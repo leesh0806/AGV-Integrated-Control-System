@@ -3,6 +3,7 @@
 from collections import deque
 from .status import MissionStatus
 from .mission import Mission
+from backend.mission.db import MissionDB
 
 class MissionManager:
     def __init__(self,db):
@@ -13,15 +14,16 @@ class MissionManager:
         self.canceled_missions = {} # 취소된 미션들
 
     def load_from_db(self):
-        rows = self.db.load_all_active_and_waiting_missions()
+        # 커넥션을 새로 생성
+        db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
+        rows = db.load_all_waiting_missions()
+        print(f"[DEBUG] DB에서 WAITING 미션 {len(rows)}개 불러옴")
+        self.waiting_queue.clear()
+        self.active_missions.clear()
         for row in rows:
             mission = Mission.from_row(row)
-            # 대기 중인 미션들
-            if mission.status == MissionStatus.WAITING:
-                self.waiting_queue.append(mission)
-            # 실행 중인 미션들
-            else:
-                self.active_missions[mission.mission_id] = mission
+            self.waiting_queue.append(mission)
+        db.close()
 
     def add_mission(self, mission):
         self.waiting_queue.append(mission)

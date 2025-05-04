@@ -50,6 +50,8 @@ class TruckFSMManager:
 
         # IDLE 상태에서 미션 할당
         if state == TruckState.IDLE and cmd == "ASSIGN_MISSION":
+            print("[DEBUG] ASSIGN_MISSION: DB에서 미션 새로 불러옴")
+            self.mission_manager.load_from_db()
             mission = self.mission_manager.assign_next_to_truck(truck_id)
             if mission:
                 self.set_state(truck_id, TruckState.MOVE_TO_GATE_FOR_LOAD)
@@ -59,6 +61,10 @@ class TruckFSMManager:
                     "mission_id": mission.mission_id,
                     "source": mission.source
                 })
+            else:
+                # 미션이 없을 때도 트럭에게 NO_MISSION 메시지 전송
+                if self.command_sender:
+                    self.command_sender.send(truck_id, "NO_MISSION", {})
             return
 
         # 게이트 A에 도착
@@ -155,6 +161,8 @@ class TruckFSMManager:
         # 대기장 도착
         elif state == TruckState.MOVE_TO_STANDBY and cmd == "ARRIVED_AT_STANDBY":
             self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
+            # ★ 미션 자동 재할당 트리거
+            self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
             return
 
         # 비상 상황

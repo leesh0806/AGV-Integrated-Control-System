@@ -48,6 +48,11 @@ class TCPServer:
 
     def handle_client(self, client_sock, addr):
         with client_sock:
+            # ✅ 클라이언트 연결 시점에 임시 트럭 ID로 등록
+            temp_truck_id = f"TEMP_{addr[1]}"
+            self.truck_sockets[temp_truck_id] = client_sock
+            self.app.set_truck_commander(self.truck_sockets)
+            
             client_sock.sendall(b"RUN\n")  # 자동 시작 명령
             print(f"[📤 RUN 전송] {addr}")
 
@@ -83,7 +88,12 @@ class TCPServer:
                         if truck_id:
                             if truck_id not in self.truck_sockets:
                                 print(f"[🔗 등록] 트럭 '{truck_id}' 소켓 등록")
+                                # ✅ 임시 트럭 ID 제거
+                                if temp_truck_id in self.truck_sockets:
+                                    del self.truck_sockets[temp_truck_id]
                             self.truck_sockets[truck_id] = client_sock
+                            # ✅ AppController의 TruckCommandSender 업데이트
+                            self.app.set_truck_commander(self.truck_sockets)
 
                         # ✅ 메시지 처리 위임
                         self.app.handle_message(message)

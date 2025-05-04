@@ -58,7 +58,6 @@ class TruckSimulator:
                 if not data:
                     print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
                     return False
-                    
                 raw = data.decode('utf-8').strip()
                 for line in raw.splitlines():
                     print(f"[📩 수신] {line}")
@@ -68,6 +67,12 @@ class TruckSimulator:
                             self.source = msg["payload"]["source"].upper()
                             print(f"[✅ 미션 수신] → source = {self.source}")
                             return True
+                        elif msg.get("cmd") == "NO_MISSION":
+                            print("[ℹ️ 미션 없음] 서버에서 미션이 없다고 응답함. 3초 후 재요청.")
+                            time.sleep(3)
+                            self.send("ASSIGN_MISSION", wait=False)
+                            # 재귀적으로 다시 대기
+                            return self.wait_for_mission_response()
                         elif msg.get("cmd") == "RUN":
                             print("[ℹ️ RUN 명령 수신]")
                             continue
@@ -137,76 +142,78 @@ class TruckSimulator:
             self.client.settimeout(None)
 
     def run_full_mission(self):
-        # ✅ 트럭 등록
-        self.send("HELLO", {"msg": "register"}, wait=False)
-        time.sleep(0.1)
+        while True:
+            # ✅ 트럭 등록
+            self.send("HELLO", {"msg": "register"}, wait=False)
+            time.sleep(0.1)
 
-        # ✅ 상태 초기화 (IDLE로 리셋)
-        self.send("RESET", wait=False)
-        time.sleep(0.1)
+            # ✅ 상태 초기화 (IDLE로 리셋)
+            self.send("RESET", wait=False)
+            time.sleep(0.1)
 
-        # ✅ 미션 요청
-        self.send("ASSIGN_MISSION", wait=False)
-        if not self.wait_for_mission_response():
-            return
+            # ✅ 미션 요청
+            self.send("ASSIGN_MISSION", wait=False)
+            if not self.wait_for_mission_response():
+                print("[ℹ️ 미션 없음] 더 이상 미션이 없어 시뮬레이터를 종료합니다.")
+                break
 
-        try:
-            # ✅ 전체 미션 수행
-            print("\n[🚛 트럭 이동] CHECKPOINT_A로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
-            if self.wait_for_gate_response():
-                self.send("ACK_GATE_OPENED")
-            else:
-                print("[❌ 오류] GATE_A가 열리지 않았습니다.")
-                return
+            try:
+                # ✅ 전체 미션 수행
+                print("\n[🚛 트럭 이동] CHECKPOINT_A로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
+                if self.wait_for_gate_response():
+                    self.send("ACK_GATE_OPENED")
+                else:
+                    print("[❌ 오류] GATE_A가 열리지 않았습니다.")
+                    return
 
-            print("\n[🚛 트럭 이동] CHECKPOINT_B로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "CHECKPOINT_B", "gate_id": "GATE_A"})
+                print("\n[🚛 트럭 이동] CHECKPOINT_B로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "CHECKPOINT_B", "gate_id": "GATE_A"})
 
-            print(f"\n[🚛 트럭 이동] {self.source}로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": self.source})  # load_A or load_B
+                print(f"\n[🚛 트럭 이동] {self.source}로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": self.source})  # load_A or load_B
 
-            print("\n[📦 적재 시작]")
-            time.sleep(1)  # 적재 준비 시간
-            self.send("START_LOADING")
-            time.sleep(3)  # 적재 시간
-            self.send("FINISH_LOADING")
-            
-            print("\n[🚛 트럭 이동] CHECKPOINT_C로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})
-            if self.wait_for_gate_response():
-                self.send("ACK_GATE_OPENED")
-            else:
-                print("[❌ 오류] GATE_B가 열리지 않았습니다.")
-                return
+                print("\n[📦 적재 시작]")
+                time.sleep(1)  # 적재 준비 시간
+                self.send("START_LOADING")
+                time.sleep(3)  # 적재 시간
+                self.send("FINISH_LOADING")
+                
+                print("\n[🚛 트럭 이동] CHECKPOINT_C로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})
+                if self.wait_for_gate_response():
+                    self.send("ACK_GATE_OPENED")
+                else:
+                    print("[❌ 오류] GATE_B가 열리지 않았습니다.")
+                    return
 
-            print("\n[🚛 트럭 이동] CHECKPOINT_D로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "CHECKPOINT_D", "gate_id": "GATE_B"})
+                print("\n[🚛 트럭 이동] CHECKPOINT_D로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "CHECKPOINT_D", "gate_id": "GATE_B"})
 
-            print("\n[🚛 트럭 이동] BELT로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "BELT"})
+                print("\n[🚛 트럭 이동] BELT로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "BELT"})
 
-            print("\n[📦 하차 시작]")
-            time.sleep(1)  # 하차 준비 시간
-            self.send("START_UNLOADING")
-            time.sleep(3)  # 하차 시간
-            self.send("FINISH_UNLOADING")
+                print("\n[📦 하차 시작]")
+                time.sleep(1)  # 하차 준비 시간
+                self.send("START_UNLOADING")
+                time.sleep(3)  # 하차 시간
+                self.send("FINISH_UNLOADING")
 
-            print("\n[🚛 트럭 이동] STANDBY로 이동 중...")
-            time.sleep(2)  # 이동 시간
-            self.send("ARRIVED", {"position": "STANDBY"})
+                print("\n[🚛 트럭 이동] STANDBY로 이동 중...")
+                time.sleep(2)  # 이동 시간
+                self.send("ARRIVED", {"position": "STANDBY"})
 
-            print("\n✅ 테스트 완료: 정상 시나리오 흐름 종료")
-        except Exception as e:
-            print(f"\n❌ 테스트 실패: {e}")
-        finally:
-            self.client.close()
+                print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
+                time.sleep(2)
+            except Exception as e:
+                print(f"\n❌ 테스트 실패: {e}")
+                break
 
 if __name__ == "__main__":
     simulator = TruckSimulator()

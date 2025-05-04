@@ -12,6 +12,7 @@ from backend.fsm.fsm_manager import TruckFSMManager
 from backend.fsm.truck_manager import TruckManager
 
 from backend.tcpio.truck_commander import TruckCommandSender
+from backend.truck_status_api import set_truck_position
 
 
 class AppController:
@@ -43,6 +44,11 @@ class AppController:
 
         self.truck_manager = TruckManager(self.fsm_manager)
 
+        # ✅ 초기 TruckCommandSender 설정
+        self.set_truck_commander({})
+
+        self.truck_positions = {}
+
     def set_truck_commander(self, truck_socket_map: dict):
         """
         서버에서 소켓 맵을 넘겨줬을 때 TruckCommandSender 초기화
@@ -68,6 +74,16 @@ class AppController:
         # ✅ 2. 게이트 수동 제어 명령 (예: "GATE_A_OPEN")
         if cmd.startswith("GATE_"):
             self._handle_manual_gate_command(cmd)
+            return
+
+        # 트럭 위치 ARRIVED 명령 처리
+        if cmd == "ARRIVED":
+            position = msg.get("payload", {}).get("position")
+            if sender and position:
+                self.truck_positions[sender] = position.upper()
+                set_truck_position(sender, position.upper())  # Flask API와 동기화
+            # ★ 반드시 트럭 FSM에도 메시지 전달
+            self.truck_manager.handle_message(msg)
             return
 
         # ✅ 3. 트럭 FSM 관련 명령

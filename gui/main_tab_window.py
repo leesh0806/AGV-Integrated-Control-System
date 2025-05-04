@@ -4,6 +4,7 @@ import os
 from backend.mission.db import MissionDB
 from backend.mission.manager import MissionManager
 from backend.mission.mission import Mission
+from backend.mission.status import MissionStatus
 from datetime import datetime
 from gui.ui.main_monitoring_tab import MainMonitoringTab
 
@@ -47,31 +48,36 @@ class MainTabWindow(QMainWindow):
 
     def refresh_mission_table(self):
         self.tablewidget.setRowCount(0)
-        missions = list(self.mission_manager.waiting_queue) + list(self.mission_manager.active_missions.values())
-        for mission in missions:
-            row = self.tablewidget.rowCount()
-            self.tablewidget.insertRow(row)
-            self.tablewidget.setItem(row, 0, QTableWidgetItem(mission.mission_id))
-            self.tablewidget.setItem(row, 1, QTableWidgetItem(mission.cargo_type))
-            self.tablewidget.setItem(row, 2, QTableWidgetItem(str(mission.cargo_amount)))
-            self.tablewidget.setItem(row, 3, QTableWidgetItem(mission.source))
-            self.tablewidget.setItem(row, 4, QTableWidgetItem(mission.destination))
-            self.tablewidget.setItem(row, 5, QTableWidgetItem(mission.status.value))  # 한글 라벨만 표시
-            self.tablewidget.setItem(row, 6, QTableWidgetItem(str(mission.assigned_truck_id)))
-            self.tablewidget.setItem(row, 7, QTableWidgetItem(str(mission.timestamp_created)))
-            self.tablewidget.setItem(row, 8, QTableWidgetItem(str(mission.timestamp_assigned)))
-            self.tablewidget.setItem(row, 9, QTableWidgetItem(str(mission.timestamp_completed)))
+        # 매번 새로 DB 인스턴스 생성
+        mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
+        rows = mission_db.load_all_missions()
+        for row in rows:
+            mission = Mission.from_row(row)
+            row_idx = self.tablewidget.rowCount()
+            self.tablewidget.insertRow(row_idx)
+            self.tablewidget.setItem(row_idx, 0, QTableWidgetItem(mission.mission_id))
+            self.tablewidget.setItem(row_idx, 1, QTableWidgetItem(mission.cargo_type))
+            self.tablewidget.setItem(row_idx, 2, QTableWidgetItem(str(mission.cargo_amount)))
+            self.tablewidget.setItem(row_idx, 3, QTableWidgetItem(mission.source))
+            self.tablewidget.setItem(row_idx, 4, QTableWidgetItem(mission.destination))
+            self.tablewidget.setItem(row_idx, 5, QTableWidgetItem(mission.status.value))
+            self.tablewidget.setItem(row_idx, 6, QTableWidgetItem(str(mission.assigned_truck_id)))
+            self.tablewidget.setItem(row_idx, 7, QTableWidgetItem(str(mission.timestamp_created)))
+            self.tablewidget.setItem(row_idx, 8, QTableWidgetItem(str(mission.timestamp_assigned)))
+            self.tablewidget.setItem(row_idx, 9, QTableWidgetItem(str(mission.timestamp_completed)))
+        mission_db.close()
 
     def add_mission(self):
-        # mission_id를 자동 생성
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # mission_id를 더 짧은 포맷으로 자동 생성 (예: mission_YYMMDD_HHMMSS)
+        now = datetime.now().strftime("%y%m%d_%H%M%S")
         mission_id = f"mission_{now}"
         cargo_type = self.lineedit_type.text()
         cargo_amount = self.spinBox.value()
         source = self.combobox_source.currentText()
         destination = "belt"  # 도착지는 belt로 고정
-        truck_id = "TRUCK_01" # 트럭ID 고정
-        mission = Mission(mission_id, cargo_type, cargo_amount, source, destination, truck_id=truck_id)
+        # truck_id를 지정하지 않고, status를 WAITING으로 명시
+        mission = Mission(mission_id, cargo_type, cargo_amount, source, destination)
+        mission.status = MissionStatus.WAITING
         self.mission_manager.add_mission(mission)
         self.refresh_mission_table()
 
@@ -84,7 +90,4 @@ class MainTabWindow(QMainWindow):
         self.refresh_mission_table()
 
     def refresh_button_clicked(self):
-        self.mission_manager.waiting_queue.clear()
-        self.mission_manager.active_missions.clear()
-        self.mission_manager.load_from_db()
         self.refresh_mission_table() 

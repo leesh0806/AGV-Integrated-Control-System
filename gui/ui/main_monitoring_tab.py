@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import QWidget, QGraphicsScene, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem
 from PyQt6.QtGui import QPen, QBrush, QColor, QPainterPath
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6 import uic
 import os
 from .truck_icon import TruckIcon
-from PyQt6.QtCore import Qt
+import requests
 
 class MainMonitoringTab(QWidget):
     def __init__(self, parent=None):
@@ -13,6 +14,7 @@ class MainMonitoringTab(QWidget):
         self.setup_ui()
         self.setup_map()
         self.setup_truck()
+        self.setup_timer()
 
     def setup_ui(self):
         self.scene = QGraphicsScene(self)
@@ -108,4 +110,29 @@ class MainMonitoringTab(QWidget):
         # TRUCK_01만 생성하여 STANDBY에 위치
         self.truck = TruckIcon("TRUCK_01")
         self.truck.update_position(*self.node_coords["STANDBY"])
-        self.scene.addItem(self.truck) 
+        self.scene.addItem(self.truck)
+
+    def setup_timer(self):
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_truck_position_from_api)
+        self.timer.start(1000)  # 1초마다
+
+    def update_truck_position_from_api(self):
+        try:
+            resp = requests.get("http://localhost:5001/api/truck_status", timeout=0.5)
+            if resp.status_code == 200:
+                data = resp.json()
+                pos = data.get("position")
+                # pos가 load_a, load_b 등 소문자로 올 수 있으니 대문자로 변환
+                pos_key = pos.upper() if pos else None
+                # node_coords의 키와 매칭
+                if pos_key == "LOAD_A":
+                    node = "A_LOAD"
+                elif pos_key == "LOAD_B":
+                    node = "B_LOAD"
+                else:
+                    node = pos_key
+                if node in self.node_coords:
+                    self.truck.update_position(*self.node_coords[node])
+        except Exception as e:
+            pass  # 네트워크 오류 등 무시 

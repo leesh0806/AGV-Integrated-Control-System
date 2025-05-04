@@ -41,5 +41,10 @@ class TruckManager:
         elif cmd == "FINISH_UNLOADING":
             self.fsm_manager.handle_trigger(truck_id, "FINISH_UNLOADING", payload)
 
+        elif cmd == "HELLO":
+            # HELLO 명령은 트럭 등록을 위한 초기 명령이므로 무시
+            print(f"[TruckManager] 트럭 등록 확인: {truck_id}")
+            return
+
         else:
             print(f"[TruckManager] 알 수 없는 명령: {cmd}")

@@ -66,6 +66,18 @@ class MissionDB:
         cursor.execute(query, (status_code, status_label, timestamp_completed, mission_id))
         self.conn.commit()
     
+    def load_all_waiting_missions(self):
+        self.cursor.execute("""
+        SELECT * FROM missions
+        WHERE status_code = 'WAITING'
+        """)
+        return self.cursor.fetchall()
+    
+    def load_all_missions(self):
+        self.conn.ping(reconnect=True)
+        self.cursor.execute("SELECT * FROM missions ORDER BY timestamp_created DESC")
+        return self.cursor.fetchall()
+    
     def close(self):
         self.cursor.close()
         self.conn.close()
