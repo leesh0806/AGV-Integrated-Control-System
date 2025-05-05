@@ -2,6 +2,7 @@ import socket
 import json
 import time
 from backend.serialio.serial_manager import SerialManager
+import threading
 
 # 서버 설정
 HOST = '127.0.0.1'
@@ -19,6 +20,9 @@ class TruckSimulator:
     def __init__(self):
         self.source = None
         self.client = None
+        self.battery_level = 100
+        self.charging = False
+        self.current_position = None
         self.connect()
 
     def connect(self):
@@ -162,6 +166,8 @@ class TruckSimulator:
                 print("\n[🚛 트럭 이동] CHECKPOINT_A로 이동 중...")
                 time.sleep(2)  # 이동 시간
                 self.send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
+                self.current_position = "CHECKPOINT_A"
+                self.charging = False
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
                 else:
@@ -208,6 +214,8 @@ class TruckSimulator:
                 print("\n[🚛 트럭 이동] STANDBY로 이동 중...")
                 time.sleep(2)  # 이동 시간
                 self.send("ARRIVED", {"position": "STANDBY"})
+                self.current_position = "STANDBY"
+                self.charging = True
 
                 print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
                 time.sleep(2)
@@ -215,6 +223,18 @@ class TruckSimulator:
                 print(f"\n❌ 테스트 실패: {e}")
                 break
 
+    def report_battery(self, interval=5, drain=5, charge=3):
+        while True:
+            if self.charging:
+                self.battery_level = min(100, self.battery_level + charge)
+            else:
+                self.battery_level = max(0, self.battery_level - drain)
+            self.send("BATTERY_LEVEL", {"level": self.battery_level}, wait=False)
+            print(f"[시뮬] 배터리 상태 보고: {self.battery_level}% (충전중: {self.charging})")
+            time.sleep(interval)
+
 if __name__ == "__main__":
     simulator = TruckSimulator()
+    # 배터리 상태 보고 스레드 시작 (5초마다 1%씩 감소)
+    threading.Thread(target=simulator.report_battery, args=(5, 1, 2), daemon=True).start()
     simulator.run_full_mission()

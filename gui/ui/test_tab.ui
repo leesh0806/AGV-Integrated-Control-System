@@ -53,7 +53,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QProgressBar" name="progressbar_velocity_truck1">
+                <widget class="QProgressBar" name="progressbar_battery_truck1">
                  <property name="value">
                   <number>24</number>
                  </property>
@@ -71,7 +71,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QProgressBar" name="progressbar_velocity_truck2">
+                <widget class="QProgressBar" name="progressbar_battery_truck2">
                  <property name="value">
                   <number>24</number>
                  </property>
@@ -89,7 +89,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QProgressBar" name="progressbar_velocity_truck3">
+                <widget class="QProgressBar" name="progressbar_battery_truck3">
                  <property name="value">
                   <number>24</number>
                  </property>

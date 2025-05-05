@@ -16,6 +16,8 @@ class MissionManager:
     def load_from_db(self):
         # 커넥션을 새로 생성
         db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
+
+        # WAITING 미션 불러오기
         rows = db.load_all_waiting_missions()
         print(f"[DEBUG] DB에서 WAITING 미션 {len(rows)}개 불러옴")
         self.waiting_queue.clear()
@@ -23,6 +25,16 @@ class MissionManager:
         for row in rows:
             mission = Mission.from_row(row)
             self.waiting_queue.append(mission)
+
+        # ASSIGNED 미션 불러오기
+        assigned_rows = db.load_all_assigned_missions()
+        print(f"[DEBUG] DB에서 ASSIGNED 미션 {len(assigned_rows)}개 불러옴")
+        for row in assigned_rows:
+            mission = Mission.from_row(row)
+            mission.cancel()
+            self.canceled_missions[mission.mission_id] = mission
+            db.save_mission(mission)
+            
         db.close()
 
     def add_mission(self, mission):

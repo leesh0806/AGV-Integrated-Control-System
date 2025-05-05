@@ -53,6 +53,20 @@ class MissionDB:
         """)
         return self.cursor.fetchall()
     
+    def load_all_waiting_missions(self):
+        self.cursor.execute("""
+        SELECT * FROM missions
+        WHERE status_code = 'WAITING'
+        """)
+        return self.cursor.fetchall()
+    
+    def load_all_assigned_missions(self):
+        self.cursor.execute("""
+        SELECT * FROM missions
+        WHERE status_code = 'ASSIGNED'
+        """)
+        return self.cursor.fetchall()
+    
     def update_mission_completion(self, mission_id, status_code, status_label, timestamp_completed):
         cursor = self.conn.cursor()
         query = """

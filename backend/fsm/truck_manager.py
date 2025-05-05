@@ -1,5 +1,7 @@
 # backend/fsm/truck_manager.py
 
+from backend.truck_status_api import TRUCK_BATTERY
+
 class TruckManager:
     def __init__(self, fsm_manager):
         self.fsm_manager = fsm_manager
@@ -40,6 +42,13 @@ class TruckManager:
 
         elif cmd == "FINISH_UNLOADING":
             self.fsm_manager.handle_trigger(truck_id, "FINISH_UNLOADING", payload)
+
+        elif cmd == "BATTERY_LEVEL":
+            level = payload.get("level")
+            print(f"[트럭 {truck_id}] 배터리 상태: {level}%")
+            if truck_id in TRUCK_BATTERY:
+                TRUCK_BATTERY[truck_id] = level
+            return
 
         elif cmd == "HELLO":
             # HELLO 명령은 트럭 등록을 위한 초기 명령이므로 무시

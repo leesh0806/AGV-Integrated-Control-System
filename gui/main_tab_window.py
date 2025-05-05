@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QTableWidgetItem, QWidget, QVBoxLayout
+from PyQt6.QtCore import QTimer
 from PyQt6 import uic
-import os
+import os, requests
 from backend.mission.db import MissionDB
 from backend.mission.manager import MissionManager
 from backend.mission.mission import Mission
@@ -14,7 +15,9 @@ class MainTabWindow(QMainWindow):
         ui_path = os.path.join(os.path.dirname(__file__), "ui", "test_tab.ui")
         uic.loadUi(ui_path, self)
         self.setWindowTitle("지능형 운송관제 시스템 D.U.S.T.")
-        # --- graphicsview_map만 MainMonitoringTab으로 교체 ---
+
+        # --------------------------------------------------------
+
         parent = self.tab_main_monitoring
         old = parent.findChild(QWidget, "graphicsview_map")
         layout = parent.layout()
@@ -27,24 +30,35 @@ class MainTabWindow(QMainWindow):
             old.setParent(None)
             self.monitoring_tab = MainMonitoringTab(parent)
             layout.insertWidget(idx, self.monitoring_tab)
-        # --- 이하 기존 코드 ---
+
+        self.battery_timer = QTimer()
+        self.battery_timer.timeout.connect(self.refresh_battery_status)
+        self.battery_timer.start(1000)
+
+        # --------------------------------------------------------
+
         # DB 및 미션 매니저 초기화
         self.mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
         self.mission_manager = MissionManager(self.mission_db)
         self.mission_manager.load_from_db()
+
         # 테이블 헤더 설정 (실제 의미 있는 정보만)
         self.tablewidget.setColumnCount(10)
         self.tablewidget.setHorizontalHeaderLabels([
             "미션ID", "화물종류", "수량", "출발지", "도착지", "상태", "트럭ID", "생성시각", "배정시각", "완료시각"
         ])
         self.refresh_mission_table()
+
         # 버튼 이벤트 연결
         self.pushbutton_add.clicked.connect(self.add_mission)
         self.pushbutton_delete.clicked.connect(self.delete_selected_mission)
         self.pushbutton_refresh.clicked.connect(self.refresh_button_clicked)
+
         # combobox_source에 출발지 옵션 추가
         self.combobox_source.clear()
         self.combobox_source.addItems(["load_A", "load_B"])
+
+        # --------------------------------------------------------
 
     def refresh_mission_table(self):
         self.tablewidget.setRowCount(0)
@@ -91,3 +105,13 @@ class MainTabWindow(QMainWindow):
 
     def refresh_button_clicked(self):
         self.refresh_mission_table() 
+
+    def refresh_battery_status(self):
+        try:
+            response = requests.get("http://127.0.0.1:5001/api/truck_battery")
+            data = response.json()
+            self.progressbar_battery_truck1.setValue(data.get("TRUCK_01", 100))
+            self.progressbar_battery_truck2.setValue(100)
+            self.progressbar_battery_truck3.setValue(100)
+        except Exception as e:
+            print(f"Error refreshing battery status: {e}")
