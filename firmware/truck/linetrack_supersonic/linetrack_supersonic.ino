@@ -82,7 +82,7 @@ void setup() {
 
 // ==== 메인 루프 ====
 void loop() 
-{//////////////////////////////////////////Wifi///////////////////////////////////
+{//////////////////////////////////////////Wifi//////////////////////////////////////////
   Serial.println(WiFi.localIP());
   // 클라이언트 연결 처리
   if (!client || !client.connected()) {
@@ -180,7 +180,7 @@ bool obstacle_detected() {
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  duration = pulseIn(ECHO_PIN, HIGH); // timeout 20ms
+  duration = pulseIn(ECHO_PIN, HIGH); 
   if (duration == 0)
   {
     Serial.println("Hello");

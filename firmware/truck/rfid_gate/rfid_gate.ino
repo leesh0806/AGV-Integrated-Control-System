@@ -72,7 +72,8 @@ void setup() {
   send_assign_mission();
 }
 
-void loop() {
+void loop() 
+{
   // TCP 서버 접속 확인
   reconnectToServer();
 
@@ -105,7 +106,8 @@ bool isSameUID(byte *uid1, byte *uid2) {
 }
 
 // ✅ UID 확인 후 메시지 전송
-void checkAndPrintUID(byte* uid) {
+void checkAndPrintUID(byte* uid) 
+{
   for (int i = 0; i < numRegistered; i++) {
     if (isSameUID(uid, registeredCards[i].uid)) {
       const char* desc = registeredCards[i].description;
