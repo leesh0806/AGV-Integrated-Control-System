@@ -8,13 +8,7 @@ import threading
 HOST = '127.0.0.1'
 PORT = 8001
 
-# 포트 매핑 설정
-port_map = {
-    "GATE_A": "GATE_A",  # 가상 시리얼 장치 이름
-    "GATE_B": "GATE_B"   # 가상 시리얼 장치 이름
-}
-
-manager = SerialManager(port_map=port_map, use_fake=True)  # use_fake=True 추가
+manager = SerialManager(port_map={}, use_fake=True)
 
 class TruckSimulator:
     def __init__(self):
@@ -25,6 +19,7 @@ class TruckSimulator:
         self.current_position = None
         self.connect()
 
+    # TCP 연결
     def connect(self):
         if self.client:
             try:
@@ -36,6 +31,7 @@ class TruckSimulator:
         print(f"[TCP 연결] {HOST}:{PORT}")
         self.client.connect((HOST, PORT))
 
+    # 메시지 전송
     def send(self, cmd, payload={}, wait=True):
         msg = {
             "sender": "TRUCK_01",
@@ -54,15 +50,17 @@ class TruckSimulator:
             self.connect()
             self.send(cmd, payload, wait)  # 재시도
 
+    # 미션 수신 대기
     def wait_for_mission_response(self, timeout=5.0):
         self.client.settimeout(timeout)
         try:
             while True:
+                # 데이터 수신
                 data = self.client.recv(4096)
                 if not data:
                     print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
                     return False
-                raw = data.decode('utf-8').strip()
+                raw = data.decode('utf-8').strip()  
                 for line in raw.splitlines():
                     print(f"[📩 수신] {line}")
                     try:
@@ -235,6 +233,5 @@ class TruckSimulator:
 
 if __name__ == "__main__":
     simulator = TruckSimulator()
-    # 배터리 상태 보고 스레드 시작 (5초마다 1%씩 감소)
     threading.Thread(target=simulator.report_battery, args=(5, 1, 2), daemon=True).start()
     simulator.run_full_mission()

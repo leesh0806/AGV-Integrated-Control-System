@@ -1,6 +1,6 @@
 # backend/test_tcp_client
 
-from tcpio.client import TCPClient
+from backend.tcpio.client import TCPClient
 import time
 
 if __name__ == "__main__":
