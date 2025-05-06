@@ -6,7 +6,7 @@ import signal
 import sys, os
 import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from backend.truck_status_api import app as flask_app
+from backend.api.truck_status_api import app as flask_app
 
 # 설정
 HOST = '0.0.0.0'

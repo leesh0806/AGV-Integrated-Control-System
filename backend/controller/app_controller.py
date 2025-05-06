@@ -12,7 +12,7 @@ from backend.fsm.fsm_manager import TruckFSMManager
 from backend.fsm.truck_manager import TruckManager
 
 from backend.tcpio.truck_commander import TruckCommandSender
-from backend.truck_status_api import set_truck_position
+from backend.api.truck_status_api import set_truck_position
 
 
 class AppController:

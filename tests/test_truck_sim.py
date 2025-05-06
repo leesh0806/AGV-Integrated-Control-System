@@ -15,7 +15,7 @@ class TruckSimulator:
         self.source = None
         self.client = None
         self.battery_level = 100
-        self.charging = False
+        self.charging = True
         self.current_position = None
         self.connect()
 

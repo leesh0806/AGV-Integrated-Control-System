@@ -1,32 +1,37 @@
 from flask import Flask, jsonify
 import threading
 
+# Flask 웹 서버 인스턴스 생성
+# 이후 /api/... 경로의 REST API를 구성하는 데 사용
 app = Flask(__name__)
 
-# 전역 변수로 트럭 위치를 저장 (실제 시스템에서는 공유 메모리/DB 등으로 대체)
+# 전역 변수로 트럭 위치를 저장
+# 실제 시스템에서는 공유 메모리/DB 등으로 대체
 TRUCK_STATUS = {
     "TRUCK_01": "STANDBY"
 }
 
+# 전역 변수로 트럭 배터리 상태를 저장
 TRUCK_BATTERY = {
     "TRUCK_01": 100,
     "TRUCK_02": 100,
     "TRUCK_03": 100,
 }
 
+# 트럭 상태 조회 API
 @app.route("/api/truck_status", methods=["GET"])
 def get_truck_status():
-    # 단일 트럭만 반환
     return jsonify({
         "truck_id": "TRUCK_01",
         "position": TRUCK_STATUS["TRUCK_01"]
     })
 
+# 트럭 배터리 상태 조회 API
 @app.route("/api/truck_battery", methods=["GET"])
 def get_truck_battery():
     return jsonify(TRUCK_BATTERY)
 
-# 예시: 외부에서 위치를 바꿀 수 있는 함수 (실제 연동 시 백엔드에서 갱신)
+# 트럭 위치 설정 API
 def set_truck_position(truck_id, position):
     TRUCK_STATUS[truck_id] = position
 
