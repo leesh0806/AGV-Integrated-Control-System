@@ -14,6 +14,9 @@ from backend.fsm.truck_manager import TruckManager
 from backend.tcpio.truck_commander import TruckCommandSender
 from backend.api.truck_status_api import set_truck_position
 
+from backend.battery.db import BatteryDB
+from backend.battery.manager import BatteryManager
+
 
 class AppController:
     def __init__(self, port_map, use_fake=False):
@@ -28,6 +31,15 @@ class AppController:
             database="dust"
         )
 
+        # ✅ 배터리 DB 및 매니저 초기화
+        self.battery_db = BatteryDB(
+            host="localhost",
+            user="root",
+            password="jinhyuk2dacibul",
+            database="dust"
+        )
+        self.battery_manager = BatteryManager(self.battery_db)
+
         # ✅ 장치 컨트롤러들
         self.belt_controller = BeltController(self.serial_manager.controllers["BELT"])
         self.gate_controller = GateController(self.serial_manager)
@@ -39,10 +51,12 @@ class AppController:
         self.fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,
             mission_manager=self.mission_manager,
-            belt_controller=self.belt_controller
+            belt_controller=self.belt_controller,
+            battery_manager=self.battery_manager
         )
 
         self.truck_manager = TruckManager(self.fsm_manager)
+        self.truck_manager.set_battery_manager(self.battery_manager)  # 배터리 매니저 설정
 
         # ✅ 초기 TruckCommandSender 설정
         self.set_truck_commander({})

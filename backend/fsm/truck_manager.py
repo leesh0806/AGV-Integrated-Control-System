@@ -1,10 +1,14 @@
 # backend/fsm/truck_manager.py
 
-from backend.api.truck_status_api import TRUCK_BATTERY
+from backend.battery.manager import BatteryManager
 
 class TruckManager:
     def __init__(self, fsm_manager):
         self.fsm_manager = fsm_manager
+        self.battery_manager = None
+
+    def set_battery_manager(self, battery_manager: BatteryManager):
+        self.battery_manager = battery_manager
 
     def handle_message(self, msg: dict):
         truck_id = msg.get("sender")
@@ -46,8 +50,8 @@ class TruckManager:
         elif cmd == "BATTERY_LEVEL":
             level = payload.get("level")
             print(f"[트럭 {truck_id}] 배터리 상태: {level}%")
-            if truck_id in TRUCK_BATTERY:
-                TRUCK_BATTERY[truck_id] = level
+            if self.battery_manager:
+                self.battery_manager.update_battery(truck_id, level)
             return
 
         elif cmd == "FINISH_CHARGING":

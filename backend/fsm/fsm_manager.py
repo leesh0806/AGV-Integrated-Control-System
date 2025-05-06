@@ -4,13 +4,14 @@ from .state_enum import TruckState
 from ..mission.status import MissionStatus
 from ..tcpio.truck_commander import TruckCommandSender
 from datetime import datetime
-from ..api.truck_status_api import TRUCK_BATTERY  # 배터리 상태를 가져오기 위해 추가
+from ..battery.manager import BatteryManager
 
 class TruckFSMManager:
-    def __init__(self, gate_controller, mission_manager, belt_controller=None):
+    def __init__(self, gate_controller, mission_manager, belt_controller=None, battery_manager=None):
         self.gate_controller = gate_controller
         self.mission_manager = mission_manager
         self.belt_controller = belt_controller
+        self.battery_manager = battery_manager
         self.states = {}
         self.command_sender = None
         self.BATTERY_THRESHOLD = 30  # 배터리 임계값 설정
@@ -71,13 +72,17 @@ class TruckFSMManager:
 
         # 배터리 상태 확인 함수
         def check_battery():
-            battery_level = TRUCK_BATTERY.get(truck_id, 100)
-            return battery_level <= self.BATTERY_THRESHOLD
+            if not self.battery_manager:
+                return False
+            battery = self.battery_manager.get_battery(truck_id)
+            return battery.needs_charging
 
         # 배터리 만충전 확인 함수
         def is_battery_full():
-            battery_level = TRUCK_BATTERY.get(truck_id, 100)
-            return battery_level >= self.BATTERY_FULL
+            if not self.battery_manager:
+                return True
+            battery = self.battery_manager.get_battery(truck_id)
+            return battery.is_fully_charged
         
         # -------------------------------------------------------------------
 
@@ -88,10 +93,12 @@ class TruckFSMManager:
             
             # 배터리 상태 확인
             if check_battery():
-                print(f"[🔋 배터리 부족] {truck_id}의 배터리: {TRUCK_BATTERY.get(truck_id)}%")
+                print(f"[🔋 배터리 부족] {truck_id}의 배터리: {self.battery_manager.get_battery(truck_id).level}%")
                 self.set_state(truck_id, TruckState.CHARGING)
                 if self.command_sender:
                     self.command_sender.send(truck_id, "START_CHARGING", {})
+                if self.battery_manager:
+                    self.battery_manager.start_charging(truck_id)
                 return
 
             mission = self.mission_manager.assign_next_to_truck(truck_id)
@@ -123,10 +130,12 @@ class TruckFSMManager:
         elif state == TruckState.MOVE_TO_STANDBY and cmd == "ARRIVED_AT_STANDBY":
             # 배터리 상태 확인
             if check_battery():
-                print(f"[🔋 배터리 부족] {truck_id}의 배터리: {TRUCK_BATTERY.get(truck_id)}%")
+                print(f"[🔋 배터리 부족] {truck_id}의 배터리: {self.battery_manager.get_battery(truck_id).level}%")
                 self.set_state(truck_id, TruckState.CHARGING)
                 if self.command_sender:
                     self.command_sender.send(truck_id, "START_CHARGING", {})
+                if self.battery_manager:
+                    self.battery_manager.start_charging(truck_id)
                 return
 
             self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
@@ -138,12 +147,14 @@ class TruckFSMManager:
         # 충전 완료
         elif state == TruckState.CHARGING and cmd == "FINISH_CHARGING":
             if not is_battery_full():
-                print(f"[🔋 충전 계속] {truck_id}의 배터리: {TRUCK_BATTERY.get(truck_id)}%")
+                print(f"[🔋 충전 계속] {truck_id}의 배터리: {self.battery_manager.get_battery(truck_id).level}%")
                 return
                 
             self.set_state(truck_id, TruckState.IDLE)
             if self.command_sender:
                 self.command_sender.send(truck_id, "CHARGING_COMPLETED", {})
+            if self.battery_manager:
+                self.battery_manager.finish_charging(truck_id)
             # 충전 완료 후 미션 할당 시도
             self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
             return

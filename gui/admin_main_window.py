@@ -131,8 +131,60 @@ class AdminMainWindow(QMainWindow):
         try:
             response = requests.get("http://127.0.0.1:5001/api/truck_battery")
             data = response.json()
-            self.progressbar_battery_truck1.setValue(data.get("TRUCK_01", 100))
-            self.progressbar_battery_truck2.setValue(100)
-            self.progressbar_battery_truck3.setValue(100)
+            print(f"[DEBUG] 배터리 데이터 수신: {data}")
+            
+            def update_battery_bar(progress_bar, truck_data):
+                if not truck_data:  # 데이터가 없는 경우
+                    print(f"[DEBUG] 트럭 데이터 없음: {truck_data}")
+                    return
+                    
+                level = int(truck_data.get("level", 100))
+                is_charging = truck_data.get("is_charging", False)
+                print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
+                
+                # 배터리 레벨에 따른 색상 설정
+                if level <= 30:
+                    color = "#FF0000"  # 빨간색 (위험)
+                elif level <= 50:
+                    color = "#FFA500"  # 주황색 (경고)
+                else:
+                    color = "#00FF00"  # 초록색 (정상)
+                
+                # 충전 중일 때는 파란색으로 표시
+                if is_charging:
+                    color = "#0000FF"  # 파란색
+                
+                # 스타일시트 설정
+                style = f"""
+                    QProgressBar {{
+                        border: 2px solid grey;
+                        border-radius: 5px;
+                        text-align: center;
+                        background-color: #f0f0f0;
+                    }}
+                    QProgressBar::chunk {{
+                        background-color: {color};
+                        width: 10px;
+                        margin: 0.5px;
+                    }}
+                """
+                progress_bar.setStyleSheet(style)
+                progress_bar.setValue(level)
+                print(f"[DEBUG] 프로그레스바 업데이트: {level}% (스타일: {style})")
+            
+            # TRUCK_01 배터리 상태 업데이트
+            truck1_data = data.get("TRUCK_01", {})
+            update_battery_bar(self.progressbar_battery_truck1, truck1_data)
+            
+            # TRUCK_02 배터리 상태 업데이트
+            truck2_data = data.get("TRUCK_02", {})
+            update_battery_bar(self.progressbar_battery_truck2, truck2_data)
+            
+            # TRUCK_03 배터리 상태 업데이트
+            truck3_data = data.get("TRUCK_03", {})
+            update_battery_bar(self.progressbar_battery_truck3, truck3_data)
+            
         except Exception as e:
-            print(f"Error refreshing battery status: {e}")
+            print(f"[ERROR] 배터리 상태 업데이트 중 오류 발생: {e}")
+            import traceback
+            traceback.print_exc()  # 상세한 오류 정보 출력

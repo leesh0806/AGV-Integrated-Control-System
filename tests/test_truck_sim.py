@@ -3,6 +3,7 @@ import json
 import time
 from backend.serialio.serial_manager import SerialManager
 import threading
+import requests
 
 # 서버 설정
 HOST = '127.0.0.1'
@@ -240,21 +241,17 @@ class TruckSimulator:
                 self.send("ARRIVED", {"position": "STANDBY"})
                 self.current_position = "STANDBY"
                 
-                # 배터리가 30% 이하일 때만 충전
-                if self.battery_level <= 30:
-                    print(f"[🔋 배터리 부족] {self.battery_level}% - 충전 시작")
-                    self.charging = True
-                    # 충전이 완료될 때까지 대기
-                    while self.charging:
-                        time.sleep(3)
-                        if self.battery_level >= 100:
-                            print("[🔋 충전 완료] 충전 완료 메시지 전송")
-                            self.charging = False
-                            self.send("FINISH_CHARGING", wait=False)
-                            break
-                else:
-                    print(f"[🔋 배터리 충분] {self.battery_level}% - 충전 불필요")
-                    self.charging = False
+                # STANDBY에서는 무조건 충전
+                print(f"[🔋 STANDBY 상태] {self.battery_level}% - 충전 시작")
+                self.charging = True
+                # 충전이 완료될 때까지 대기
+                while self.charging:
+                    time.sleep(3)
+                    if self.battery_level >= 100:
+                        print("[🔋 충전 완료] 충전 완료 메시지 전송")
+                        self.charging = False
+                        self.send("FINISH_CHARGING", wait=False)
+                        break
 
                 print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
                 time.sleep(2)
@@ -264,16 +261,44 @@ class TruckSimulator:
 
     def report_battery(self, interval=5, drain=5, charge=3):
         while True:
-            if self.charging:
-                self.battery_level = min(100, self.battery_level + charge)
-            elif self.current_position == "STANDBY":
-                # STANDBY에서는 배터리 유지
-                pass
-            else:
-                self.battery_level = max(0, self.battery_level - drain)
-            self.send("BATTERY_LEVEL", {"level": self.battery_level}, wait=False)
-            print(f"[시뮬] 배터리 상태 보고: {self.battery_level}% (충전중: {self.charging})")
-            time.sleep(interval)
+            try:
+                # 현재 배터리 레벨 저장
+                current_level = self.battery_level
+                
+                if self.charging:
+                    self.battery_level = min(100, self.battery_level + charge)
+                    print(f"[DEBUG] 배터리 충전 중: {current_level}% -> {self.battery_level}%")
+                elif self.current_position == "STANDBY":
+                    # STANDBY에서는 배터리 유지
+                    print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
+                else:
+                    self.battery_level = max(0, self.battery_level - drain)
+                    print(f"[DEBUG] 배터리 감소 중: {current_level}% -> {self.battery_level}% (위치: {self.current_position})")
+                
+                # API로 배터리 상태 전송
+                try:
+                    print(f"[DEBUG] API로 배터리 상태 전송: {self.battery_level}% (충전중: {self.charging})")
+                    response = requests.post(
+                        f"http://127.0.0.1:5001/api/truck_battery/TRUCK_01",
+                        json={
+                            "level": self.battery_level,
+                            "is_charging": self.charging
+                        }
+                    )
+                    if response.status_code == 200:
+                        print(f"[DEBUG] 배터리 상태 업데이트 성공: {self.battery_level}% (충전중: {self.charging})")
+                    else:
+                        print(f"[ERROR] 배터리 상태 업데이트 실패: {response.status_code}")
+                except Exception as e:
+                    print(f"[ERROR] 배터리 상태 업데이트 중 오류 발생: {str(e)}")
+                    time.sleep(1)  # 오류 발생 시 잠시 대기
+                    continue
+                
+                time.sleep(interval)
+            except Exception as e:
+                print(f"[ERROR] 배터리 관리 중 오류 발생: {str(e)}")
+                time.sleep(1)
+                continue
 
 if __name__ == "__main__":
     simulator = TruckSimulator()
