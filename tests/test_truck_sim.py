@@ -70,10 +70,34 @@ class TruckSimulator:
                             print(f"[✅ 미션 수신] → source = {self.source}")
                             return True
                         elif msg.get("cmd") == "NO_MISSION":
-                            print("[ℹ️ 미션 없음] 서버에서 미션이 없다고 응답함. 3초 후 재요청.")
-                            time.sleep(3)
-                            self.send("ASSIGN_MISSION", wait=False)
-                            # 재귀적으로 다시 대기
+                            reason = msg.get("payload", {}).get("reason", "")
+                            if reason == "BATTERY_LOW" or reason == "CHARGING":
+                                print(f"[🔋 충전 필요] {reason}")
+                                # 충전이 완료될 때까지 대기
+                                while True:
+                                    time.sleep(5)  # 5초마다 배터리 상태 확인
+                                    if self.battery_level >= 100:
+                                        print("[🔋 충전 완료] 충전 완료 메시지 전송")
+                                        self.charging = False
+                                        self.send("FINISH_CHARGING", wait=False)
+                                        return self.wait_for_mission_response()
+                            else:
+                                print("[ℹ️ 미션 없음] 서버에서 미션이 없다고 응답함. 3초 후 재요청.")
+                                time.sleep(3)
+                                self.send("ASSIGN_MISSION", wait=False)
+                                # 재귀적으로 다시 대기
+                                return self.wait_for_mission_response()
+                        elif msg.get("cmd") == "CHARGING_COMPLETED":
+                            print("[🔋 충전 완료 메시지 수신]")
+                            self.charging = False
+                            # 배터리가 30% 이하일 때만 다시 충전 요청
+                            if self.battery_level <= 30:
+                                print(f"[🔋 배터리 부족] {self.battery_level}% - 충전 요청")
+                                self.charging = True
+                                self.send("ASSIGN_MISSION", wait=False)
+                            else:
+                                print(f"[🔋 배터리 충분] {self.battery_level}% - 미션 요청")
+                                self.send("ASSIGN_MISSION", wait=False)
                             return self.wait_for_mission_response()
                         elif msg.get("cmd") == "RUN":
                             print("[ℹ️ RUN 명령 수신]")
@@ -155,9 +179,11 @@ class TruckSimulator:
 
             # ✅ 미션 요청
             self.send("ASSIGN_MISSION", wait=False)
-            if not self.wait_for_mission_response():
-                print("[ℹ️ 미션 없음] 더 이상 미션이 없어 시뮬레이터를 종료합니다.")
-                break
+            mission_received = self.wait_for_mission_response()
+            if not mission_received:
+                print("[ℹ️ 미션 없음] 3초 후 다시 시도합니다.")
+                time.sleep(3)
+                continue
 
             try:
                 # ✅ 전체 미션 수행
@@ -187,7 +213,7 @@ class TruckSimulator:
                 self.send("FINISH_LOADING")
                 
                 print("\n[🚛 트럭 이동] CHECKPOINT_C로 이동 중...")
-                time.sleep(2)  # 이동 시간
+                time.sleep(2)
                 self.send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
@@ -213,7 +239,22 @@ class TruckSimulator:
                 time.sleep(2)  # 이동 시간
                 self.send("ARRIVED", {"position": "STANDBY"})
                 self.current_position = "STANDBY"
-                self.charging = True
+                
+                # 배터리가 30% 이하일 때만 충전
+                if self.battery_level <= 30:
+                    print(f"[🔋 배터리 부족] {self.battery_level}% - 충전 시작")
+                    self.charging = True
+                    # 충전이 완료될 때까지 대기
+                    while self.charging:
+                        time.sleep(3)
+                        if self.battery_level >= 100:
+                            print("[🔋 충전 완료] 충전 완료 메시지 전송")
+                            self.charging = False
+                            self.send("FINISH_CHARGING", wait=False)
+                            break
+                else:
+                    print(f"[🔋 배터리 충분] {self.battery_level}% - 충전 불필요")
+                    self.charging = False
 
                 print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
                 time.sleep(2)
@@ -225,6 +266,9 @@ class TruckSimulator:
         while True:
             if self.charging:
                 self.battery_level = min(100, self.battery_level + charge)
+            elif self.current_position == "STANDBY":
+                # STANDBY에서는 배터리 유지
+                pass
             else:
                 self.battery_level = max(0, self.battery_level - drain)
             self.send("BATTERY_LEVEL", {"level": self.battery_level}, wait=False)
@@ -233,5 +277,5 @@ class TruckSimulator:
 
 if __name__ == "__main__":
     simulator = TruckSimulator()
-    threading.Thread(target=simulator.report_battery, args=(5, 1, 2), daemon=True).start()
+    threading.Thread(target=simulator.report_battery, args=(3, 5, 5), daemon=True).start()
     simulator.run_full_mission()

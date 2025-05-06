@@ -50,6 +50,10 @@ class TruckManager:
                 TRUCK_BATTERY[truck_id] = level
             return
 
+        elif cmd == "FINISH_CHARGING":
+            self.fsm_manager.handle_trigger(truck_id, "FINISH_CHARGING", payload)
+            return
+
         elif cmd == "HELLO":
             # HELLO 명령은 트럭 등록을 위한 초기 명령이므로 무시
             print(f"[TruckManager] 트럭 등록 확인: {truck_id}")

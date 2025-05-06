@@ -1,5 +1,10 @@
 # backend/mission/manager.py
 
+"""
+이 MissionManager 클래스는 자율 운송 시스템의 미션 큐 관리 중심 허브입니다. 
+미션(할당된 작업)의 현재 상태를 RAM에서 관리하면서, 변경 사항을 MySQL DB와 동기화하는 역할을 합니다.
+"""
+
 from collections import deque
 from .status import MissionStatus
 from .mission import Mission
@@ -14,7 +19,6 @@ class MissionManager:
         self.canceled_missions = {} # 취소된 미션들
 
     def load_from_db(self):
-        # 커넥션을 새로 생성
         db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
 
         # WAITING 미션 불러오기
@@ -37,10 +41,12 @@ class MissionManager:
             
         db.close()
 
+    # 미션 추가
     def add_mission(self, mission):
         self.waiting_queue.append(mission)
         self.db.save_mission(mission)
 
+    # 미션 완료
     def complete_mission(self, mission_id):
         if mission_id in self.active_missions:
             mission = self.active_missions.pop(mission_id)
@@ -48,6 +54,7 @@ class MissionManager:
             self.completed_missions[mission_id] = mission
             self.db.save_mission(mission)
 
+    # 미션 취소
     def cancel_mission(self, mission_id):
         if mission_id in self.active_missions:
             mission = self.active_missions.pop(mission_id)
@@ -64,6 +71,7 @@ class MissionManager:
                 self.db.save_mission(mission)
                 return
             
+    # 트럭에 미션 할당
     def assign_next_to_truck(self, truck_id):
         if self.waiting_queue:
             mission = self.waiting_queue.popleft()
@@ -73,12 +81,14 @@ class MissionManager:
             return mission
         return None
     
+    # 트럭에 할당된 미션 조회
     def get_mission_by_truck(self, truck_id):
         for mission in self.active_missions.values():
             if mission.assigned_truck_id == truck_id:
                 return mission
         return None
 
+    # 미션 저장
     def save_to_db(self):
         for mission in self.missions:
             if mission.status_code == "COMPLETED" and mission.timestamp_completed:
