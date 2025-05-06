@@ -2,7 +2,11 @@
 
 from .state_enum import TruckState
 from ..mission.status import MissionStatus
-from ..tcpio.truck_commander import TruckCommandSender
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..tcpio.truck_commander import TruckCommandSender
+
 from datetime import datetime
 from ..battery.manager import BatteryManager
 
@@ -20,7 +24,7 @@ class TruckFSMManager:
     # -------------------------------------------------------------------
 
     # 명령 전송 설정
-    def set_commander(self, commander: TruckCommandSender):
+    def set_commander(self, commander: 'TruckCommandSender'):
         self.command_sender = commander
 
     # 트럭 상태 조회
@@ -98,7 +102,7 @@ class TruckFSMManager:
                 if self.command_sender:
                     self.command_sender.send(truck_id, "START_CHARGING", {})
                 if self.battery_manager:
-                    self.battery_manager.start_charging(truck_id)
+                    self.battery_manager.update_battery(truck_id, self.battery_manager.get_battery(truck_id).level, True)
                 return
 
             mission = self.mission_manager.assign_next_to_truck(truck_id)
@@ -135,7 +139,7 @@ class TruckFSMManager:
                 if self.command_sender:
                     self.command_sender.send(truck_id, "START_CHARGING", {})
                 if self.battery_manager:
-                    self.battery_manager.start_charging(truck_id)
+                    self.battery_manager.update_battery(truck_id, self.battery_manager.get_battery(truck_id).level, True)
                 return
 
             self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
@@ -154,7 +158,7 @@ class TruckFSMManager:
             if self.command_sender:
                 self.command_sender.send(truck_id, "CHARGING_COMPLETED", {})
             if self.battery_manager:
-                self.battery_manager.finish_charging(truck_id)
+                self.battery_manager.update_battery(truck_id, self.battery_manager.get_battery(truck_id).level, False)
             # 충전 완료 후 미션 할당 시도
             self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
             return

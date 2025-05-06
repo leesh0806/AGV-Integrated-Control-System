@@ -8,8 +8,10 @@ from backend.mission.db import MissionDB
 from backend.mission.manager import MissionManager
 from backend.mission.mission import Mission
 
-from backend.fsm.fsm_manager import TruckFSMManager
-from backend.fsm.truck_manager import TruckManager
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.fsm.fsm_manager import TruckFSMManager
+    from backend.fsm.truck_manager import TruckManager
 
 from backend.tcpio.truck_commander import TruckCommandSender
 from backend.api.truck_status_api import set_truck_position
@@ -47,6 +49,9 @@ class AppController:
         # ✅ 미션 및 FSM 관리자
         self.mission_manager = MissionManager(self.db)
         self.mission_manager.load_from_db()  # DB에서 미션 로드
+
+        from backend.fsm.fsm_manager import TruckFSMManager
+        from backend.fsm.truck_manager import TruckManager
 
         self.fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,
