@@ -1,4 +1,4 @@
-# backend/serialio/controller.py
+# backend/serialio/serial_controller.py
 
 import serial
 import time
@@ -12,6 +12,7 @@ class SerialController:
         else:
             self.ser = serial.Serial(port, baudrate, timeout=1)
 
+    # 구조화된 명령어 전송
     def send_command(self, target: str, action: str):
         """
         구조화된 명령어 전송: ex) GATE_A + OPEN → 'GATE_A:OPEN'
@@ -20,6 +21,7 @@ class SerialController:
         print(f"[Serial Send] {command.strip()}")
         self.ser.write(command.encode())
 
+    # 단순 텍스트 명령 전송
     def write(self, msg: str):
         """
         단순 텍스트 명령 전송 (예: BELTACT, BELTOFF 등)
@@ -29,6 +31,7 @@ class SerialController:
         except Exception as e:
             print(f"[SerialController 오류] write 실패: {e}")
 
+    # 응답 수신
     def read_response(self, timeout=5):
         """
         응답 수신 (ACK 또는 장치 상태 등) → 문자열로 반환
@@ -39,7 +42,8 @@ class SerialController:
             if self.ser.in_waiting:
                 line = self.ser.readline().decode().strip()
 
-                # ✅ FakeSerial 응답일 경우 "STATUS:" 프리픽스를 제거
+                # ✅ FakeSerial 응답일 경우 
+                # "STATUS:" 프리픽스를 제거
                 if line.startswith("STATUS:"):
                     line = line.replace("STATUS:", "", 1)
 
@@ -47,6 +51,7 @@ class SerialController:
                 if "GATE_" in line:
                     print(f"[🚪 게이트 응답] {line}")
                     return line
+                
                 # ✅ 벨트 상태 응답 로깅
                 elif any(status in line for status in ["BELTON", "BELTOFF", "ConA_FULL"]):
                     print(f"[🔄 벨트 상태] {line}")
@@ -66,4 +71,4 @@ class SerialController:
         try:
             self.ser.close()
         except Exception:
-            pass
+            pass 

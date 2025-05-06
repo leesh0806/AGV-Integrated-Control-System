@@ -1,6 +1,6 @@
 # backend/fsm/truck_manager.py
 
-from backend.truck_status_api import TRUCK_BATTERY
+from backend.api.truck_status_api import TRUCK_BATTERY
 
 class TruckManager:
     def __init__(self, fsm_manager):
@@ -48,6 +48,10 @@ class TruckManager:
             print(f"[트럭 {truck_id}] 배터리 상태: {level}%")
             if truck_id in TRUCK_BATTERY:
                 TRUCK_BATTERY[truck_id] = level
+            return
+
+        elif cmd == "FINISH_CHARGING":
+            self.fsm_manager.handle_trigger(truck_id, "FINISH_CHARGING", payload)
             return
 
         elif cmd == "HELLO":

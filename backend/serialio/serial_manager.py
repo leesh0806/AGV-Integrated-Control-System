@@ -1,6 +1,6 @@
 # backend/serialio/serial_manager.py
 
-from backend.serialio.controller import SerialController
+from backend.serialio.serial_controller import SerialController
 
 class SerialManager:
     def __init__(self, port_map: dict, use_fake=False):

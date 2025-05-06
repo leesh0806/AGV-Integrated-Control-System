@@ -10,12 +10,9 @@ class LoginWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # UI 파일 경로 (절대경로 또는 상대경로 가능)
+        # UI 파일 경로
         ui_path = os.path.join(os.path.dirname(__file__), "ui", "login.ui")
         uic.loadUi(ui_path, self)
-
-        # 버튼 및 입력창 objectName이 login.ui에 있어야 합니다
-        # 예: QLineEdit (input_id, input_pw), QPushButton (btn_login)
 
         # 비밀번호 입력 필드 설정
         self.input_pw.setEchoMode(QLineEdit.EchoMode.Password)
@@ -30,6 +27,8 @@ class LoginWindow(QMainWindow):
 
         # 로그인 버튼 이벤트 연결
         self.btn_login.clicked.connect(self.handle_login)
+        self.input_pw.returnPressed.connect(self.handle_login)
+
 
     def handle_login(self):
         username = self.input_id.text().strip()
