@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QMainWindow, QMessageBox, QLineEdit
 from PyQt6 import uic
 import os
 from backend.auth.user_auth import UserAuthManager
-from gui.main_tab_window import MainTabWindow
+from gui.admin_main_window import AdminMainWindow
 
 class LoginWindow(QMainWindow):
     def __init__(self):
@@ -43,6 +43,6 @@ class LoginWindow(QMainWindow):
 
     def open_main(self, role):
         # 로그인 성공 → 메인 탭 창 열기
-        self.main = MainTabWindow(role)
+        self.main = AdminMainWindow(role)
         self.main.show()
         self.close()

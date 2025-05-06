@@ -1,15 +1,19 @@
 from PyQt6.QtWidgets import QMainWindow, QTableWidgetItem, QWidget, QVBoxLayout
 from PyQt6.QtCore import QTimer
 from PyQt6 import uic
-import os, requests
+
 from backend.mission.db import MissionDB
 from backend.mission.manager import MissionManager
 from backend.mission.mission import Mission
 from backend.mission.status import MissionStatus
-from datetime import datetime
+
 from gui.ui.main_monitoring_tab import MainMonitoringTab
 
-class MainTabWindow(QMainWindow):
+from datetime import datetime
+import os, requests
+
+
+class AdminMainWindow(QMainWindow):
     def __init__(self, role=None):
         super().__init__()
         ui_path = os.path.join(os.path.dirname(__file__), "ui", "main.ui")
@@ -17,6 +21,8 @@ class MainTabWindow(QMainWindow):
         self.setWindowTitle("지능형 운송관제 시스템 D.U.S.T.")
 
         # --------------------------------------------------------
+
+        # Main Monitoring Tab
 
         parent = self.tab_main_monitoring
         old = parent.findChild(QWidget, "graphicsview_map")
@@ -36,6 +42,8 @@ class MainTabWindow(QMainWindow):
         self.battery_timer.start(1000)
 
         # --------------------------------------------------------
+
+        # Mission Management Tab
 
         # DB 및 미션 매니저 초기화
         self.mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
@@ -59,6 +67,19 @@ class MainTabWindow(QMainWindow):
         self.combobox_source.addItems(["load_A", "load_B"])
 
         # --------------------------------------------------------
+
+        # Truck Management Tab
+
+        # --------------------------------------------------------
+
+        # Facility Management Tab
+
+        # --------------------------------------------------------
+
+        # Settings Tab
+
+        # --------------------------------------------------------
+
 
     def refresh_mission_table(self):
         self.tablewidget.setRowCount(0)
