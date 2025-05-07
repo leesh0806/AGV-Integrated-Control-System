@@ -11,11 +11,21 @@ class BatteryManager:
     # 트럭의 배터리 객체를 가져옴
     def get_battery(self, truck_id: str) -> Battery:
         if truck_id not in self.batteries:
-            self.batteries[truck_id] = Battery(
-                truck_id=truck_id,
-                level=100,  # 기본값
-                last_updated=datetime.now()
-            )
+            # DB에서 배터리 상태 조회
+            battery_data = self.db.get_latest_battery_status(truck_id)
+            if battery_data:
+                self.batteries[truck_id] = Battery(
+                    truck_id=truck_id,
+                    level=battery_data['battery_level'],
+                    last_updated=battery_data['timestamp']
+                )
+            else:
+                # DB에 데이터가 없는 경우에만 기본값 사용
+                self.batteries[truck_id] = Battery(
+                    truck_id=truck_id,
+                    level=100,  # 기본값
+                    last_updated=datetime.now()
+                )
         return self.batteries[truck_id]
     
     # 배터리 상태 업데이트
@@ -65,6 +75,9 @@ class BatteryManager:
             truck_state="CHARGING" if battery.is_charging else "NORMAL",
             event_type=event_type
         )
+        
+        # 메모리 캐시 업데이트
+        self.batteries[truck_id] = battery
     
     # 모든 배터리 상태 반환
     def get_all_batteries(self) -> Dict[str, Battery]:

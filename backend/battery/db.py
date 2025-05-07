@@ -70,6 +70,27 @@ class BatteryDB:
             print(f"[DB 오류] {err}")
             return []
 
+    def get_latest_battery_status(self, truck_id: str):
+        query = """
+        SELECT battery_level, timestamp
+        FROM battery_logs
+        WHERE truck_id = %s
+        ORDER BY timestamp DESC
+        LIMIT 1
+        """
+        try:
+            self.cursor.execute(query, (truck_id,))
+            row = self.cursor.fetchone()
+            if row:
+                return {
+                    'battery_level': row['battery_level'],
+                    'timestamp': row['timestamp']
+                }
+            return None
+        except mysql.connector.Error as err:
+            print(f"[DB 오류] 배터리 상태 조회 중 오류 발생: {err}")
+            return None
+
     def close(self):
         """DB 연결 종료"""
         try:

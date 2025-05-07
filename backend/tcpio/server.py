@@ -52,9 +52,6 @@ class TCPServer:
             temp_truck_id = f"TEMP_{addr[1]}"
             self.truck_sockets[temp_truck_id] = client_sock
             self.app.set_truck_commander(self.truck_sockets)
-            
-            client_sock.sendall(b"RUN\n")  # 자동 시작 명령
-            print(f"[📤 RUN 전송] {addr}")
 
             buffer = ""
             while True:

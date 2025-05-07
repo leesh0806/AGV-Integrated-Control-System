@@ -19,10 +19,8 @@ class MissionManager:
         self.canceled_missions = {} # 취소된 미션들
 
     def load_from_db(self):
-        db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
-
         # WAITING 미션 불러오기
-        rows = db.load_all_waiting_missions()
+        rows = self.db.load_all_waiting_missions()
         print(f"[DEBUG] DB에서 WAITING 미션 {len(rows)}개 불러옴")
         self.waiting_queue.clear()
         self.active_missions.clear()
@@ -31,15 +29,19 @@ class MissionManager:
             self.waiting_queue.append(mission)
 
         # ASSIGNED 미션 불러오기
-        assigned_rows = db.load_all_assigned_missions()
+        assigned_rows = self.db.load_all_assigned_missions()
         print(f"[DEBUG] DB에서 ASSIGNED 미션 {len(assigned_rows)}개 불러옴")
         for row in assigned_rows:
             mission = Mission.from_row(row)
-            mission.cancel()
-            self.canceled_missions[mission.mission_id] = mission
-            db.save_mission(mission)
-            
-        db.close()
+            mission.update_status(MissionStatus.WAITING)  # ASSIGNED -> WAITING으로 변경
+            self.waiting_queue.append(mission)  # waiting_queue에 추가
+            self.db.update_mission_status(  # DB 상태 업데이트
+                mission_id=mission.mission_id,
+                status_code="WAITING",
+                status_label="대기중",
+                timestamp_assigned=None,  # 할당 타임스탬프 초기화
+                timestamp_completed=None   # 완료 타임스탬프 초기화
+            )
 
     # 미션 추가
     def add_mission(self, mission):

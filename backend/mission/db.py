@@ -56,14 +56,14 @@ class MissionDB:
     def load_all_waiting_missions(self):
         self.cursor.execute("""
         SELECT * FROM missions
-        WHERE status_code = 'WAITING'
+        WHERE UPPER(status_code) = 'WAITING'
         """)
         return self.cursor.fetchall()
     
     def load_all_assigned_missions(self):
         self.cursor.execute("""
         SELECT * FROM missions
-        WHERE status_code = 'ASSIGNED'
+        WHERE UPPER(status_code) = 'ASSIGNED'
         """)
         return self.cursor.fetchall()
     
@@ -80,12 +80,19 @@ class MissionDB:
         cursor.execute(query, (status_code, status_label, timestamp_completed, mission_id))
         self.conn.commit()
     
-    def load_all_waiting_missions(self):
-        self.cursor.execute("""
-        SELECT * FROM missions
-        WHERE status_code = 'WAITING'
-        """)
-        return self.cursor.fetchall()
+    def update_mission_status(self, mission_id, status_code, status_label, timestamp_assigned=None, timestamp_completed=None):
+        cursor = self.conn.cursor()
+        query = """
+            UPDATE missions
+            SET status_code = %s,
+                status_label = %s,
+                timestamp_assigned = %s,
+                timestamp_completed = %s
+            WHERE mission_id = %s
+        """
+
+        cursor.execute(query, (status_code, status_label, timestamp_assigned, timestamp_completed, mission_id))
+        self.conn.commit()
     
     def load_all_missions(self):
         self.conn.ping(reconnect=True)
