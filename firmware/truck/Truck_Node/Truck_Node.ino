@@ -7,11 +7,11 @@
 #include <time.h>
 
 // ==== WiFi 설정 ====
-const char* ssid = "olleh_WiFi_ECDF";
-const char* password = "0000000567";
+const char* ssid = "addinedu_class_1(2.4G)";
+const char* password = "addinedu1";
 
 // ==== ✅ PC 서버 주소 및 포트 ==== /////////////////////////////////////////////////
-IPAddress serverIP(172, 30, 1, 11);  // ← PC IP로 바꾸세요
+IPAddress serverIP(192, 168, 2, 23);  // ← PC IP로 바꾸세요
 const int serverPort = 8001;  
 WiFiClient client;
 String incoming_msg = "";
@@ -34,7 +34,7 @@ const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
 
 
 // ==== 트럭 ID 설정 ====/////////////////////////////////////////////////////////////
-const char* truck_id = "TRUCK_01";  // 설정 가능하도록 변경
+char* truck_id = "TRUCK_01";  // 설정 가능하도록 변경
 ////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////// ==== 상태 로직 변환 및 기타 변수들 ==== ////////////////////////
@@ -42,6 +42,7 @@ bool run_command = false;  // PC 명령으로 주행 여부 결정
 bool obstacle_block = false;
 float last_distance_cm = 0;
 String current_position = "UNKNOWN";     // 현재 위치 동적으로 관리
+String last_cmd = "";  // 마지막 처리된 명령 저장
 ///////////////////////////////////////////////////////////////////////////////////
 
 // ==== 모터 제어 핀 및 PWM ====
@@ -140,75 +141,30 @@ void setup()
 }
 
 // ==== 메인 루프 ====
-void loop() 
-{//////////////////////////////////////////==== server ====//////////////////////////////////////////
-
-  // TCP 서버 접속 확인
+void loop() {
   reconnectToServer();
 
-  // RFID 체크
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
-    return;
-  }
-
-  Serial.print("UID: ");
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-    Serial.print(rfid.uid.uidByte[i], HEX);
-    if (i < rfid.uid.size - 1) Serial.print("-");
-  }
-  Serial.println();
-
-  // UID 확인 및 서버 전송
-  checkAndPrintUID(rfid.uid.uidByte);
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
-
-
-  // 클라이언트로부터 명령 수신
-  if (client && client.available()) 
-  {
+  // ✅ 수신 메시지 처리
+  if (client && client.available()) {
     incoming_msg = client.readStringUntil('\n');
     incoming_msg.trim();
-    incoming_msg.toUpperCase();
 
-    Serial.print("[TCP 수신] ");
+    Serial.println("========== 📩 [서버 메시지 수신] ==========");
     Serial.println(incoming_msg);
+    Serial.println("===========================================");
 
-    ///////////////////====모터속도 업데이팅====///////////////////////////
     handleIncomingJsonMessage(incoming_msg);
-
-    ///명령어 처리
-    if (incoming_msg == "RUN") 
-    {
-      run_command = true;
-      line_trace();
-    } 
-    else if (incoming_msg == "STOP") 
-    {
-      run_command = false;
-      stop_motors();
-    }
   }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////// 주행////////////////////////////////////////////
-  if (checkAndPrintUID(rfid.uid.uidByte)) 
-  {
-    stop_motors();        
-    run_command = false;  // 등록된 카드일 때만 정지 및 대기
-  }
-
+  // ✅ 주행 제어
   obstacle_block = obstacle_detected();
-  Serial.println(obstacle_block);
-  if(!obstacle_block)
-  {
+
+  if (run_command && !obstacle_block) {
+    //Serial.println("[🚗 디버깅] 주행 시작 - line_trace() 호출");
     line_trace();
     send_obstacle_status(last_distance_cm, false, current_position.c_str());
-  }
-  else
-  {
+  } else if (obstacle_block) {
+    Serial.println("[🧱 디버깅] 장애물 감지됨! 주행 중단");
     stop_motors();
     send_obstacle_status(last_distance_cm, true, current_position.c_str());
   }
@@ -221,8 +177,8 @@ void line_trace() {
   l_sensor_val = analogRead(LEFT_SENSOR);
   r_sensor_val = analogRead(RIGHT_SENSOR);
 
-  Serial.print("L: "); Serial.print(l_sensor_val);
-  Serial.print(" R: "); Serial.println(r_sensor_val);
+  //Serial.print("L: "); Serial.print(l_sensor_val);
+  //Serial.print(" R: "); Serial.println(r_sensor_val);
 
   error = l_sensor_val - r_sensor_val;
   PD_control = error * Kp;
@@ -310,10 +266,9 @@ void send_obstacle_status(float distance_cm, bool detected, const char* position
   // 감지 여부: true/false → "DETECTED"/"CLEARED"
   payload["detected"] = detected ? "DETECTED" : "CLEARED";
 
-  if (client && client.connected()) {
+  if (detected && client && client.connected()) {
     serializeJson(doc, client);
     client.print("\n");
-    Serial.println("[송신] 장애물 상태 전송됨");
   }
 }
 
@@ -440,26 +395,70 @@ void reconnectToServer()
 }
 //////////////////////////////////////////==== 속도 조절 명령 수신 ==== /////////////
 void handleIncomingJsonMessage(const String& msg) {
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<256> doc;
   DeserializationError err = deserializeJson(doc, msg);
   if (err) {
     Serial.println("[⚠️ JSON 파싱 실패]");
+    Serial.println(msg);
     return;
   }
 
   const char* cmd = doc["cmd"];
-  if (strcmp(cmd, "SET_SPEED") == 0) {
-    int new_speed = doc["payload"]["max_pwm"];
-    if (new_speed >= 0 && new_speed <= 255) {
-      max_pwm = new_speed;
-      Serial.print("🌀 속도 변경됨: ");
-      Serial.println(max_pwm);
-    } else {
-      Serial.println("[❌ 오류] PWM 범위 초과");
-    }
-  } else {
-    Serial.print("[ℹ️ 기타 명령어 무시] ");
+  Serial.print("📩 [디버깅] 파싱된 명령어: ");
+  Serial.println(cmd);
+
+  // ✅ 이전에 처리한 명령이면 무시
+  if (last_cmd == String(cmd)) {
+    Serial.print("[⏭️ 중복 명령 무시] 이미 처리한 명령: ");
     Serial.println(cmd);
+    return;
+  }
+
+  // ✅ 새 명령이므로 처리
+  last_cmd = String(cmd);  // 다음 비교용으로 저장
+
+  if (strcmp(cmd, "SET_SPEED") == 0) {
+    Serial.println("[디버깅] SET_SPEED 명령 처리 시작");
+    // ...
+  } 
+  else if (strcmp(cmd, "RUN") == 0) {
+    Serial.println("[✅ 디버깅] RUN 명령 수신됨!");
+    run_command = true;
+    receive_run_mission();
+  } 
+  else if (strcmp(cmd, "STOP") == 0) {
+    Serial.println("[⛔ 디버깅] STOP 명령 수신됨!");
+    run_command = false;
+    stop_motors();
+  } 
+  else {
+    Serial.print("[ℹ️ 디버깅] 알 수 없는 명령: ");
+    Serial.println(cmd);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// ✅ 미션 요청 메시지 전송
+void receive_run_mission() 
+{
+  StaticJsonDocument<255> doc;
+
+  doc["sender"] = "SERVER";  // 하드코딩된 TRUCK_01 대신 truck_id 사용
+  doc["receiver"] = truck_id;
+  doc["cmd"] = "RUN";
+  doc["payload"] = JsonObject();  // 빈 payload
+
+  if (client && client.connected()) 
+  {
+    serializeJson(doc, client);
+    client.print("\n");
+    Serial.println("[📤 수신] 미션 받음:");
+    serializeJsonPretty(doc, Serial);
+    Serial.println();
+  } 
+  else 
+  {
+    Serial.println("[❌ 오류] 서버와 연결되지 않음 (미션 요청 실패)");
   }
 }
 
