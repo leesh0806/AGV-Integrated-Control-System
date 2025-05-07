@@ -49,14 +49,17 @@ class MissionDB:
     def load_all_active_and_waiting_missions(self):
         self.cursor.execute("""
         SELECT * FROM missions
-        WHERE status_code NOT IN ('COMPLETED', 'CANCELED')
+        WHERE UPPER(status_code) NOT IN ('COMPLETED', 'CANCELED')
+        ORDER BY timestamp_created ASC
         """)
         return self.cursor.fetchall()
     
     def load_all_waiting_missions(self):
+        self.conn.ping(reconnect=True)
         self.cursor.execute("""
         SELECT * FROM missions
-        WHERE UPPER(status_code) = 'WAITING'
+        WHERE UPPER(status_code) = UPPER('WAITING')
+        ORDER BY timestamp_created ASC
         """)
         return self.cursor.fetchall()
     

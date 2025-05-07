@@ -19,27 +19,47 @@ class MissionManager:
         self.canceled_missions = {} # 취소된 미션들
 
     def load_from_db(self):
-        """DB에서 미션 로드"""
-        self.missions = self.db.load_all_active_and_waiting_missions()
+        """데이터베이스에서 미션 로드"""
+        print("[DEBUG] DB에서 미션 로드 시작")
+        missions = self.db.load_all_active_and_waiting_missions()
+        print(f"[DEBUG] DB에서 가져온 미션 수: {len(missions)}")
         self.waiting_queue.clear()
         self.active_missions.clear()
-        for mission in self.missions:
+        
+        for mission_data in missions:
+            print(f"[DEBUG] 미션 데이터: {mission_data}")
+            # 튜플 데이터를 Mission 객체로 변환
+            mission = Mission(
+                mission_id=mission_data[0],
+                cargo_type=mission_data[1],
+                cargo_amount=mission_data[2],
+                source=mission_data[3],
+                destination=mission_data[4]
+            )
+            mission.status = MissionStatus[mission_data[5]]  # 문자열을 enum으로 변환
+            print(f"[DEBUG] 변환된 미션: {mission.mission_id}, 상태: {mission.status}")
+            
             if mission.status == MissionStatus.WAITING:
                 self.waiting_queue.append(mission)
+                print(f"[DEBUG] 대기 큐에 추가: {mission.mission_id}")
             elif mission.status == MissionStatus.ASSIGNED:
-                mission.update_status(MissionStatus.WAITING)  # ASSIGNED -> WAITING으로 변경
-                self.waiting_queue.append(mission)  # waiting_queue에 추가
-                self.db.update_mission_status(  # DB 상태 업데이트
-                    mission_id=mission.mission_id,
-                    status_code="WAITING",
-                    status_label="대기중",
-                    timestamp_assigned=None,  # 할당 타임스탬프 초기화
-                    timestamp_completed=None   # 완료 타임스탬프 초기화
-                )
+                self.active_missions[mission_data[6]] = mission  # truck_id를 키로 사용
+                print(f"[DEBUG] 활성 미션에 추가: {mission.mission_id}")
+        
+        print(f"[DEBUG] 최종 대기 큐 크기: {len(self.waiting_queue)}")
+        print(f"[DEBUG] 최종 활성 미션 수: {len(self.active_missions)}")
+        
+        # 대기 중인 미션이 있으면 트럭들에게 알림
+        if len(self.waiting_queue) > 0 and hasattr(self, 'command_sender') and self.command_sender:
+            print(f"[📢 미션 알림] 대기 중인 미션 {len(self.waiting_queue)}개가 있습니다.")
+            self.command_sender.broadcast("MISSIONS_AVAILABLE", {
+                "count": len(self.waiting_queue)
+            })
 
     def get_all_active_and_waiting_missions(self):
         """현재 로드된 모든 활성 및 대기 중인 미션 반환"""
-        return self.missions
+        all_missions = list(self.waiting_queue) + list(self.active_missions.values())
+        return all_missions
 
     # 미션 추가
     def add_mission(self, mission):
@@ -73,12 +93,30 @@ class MissionManager:
             
     # 트럭에 미션 할당
     def assign_next_to_truck(self, truck_id):
-        if self.waiting_queue:
-            mission = self.waiting_queue.popleft()
+        # DB에서 대기 중인 미션 확인
+        waiting_missions = self.db.load_all_waiting_missions()
+        print(f"[DEBUG] 대기 중인 미션 수: {len(waiting_missions)}")
+        
+        if waiting_missions:
+            # 첫 번째 대기 미션을 가져옴
+            mission_data = waiting_missions[0]
+            print(f"[DEBUG] 할당할 미션 데이터: {mission_data}")
+            mission = Mission(
+                mission_id=mission_data[0],
+                cargo_type=mission_data[1],
+                cargo_amount=mission_data[2],
+                source=mission_data[3],
+                destination=mission_data[4]
+            )
+            mission.status = MissionStatus[mission_data[5]]
+            print(f"[DEBUG] 미션 상태: {mission.status}")
+            
+            # 트럭에 할당
             mission.assign_to_truck(truck_id)
             self.active_missions[mission.mission_id] = mission
             self.db.save_mission(mission)
             return mission
+            
         return None
     
     # 트럭에 할당된 미션 조회
