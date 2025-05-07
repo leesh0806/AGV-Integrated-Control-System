@@ -19,29 +19,27 @@ class MissionManager:
         self.canceled_missions = {} # 취소된 미션들
 
     def load_from_db(self):
-        # WAITING 미션 불러오기
-        rows = self.db.load_all_waiting_missions()
-        print(f"[DEBUG] DB에서 WAITING 미션 {len(rows)}개 불러옴")
+        """DB에서 미션 로드"""
+        self.missions = self.db.load_all_active_and_waiting_missions()
         self.waiting_queue.clear()
         self.active_missions.clear()
-        for row in rows:
-            mission = Mission.from_row(row)
-            self.waiting_queue.append(mission)
+        for mission in self.missions:
+            if mission.status == MissionStatus.WAITING:
+                self.waiting_queue.append(mission)
+            elif mission.status == MissionStatus.ASSIGNED:
+                mission.update_status(MissionStatus.WAITING)  # ASSIGNED -> WAITING으로 변경
+                self.waiting_queue.append(mission)  # waiting_queue에 추가
+                self.db.update_mission_status(  # DB 상태 업데이트
+                    mission_id=mission.mission_id,
+                    status_code="WAITING",
+                    status_label="대기중",
+                    timestamp_assigned=None,  # 할당 타임스탬프 초기화
+                    timestamp_completed=None   # 완료 타임스탬프 초기화
+                )
 
-        # ASSIGNED 미션 불러오기
-        assigned_rows = self.db.load_all_assigned_missions()
-        print(f"[DEBUG] DB에서 ASSIGNED 미션 {len(assigned_rows)}개 불러옴")
-        for row in assigned_rows:
-            mission = Mission.from_row(row)
-            mission.update_status(MissionStatus.WAITING)  # ASSIGNED -> WAITING으로 변경
-            self.waiting_queue.append(mission)  # waiting_queue에 추가
-            self.db.update_mission_status(  # DB 상태 업데이트
-                mission_id=mission.mission_id,
-                status_code="WAITING",
-                status_label="대기중",
-                timestamp_assigned=None,  # 할당 타임스탬프 초기화
-                timestamp_completed=None   # 완료 타임스탬프 초기화
-            )
+    def get_all_active_and_waiting_missions(self):
+        """현재 로드된 모든 활성 및 대기 중인 미션 반환"""
+        return self.missions
 
     # 미션 추가
     def add_mission(self, mission):

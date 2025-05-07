@@ -36,20 +36,8 @@ app.mission_manager.load_from_db()
 
 # ✅ 기존 미션 확인
 print("[🔍 기존 미션 확인 중...]")
-existing_missions = db.load_all_active_and_waiting_missions()
-if not existing_missions:
-    print("[🔧 새로운 테스트 미션 추가 중...]")
-    test_mission = Mission(
-        mission_id="TEST_001",
-        cargo_type="MINERAL",
-        cargo_amount=100,
-        source="LOAD_A",
-        destination="BELT"
-    )
-    app.mission_manager.add_mission(test_mission)
-    print(f"[✅ 미션 추가됨] {test_mission.mission_id}")
-else:
-    print(f"[ℹ️ 기존 미션 발견] 총 {len(existing_missions)}개의 미션이 있습니다.")
+existing_missions = app.mission_manager.get_all_active_and_waiting_missions()
+print(f"[ℹ️ 기존 미션 발견] 총 {len(existing_missions)}개의 미션이 있습니다.")
 
 # ✅ TCP 서버 실행
 server = TCPServer(HOST, PORT, app)
@@ -68,7 +56,6 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 print(f"[✅ 서버 시작됨] {HOST}:{PORT}")
-print(f"[🚀 TCP 서버 시작] {HOST}:{PORT}")
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask, daemon=True)

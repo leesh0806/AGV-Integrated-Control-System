@@ -125,13 +125,20 @@ class TruckFSMManager:
                         })
                         return
                 else:
-                    # 미션이 없을 때는 충전 상태로 전환
-                    print(f"[🔋 미션 없음] {truck_id}의 배터리: {battery_level}% - 충전 상태로 전환")
-                    self.set_state(truck_id, TruckState.CHARGING)
-                    if self.command_sender:
-                        self.command_sender.send(truck_id, "START_CHARGING", {})
-                    if self.battery_manager:
-                        self.battery_manager.update_battery(truck_id, battery_level, True)
+                    # 미션이 없을 때는 배터리 상태에 따라 처리
+                    print(f"[🔋 미션 없음] {truck_id}의 배터리: {battery_level}%")
+                    if battery_level < self.BATTERY_FULL:  # 배터리가 100%가 아닐 때만 충전
+                        print(f"[🔋 충전 필요] {truck_id}의 배터리: {battery_level}% - 충전 상태로 전환")
+                        self.set_state(truck_id, TruckState.CHARGING)
+                        if self.command_sender:
+                            self.command_sender.send(truck_id, "START_CHARGING", {})
+                        if self.battery_manager:
+                            self.battery_manager.update_battery(truck_id, battery_level, True)
+                    else:
+                        print(f"[🔋 충전 불필요] {truck_id}의 배터리: {battery_level}% - 대기 상태 유지")
+                        self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
+                        if self.command_sender:
+                            self.command_sender.send(truck_id, "NO_MISSION", {"reason": "NO_MISSIONS_AVAILABLE"})
                 return
 
             # 이미 미션 진행 중일 때 ASSIGN_MISSION 요청이 오면 현재 상태 응답
