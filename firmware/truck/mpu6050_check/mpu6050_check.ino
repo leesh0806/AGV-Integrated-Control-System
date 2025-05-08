@@ -31,5 +31,6 @@ void loop() {
   Serial.print("Gyro  X: "); Serial.print(gx);
   Serial.print(" | Y: "); Serial.print(gy);
   Serial.print(" | Z: "); Serial.println(gz);
+  delay(100);
 
 }

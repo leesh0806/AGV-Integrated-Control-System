@@ -41,7 +41,8 @@ char* truck_id = "TRUCK_01";
 /*-------------------------상태 로직 변환 및 기타 변수들--------------------------------*/
 
 bool run_command = false;
-bool obstacle_block = false;
+bool obstacle_block = false;   //지금 멈춰야 하나?(실시간 결정용)
+bool prev_obstacle_state = false;
 float last_distance_cm = 0;
 String current_position = "UNKNOWN";
 String last_cmd = "";
@@ -294,6 +295,11 @@ void send_arrived(const char* position, const char* gate_id)
 // 장애물 감지 메시지 (OBSTACLE)
 void send_obstacle(float distance_cm, bool detected, const char* position) 
 {
+
+  if (detected == prev_obstacle_state) return;
+
+  prev_obstacle_state = detected;
+
   StaticJsonDocument<256> doc;
   JsonObject payload = doc.createNestedObject("payload");
 
@@ -301,6 +307,7 @@ void send_obstacle(float distance_cm, bool detected, const char* position)
   payload["distance_cm"] = distance_cm;
   payload["timestamp"] = getISOTime();
   payload["detected"] = detected ? "DETECTED" : "CLEARED";
+  
   send_json("OBSTACLE", payload);
 }
 
