@@ -33,9 +33,14 @@ UIDEntry registeredCards[] = {
   { {0xD9, 0x3F, 0x09, 0x05}, "load_A" },
   { {0xA3, 0x8F, 0x09, 0x05}, "load_B" },
   { {0x9C, 0x84, 0x0B, 0x05}, "CHECKPOINT_C" },
+  { {0x83, 0x58, 0xAE, 0x1A}, "BELT" },
+  { {0xD3, 0xAF, 0xC3, 0x18}, "CHECKPOINT_D" },
   
 };
 const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
+
+unsigned long last_rfid_check = 0;
+const unsigned long RFID_CHECK_INTERVAL = 300;  // 0.3초마다 RFID 체크
 
 /*--------------------------------트럭 ID 설정--------------------------------*/
 
@@ -96,9 +101,11 @@ bool battery_empty = false;  // 배터리 0% 상태 플래그
 
 /*--------------------------------PID 제어 변수--------------------------------*/
 
-double Kp = 0.1025;
-double Kd = 0.2;
-double PD_control;
+double Kp = 0.1075;
+double Kd = 0.03;
+double Ki = 0.01;       // I 제어 계수 (필요시 조정)
+double integral = 0.0;  // 누적 적분값
+double PID_control;
 int last_error = 0;
 int derivative;
 int L_PWM, R_PWM;
@@ -106,7 +113,12 @@ int error;
 int l_sensor_val;
 int r_sensor_val;
 int avg_PWM = 150;
-int max_pwm = 70;
+int max_pwm = 75;
+/*-------------------------------- loading logic--------------------------------*/
+
+bool is_loading = false;
+unsigned long loading_start_time = 0;
+const unsigned long LOADING_DURATION = 5000;  // 5초 후 로딩 완료 처리
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
 
@@ -190,8 +202,10 @@ void loop()
     receive_json(incoming_msg);
   }
 
-  // ✅ 주기적인 미션 체크
+  // ✅ 현재 시간 갱신
   unsigned long current_time = millis();
+
+  // ✅ 주기적인 미션 체크
   if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
   {
     last_mission_check = current_time;
@@ -213,11 +227,18 @@ void loop()
   else if (obstacle_block) 
   {
     Serial.println("stop");
-    Serial.print("Distance: ");
-    Serial.print(distance_cm);
-    Serial.println(" cm");
+    //Serial.print("Distance: ");
+    //Serial.print(distance_cm);
+    //Serial.println(" cm");
     stop_motors();
     send_obstacle(last_distance_cm, true, current_position.c_str());
+  }
+
+    // ✅ 적재 완료 체크 (로딩 시작 후 일정 시간 지나면)
+  if (is_loading && current_time - loading_start_time >= LOADING_DURATION) {
+    Serial.println("✅ [자동 보고] 적재 완료됨!");
+    send_status("FINISH_LOADING");
+    is_loading = false;
   }
 
   // RFID 체크
@@ -237,10 +258,31 @@ void loop()
   // UID 확인 및 서버 전송
   checkAndPrintUID(rfid.uid.uidByte);
 
-  // if (run_command)
-  // {
-  //   line_trace();
+  // // ✅ RFID 체크 (0.3초마다 제한)
+  // static unsigned long last_rfid_check = 0;
+  // const unsigned long RFID_CHECK_INTERVAL = 300;
+  // if (current_time - last_rfid_check >= RFID_CHECK_INTERVAL) {
+  //   last_rfid_check = current_time;
+
+  //   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+  //     Serial.print("UID: ");
+  //     for (byte i = 0; i < rfid.uid.size; i++) {
+  //       if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
+  //       Serial.print(rfid.uid.uidByte[i], HEX);
+  //       if (i < rfid.uid.size - 1) Serial.print("-");
+  //     }
+  //     Serial.println();
+
+  //     checkAndPrintUID(rfid.uid.uidByte);
+
+  //     rfid.PICC_HaltA();
+  //     rfid.PCD_StopCrypto1();
+  //   }
   // }
+
+
+
+
   // 🪫 10초마다 배터리 감소
   if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
     last_battery_drop = current_time;
@@ -267,10 +309,10 @@ void loop()
     send_battery_status();
   }
 
-
-
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
+
+
 }
 
 /*------------------------------- 수신 처리--------------------------------*/
@@ -334,6 +376,24 @@ void receive_json(const String& msg)
     Serial.println(mission_target);
     run_command = true;
   }
+  else if (strcmp(cmd, "START_LOADING") == 0) {
+  Serial.println("[📦 적재 시작] 로딩 중...");
+  is_loading = true;
+  loading_start_time = millis();  // 시작 시간 기록
+  }
+
+  else if (strcmp(cmd, "FINISH_LOADING") == 0) {
+    Serial.println("[📦 적재 완료] 서버에서 수동 처리됨");
+    is_loading = false;
+  }
+
+
+
+
+
+
+
+
   else if (strcmp(cmd, "NO_MISSION") == 0) {
     Serial.println("📭 [서버 응답] 미션 없음 → 대기 상태 유지");
     run_command = false;
@@ -424,6 +484,13 @@ void send_obstacle(float distance_cm, bool detected, const char* position)
   
   send_json("OBSTACLE", payload);
 }
+//상태 보고용 함수 
+void send_status(const char* cmd_str) {
+  StaticJsonDocument<128> doc;
+  JsonObject payload = doc.createNestedObject("payload");
+  payload["timestamp"] = getISOTime();
+  send_json(cmd_str, payload);
+}
 
 void send_battery_status() {
   StaticJsonDocument<128> doc;
@@ -442,17 +509,22 @@ void line_trace() {
   l_sensor_val = analogRead(LEFT_SENSOR);
   r_sensor_val = analogRead(RIGHT_SENSOR);
 
-  //Serial.print("L: "); Serial.print(l_sensor_val);
-  //Serial.print(" R: "); Serial.println(r_sensor_val);
+  Serial.print("L: "); Serial.print(l_sensor_val);
+  Serial.print(" R: "); Serial.println(r_sensor_val);
 
   error = l_sensor_val - r_sensor_val;
-  PD_control = error * Kp;
+
+
+  // ⬇ PID 제어 계산
+  integral += error;
   derivative = error - last_error;
-  PD_control += Kd * derivative;
+  PID_control = Kp * error + Ki * integral + Kd * derivative;
+
+
   last_error = error;
 
-  R_PWM = speed_limit(avg_PWM - PD_control, 0, max_pwm);
-  L_PWM = speed_limit(avg_PWM + PD_control, 0, max_pwm);
+  R_PWM = speed_limit(avg_PWM - PID_control, 0, max_pwm);
+  L_PWM = speed_limit(avg_PWM + PID_control, 0, max_pwm);
 
   left_motor_f(L_PWM);
   right_motor_f(R_PWM);
@@ -552,6 +624,16 @@ bool checkAndPrintUID(byte* uid)
       else if (strcmp(desc, "CHECKPOINT_D") == 0) 
       {
         send_arrived("CHECKPOINT_D", "GATE_D");
+      }
+
+      else if (strcmp(desc, "load_A") == 0) {
+        send_arrived("load_A", "LOAD_A");
+      }
+      else if (strcmp(desc, "load_B") == 0) {
+        send_arrived("load_B", "LOAD_B");
+      }
+      else if (strcmp(desc, "BELT") == 0) {
+        send_arrived("BELT", "BELT");
       }
 
       // 🎯 목적지에 도달한 경우 멈춤
