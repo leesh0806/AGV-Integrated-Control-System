@@ -9,7 +9,15 @@ import requests
 HOST = '127.0.0.1'
 PORT = 8001
 
-manager = SerialManager(port_map={}, use_fake=True)
+# 포트 맵: 시리얼 장치 연결에 사용됨 - 서버와 동일한 설정 사용
+port_map = {
+    "GATE_A": "GATE_A",
+    "GATE_B": "GATE_B",
+    "BELT": "BELT"
+}
+
+# 시리얼 매니저 초기화 - 실제 포트 맵 사용
+manager = SerialManager(port_map=port_map, use_fake=True)
 
 class TruckSimulator:
     def __init__(self):
@@ -135,21 +143,27 @@ class TruckSimulator:
         finally:
             self.client.settimeout(None)
 
-    def wait_for_gate_response(self, timeout=5.0):
+    def wait_for_gate_response(self, timeout=15.0):
+        """
+        게이트 열림 명령을 기다립니다.
+        게이트가 열리면 ACK_GATE_OPENED를 보내야 합니다.
+        """
         self.client.settimeout(timeout)
+        received_gate_open = False
+        
         try:
+            # 게이트 응답 대기 (최대 timeout 초)
             start_time = time.time()
-            while True:
-                if time.time() - start_time > timeout:
-                    print("[⏰ 타임아웃] GATE_OPENED 수신 실패")
-                    return False
-
-                data = self.client.recv(4096)
-                if not data:
-                    print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
-                    return False
-                    
-                raw = data.decode('utf-8').strip()
+            while time.time() - start_time < timeout:
+                # 소켓에서 데이터를 읽음
+                try:
+                    raw = self.client.recv(4096).decode()
+                    if not raw:
+                        time.sleep(0.1)
+                        continue
+                except socket.timeout:
+                    continue
+                
                 for line in raw.splitlines():
                     print(f"[📩 수신] {line}")
                     try:
@@ -159,11 +173,11 @@ class TruckSimulator:
                         # GATE_OPENED 명령을 받으면 성공
                         if cmd == "GATE_OPENED":
                             print("[✅ 게이트 열림 확인]")
-                            return True
+                            received_gate_open = True
                         
-                        # RUN 명령은 무시하고 계속 대기
+                        # RUN 명령 처리
                         elif cmd == "RUN":
-                            continue
+                            print("[ℹ️ RUN 명령 수신]")
                         
                         # GATE_CLOSED는 이전 게이트에 대한 것이므로 무시
                         elif cmd == "GATE_CLOSED":
@@ -175,7 +189,11 @@ class TruckSimulator:
                     except json.JSONDecodeError:
                         print("[ℹ️ 비JSON 메시지 무시]")
                         continue
-                    
+                
+                # GATE_OPENED를 받았으면 루프 종료
+                if received_gate_open:
+                    return True
+                
         except socket.timeout:
             print("[⏰ 타임아웃] GATE_OPENED 수신 실패")
             return False
@@ -184,6 +202,62 @@ class TruckSimulator:
             return False
         finally:
             self.client.settimeout(None)
+        
+        return received_gate_open
+
+    def wait_for_run_command(self, timeout=5.0):
+        """
+        RUN 명령을 기다립니다.
+        """
+        self.client.settimeout(timeout)
+        received_run = False
+        
+        try:
+            print("[🔄 RUN 명령 대기 중...]")
+            # RUN 명령 대기 (최대 timeout 초)
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                # 소켓에서 데이터를 읽음
+                try:
+                    raw = self.client.recv(4096).decode()
+                    if not raw:
+                        time.sleep(0.1)
+                        continue
+                except socket.timeout:
+                    continue
+                
+                for line in raw.splitlines():
+                    print(f"[📩 수신] {line}")
+                    try:
+                        msg = json.loads(line)
+                        cmd = msg.get("cmd", "")
+                        
+                        # RUN 명령을 받으면 성공
+                        if cmd == "RUN":
+                            print("[✅ RUN 명령 수신 - 이동 시작]")
+                            received_run = True
+                            break
+                        else:
+                            print(f"[ℹ️ 기타 메시지] {msg}")
+                            
+                    except json.JSONDecodeError:
+                        print("[ℹ️ 비JSON 메시지 무시]")
+                        continue
+                
+                # RUN을 받았으면 루프 종료
+                if received_run:
+                    return True
+            
+        except socket.timeout:
+            print("[⏰ 타임아웃] RUN 명령 수신 실패")
+            return False
+        except Exception as e:
+            print(f"[❌ 오류] → {e}")
+            return False
+        finally:
+            self.client.settimeout(None)
+        
+        return received_run
 
     def run_full_mission(self):
         while True:
@@ -212,11 +286,16 @@ class TruckSimulator:
                 self.charging = False
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
+                    # RUN 명령을 기다린 후 이동
+                    if self.wait_for_run_command():
+                        print("\n[�� 트럭 이동] CHECKPOINT_B로 이동 중...")
+                    else:
+                        print("[❌ 오류] RUN 명령을 받지 못했습니다.")
+                        return
                 else:
                     print("[❌ 오류] GATE_A가 열리지 않았습니다.")
                     return
 
-                print("\n[🚛 트럭 이동] CHECKPOINT_B로 이동 중...")
                 time.sleep(2)  # 이동 시간
                 self.send("ARRIVED", {"position": "CHECKPOINT_B", "gate_id": "GATE_A"})
 
@@ -235,11 +314,16 @@ class TruckSimulator:
                 self.send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
+                    # RUN 명령을 기다린 후 이동
+                    if self.wait_for_run_command():
+                        print("\n[🚛 트럭 이동] CHECKPOINT_D로 이동 중...")
+                    else:
+                        print("[❌ 오류] RUN 명령을 받지 못했습니다.")
+                        return
                 else:
                     print("[❌ 오류] GATE_B가 열리지 않았습니다.")
                     return
 
-                print("\n[🚛 트럭 이동] CHECKPOINT_D로 이동 중...")
                 time.sleep(2)  # 이동 시간
                 self.send("ARRIVED", {"position": "CHECKPOINT_D", "gate_id": "GATE_B"})
 

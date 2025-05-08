@@ -15,10 +15,12 @@ PORT = 8001
 
 # 포트 맵: 시리얼 장치 연결에 사용됨
 port_map = {
-    "GATE_A": "VIRTUAL_GATE_A",
-    "GATE_B": "VIRTUAL_GATE_B",
-    "BELT": "VIRTUAL_BELT"
+    "GATE_A": "GATE_A",  # 가상 장치는 이름을 그대로 사용
+    "GATE_B": "GATE_B",  # 가상 장치는 이름을 그대로 사용
+    "BELT": "BELT"
 }
+
+print("[✅ 초기화] 포트 맵:", port_map)
 
 # ✅ DB 연결 설정
 db = MissionDB(

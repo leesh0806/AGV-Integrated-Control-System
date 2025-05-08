@@ -183,18 +183,23 @@ void loop()
     }
   }
 
-  // ✅ 주행 제어
-  obstacle_block = obstacle_detected();
-  if (run_command && !obstacle_block) 
+  if (run_command)
   {
     line_trace();
-    send_obstacle(last_distance_cm, false, current_position.c_str());
   }
-  else if (obstacle_block) 
-  {
-    stop_motors();
-    send_obstacle(last_distance_cm, true, current_position.c_str());
-  }
+
+  // // ✅ 주행 제어
+  // obstacle_block = obstacle_detected();
+  // if (run_command && !obstacle_block) 
+  // {
+  //   line_trace();
+  //   send_obstacle(last_distance_cm, false, current_position.c_str());
+  // }
+  // else if (obstacle_block) 
+  // {
+  //   stop_motors();
+  //   send_obstacle(last_distance_cm, true, current_position.c_str());
+  // }
 }
 
 /*------------------------------- 수신 처리--------------------------------*/

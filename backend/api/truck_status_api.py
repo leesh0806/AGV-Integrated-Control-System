@@ -73,6 +73,11 @@ def update_truck_battery(truck_id):
     level = data.get("level")
     is_charging = data.get("is_charging")
     
+    # 배터리가 100%일 때는 충전 상태를 False로 설정 (시뮬레이션 초기 상태용)
+    if level == 100 and is_charging == True:
+        print(f"[DEBUG] 배터리가 100%이므로 충전 상태를 False로 자동 설정")
+        is_charging = False
+    
     if level is not None:
         battery_manager = get_battery_manager()
         print(f"[DEBUG] 배터리 상태 업데이트 전: {truck_id} - {battery_manager.get_battery(truck_id).to_dict()}")

@@ -236,7 +236,7 @@ class TruckFSMManager:
 
             # CHECKPOINT_B 도착 (GATE_A 닫기)
             elif state == TruckState.MOVE_TO_LOAD and cmd == "ARRIVED_AT_CHECKPOINT_B":
-                self.send_stop(truck_id)  # 트럭 정지
+                # self.send_stop(truck_id)  # 트럭 정지
                 gate_id = payload.get("gate_id", "GATE_A")
                 self._close_gate_and_log(gate_id, truck_id)
                 return
@@ -285,7 +285,7 @@ class TruckFSMManager:
 
             # CHECKPOINT_D 도착 (GATE_B 닫기)
             elif state == TruckState.MOVE_TO_UNLOAD and cmd == "ARRIVED_AT_CHECKPOINT_D":
-                self.send_stop(truck_id)  # 트럭 정지
+                # self.send_stop(truck_id)  # 트럭 정지
                 gate_id = payload.get("gate_id", "GATE_B")
                 self._close_gate_and_log(gate_id, truck_id)
                 return
