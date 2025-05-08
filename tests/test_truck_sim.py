@@ -260,23 +260,22 @@ class TruckSimulator:
         return received_run
 
     def run_full_mission(self):
+        # 최초 1회만 등록 및 초기화
+        self.send("HELLO", {"msg": "register"}, wait=False)
+        time.sleep(0.1)
+        self.send("RESET", wait=False)
+        time.sleep(0.1)
+        
+        # 첫 미션 요청
+        self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
+        mission_received = self.wait_for_mission_response()
+        if not mission_received:
+            print("[ℹ️ 미션 없음] 3초 후 다시 시도합니다.")
+            time.sleep(3)
+            self.run_full_mission()  # 재귀 호출로 다시 시작
+            return
+
         while True:
-            # ✅ 트럭 등록
-            self.send("HELLO", {"msg": "register"}, wait=False)
-            time.sleep(0.1)
-
-            # ✅ 상태 초기화 (IDLE로 리셋)
-            self.send("RESET", wait=False)
-            time.sleep(0.1)
-
-            # ✅ 미션 요청
-            self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
-            mission_received = self.wait_for_mission_response()
-            if not mission_received:
-                print("[ℹ️ 미션 없음] 3초 후 다시 시도합니다.")
-                time.sleep(3)
-                continue
-
             try:
                 # ✅ 전체 미션 수행
                 print("\n[🚛 트럭 이동] CHECKPOINT_A로 이동 중...")
@@ -342,15 +341,16 @@ class TruckSimulator:
                 self.send("ARRIVED", {"position": "STANDBY"})
                 self.current_position = "STANDBY"
                 
-                # 서버의 응답을 기다림
+                print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
+                time.sleep(2)
+                
+                # STANDBY에 도착한 후에만 새 미션 요청
+                self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
                 mission_received = self.wait_for_mission_response()
                 if not mission_received:
                     print("[ℹ️ 미션 없음] 3초 후 다시 시도합니다.")
                     time.sleep(3)
                     continue
-
-                print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
-                time.sleep(2)
             except Exception as e:
                 print(f"\n❌ 테스트 실패: {e}")
                 break

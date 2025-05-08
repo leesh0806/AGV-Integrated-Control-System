@@ -176,29 +176,7 @@ void loop()
 {
   reconnectToServer();
 
-  // RFID 체크
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
-  {
-    return;
-  }
-
-  Serial.print("UID: ");
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-    Serial.print(rfid.uid.uidByte[i], HEX);
-    if (i < rfid.uid.size - 1) Serial.print("-");
-  }
-  Serial.println();
-
-
-  if (client) {
-    Serial.println("📶 client 객체는 존재함");
-    Serial.print("🔌 연결 상태: ");
-    Serial.println(client.connected());
-    Serial.print("📦 수신 가능 데이터 바이트 수: ");
-    Serial.println(client.available());
-  }
-
+  // ✅ 수신 메시지 처리
   if (client && client.connected() && client.available()) {
     incoming_msg = client.readStringUntil('\n');
     incoming_msg.trim();
@@ -212,25 +190,31 @@ void loop()
 
   // ✅ 주기적인 미션 체크
   unsigned long current_time = millis();
-  // if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
-  // {
-  //   last_mission_check = current_time;
-  //   if (current_position == "UNKNOWN" || current_position == "STANDBY") 
-  //   {
-  //     Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
-  //     send_assign_mission();
-  //   }
-  // }
+  if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) {
+    last_mission_check = current_time;
+    if (current_position == "UNKNOWN" || current_position == "STANDBY") {
+      Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
+      send_assign_mission();
+    }
+  }
 
-  
+  // RFID 체크 - 카드가 없으면 이 부분만 건너뛰기
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    Serial.print("UID: ");
+    for (byte i = 0; i < rfid.uid.size; i++) {
+      if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
+      Serial.print(rfid.uid.uidByte[i], HEX);
+      if (i < rfid.uid.size - 1) Serial.print("-");
+    }
+    Serial.println();
 
-  // UID 확인 및 서버 전송
-  checkAndPrintUID(rfid.uid.uidByte);
+    // UID 확인 및 서버 전송
+    checkAndPrintUID(rfid.uid.uidByte);
 
-  // if (run_command)
-  // {
-  //   line_trace();
-  // }
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+  }
+
   // 🪫 10초마다 배터리 감소
   if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
     last_battery_drop = current_time;
@@ -269,9 +253,6 @@ void loop()
     stop_motors();
     send_obstacle(last_distance_cm, true, current_position.c_str());
   }
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
 }
 
 /*------------------------------- 수신 처리--------------------------------*/
