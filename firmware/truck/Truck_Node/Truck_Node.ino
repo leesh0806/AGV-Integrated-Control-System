@@ -27,10 +27,11 @@ struct UIDEntry
 };
 
 UIDEntry registeredCards[] = {
+  // { {0x8B, 0xEE, 0xC9, 0x01}, "CHARGE_LOCATION" },
   { {0x86, 0x51, 0x0A, 0x05}, "CHECKPOINT_A" },
   { {0x12, 0x6D, 0x07, 0x05}, "CHECKPOINT_B" },
-  { {0x12, 0x6D, 0x07, 0x05}, "CHECKPOINT_C" },
-  { {0x12, 0x6D, 0x07, 0x05}, "CHECKPOINT_D" },
+  { {0xD9, 0x3F, 0x09, 0x05}, "LOAD_A" },
+  { {0xA3, 0x8F, 0x09, 0x05}, "LOAD_B" },
 };
 const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
 
@@ -46,8 +47,22 @@ bool prev_obstacle_state = false;
 float last_distance_cm = 0;
 String current_position = "UNKNOWN";
 String last_cmd = "";
+String mission_target = "";
 unsigned long last_mission_check = 0;    // 마지막 미션 체크 시간
 const unsigned long MISSION_CHECK_INTERVAL = 5000;  // 5초마다 체크
+
+/*--------------------------------가상 배터리 잔량 체크--------------------------------*/
+
+int battery_level = 100;
+
+
+unsigned long last_battery_drop = 0;
+const unsigned long BATTERY_DROP_INTERVAL = 5000; //5초 마다 배터리 감소 
+
+unsigned long last_battery_report = 0;
+const unsigned long BATTERY_REPORT_INTERVAL = 5000; // 5초마다 배터리 상태 서버에 전송
+bool battery_empty = false;  // 배터리 0% 상태 플래그
+
 
 /*--------------------------------모터 제어 핀 및 PWM--------------------------------*/
 
@@ -161,8 +176,30 @@ void loop()
 {
   reconnectToServer();
 
-  // ✅ 수신 메시지 처리
-  if (client && client.available()) {
+  // RFID 체크
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
+  {
+    return;
+  }
+
+  Serial.print("UID: ");
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
+    Serial.print(rfid.uid.uidByte[i], HEX);
+    if (i < rfid.uid.size - 1) Serial.print("-");
+  }
+  Serial.println();
+
+
+  if (client) {
+    Serial.println("📶 client 객체는 존재함");
+    Serial.print("🔌 연결 상태: ");
+    Serial.println(client.connected());
+    Serial.print("📦 수신 가능 데이터 바이트 수: ");
+    Serial.println(client.available());
+  }
+
+  if (client && client.connected() && client.available()) {
     incoming_msg = client.readStringUntil('\n');
     incoming_msg.trim();
 
@@ -175,54 +212,93 @@ void loop()
 
   // ✅ 주기적인 미션 체크
   unsigned long current_time = millis();
-  if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) {
-    last_mission_check = current_time;
-    if (current_position == "UNKNOWN" || current_position == "STANDBY") {
-      Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
-      send_assign_mission();
+  // if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
+  // {
+  //   last_mission_check = current_time;
+  //   if (current_position == "UNKNOWN" || current_position == "STANDBY") 
+  //   {
+  //     Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
+  //     send_assign_mission();
+  //   }
+  // }
+
+  
+
+  // UID 확인 및 서버 전송
+  checkAndPrintUID(rfid.uid.uidByte);
+
+  // if (run_command)
+  // {
+  //   line_trace();
+  // }
+  // 🪫 10초마다 배터리 감소
+  if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
+    last_battery_drop = current_time;
+
+    if (battery_level > 0) {
+      battery_level -= 5;
+      if (battery_level <= 0) {
+        battery_level = 0;
+        battery_empty = true;
+        run_command = false;
+        stop_motors();
+        Serial.println("❌ 배터리 소진 → 트럭 정지");
+      }
+
+      Serial.print("🪫 배터리 감소됨: ");
+      Serial.print(battery_level);
+      Serial.println("%");
     }
   }
 
-  if (run_command)
-  {
-    line_trace();
+  // 📤 5초마다 서버에 배터리 상태 전송
+  if (current_time - last_battery_report >= BATTERY_REPORT_INTERVAL) {
+    last_battery_report = current_time;
+    send_battery_status();
   }
 
-  // // ✅ 주행 제어
-  // obstacle_block = obstacle_detected();
-  // if (run_command && !obstacle_block) 
-  // {
-  //   line_trace();
-  //   send_obstacle(last_distance_cm, false, current_position.c_str());
-  // }
-  // else if (obstacle_block) 
-  // {
-  //   stop_motors();
-  //   send_obstacle(last_distance_cm, true, current_position.c_str());
-  // }
+  // ✅ 주행 제어
+  obstacle_block = obstacle_detected();
+  if (run_command && !obstacle_block && !battery_empty)
+  {
+    line_trace();
+    send_obstacle(last_distance_cm, false, current_position.c_str());
+  }
+  else if (obstacle_block) 
+  {
+    stop_motors();
+    send_obstacle(last_distance_cm, true, current_position.c_str());
+  }
+
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
 }
 
 /*------------------------------- 수신 처리--------------------------------*/
 
-// JSON 수신 함수
 void receive_json(const String& msg)
 {
+  Serial.println("📩 [디버깅] receive_json() 호출됨");  // ✔️
+
+  Serial.print("📩 [디버깅] 원본 메시지: ");
+  Serial.println(msg);  // ✔️
+
   StaticJsonDocument<256> doc;
   DeserializationError err = deserializeJson(doc, msg);
 
-  // JSON 파싱 오류 처리
   if (err)
   {
-    Serial.println("[⚠️ JSON 파싱 실패]");
-    Serial.println(msg);
+    Serial.println("⚠️ [JSON 파싱 실패]");
+    Serial.println(err.c_str());  // ✔️ 구체적인 파싱 에러 출력
     return;
   }
+
+  Serial.println("✅ [JSON 파싱 성공]");  // ✔️
 
   const char* cmd = doc["cmd"];
   Serial.print("📩 [디버깅] 파싱된 명령어: ");
   Serial.println(cmd);
 
-  // 중복 명령 처리 방지
   if (last_cmd == String(cmd))
   {
     Serial.print("[⏭️ 중복 명령 무시] 이미 처리한 명령: ");  
@@ -230,8 +306,9 @@ void receive_json(const String& msg)
     return;
   }
 
-  // 명령 처리
   last_cmd = String(cmd);
+  
+  // 명령 처리
   if (strcmp(cmd, "SET_SPEED") == 0) {
     Serial.println("[디버깅] SET_SPEED 명령 처리 시작");
   } 
@@ -244,11 +321,24 @@ void receive_json(const String& msg)
     run_command = false;
     stop_motors();
   } 
+  else if (strcmp(cmd, "MISSION_ASSIGNED") == 0) {
+    const char* target = doc["payload"]["source"];
+    mission_target = String(target);
+    Serial.print("[📦 미션 할당됨] 목표 위치: ");
+    Serial.println(mission_target);
+    run_command = true;
+  }
+  else if (strcmp(cmd, "NO_MISSION") == 0) {
+    Serial.println("📭 [서버 응답] 미션 없음 → 대기 상태 유지");
+    run_command = false;
+    mission_target = "";
+  }
   else {
     Serial.print("[ℹ️ 디버깅] 알 수 없는 명령: ");
     Serial.println(cmd);
   }
 }
+
 
 /*-------------------------------- 송신 처리 --------------------------------*/
 
@@ -315,6 +405,17 @@ void send_obstacle(float distance_cm, bool detected, const char* position)
   
   send_json("OBSTACLE", payload);
 }
+
+void send_battery_status() {
+  StaticJsonDocument<128> doc;
+  JsonObject payload = doc.createNestedObject("payload");
+
+  payload["battery_level"] = battery_level;
+  payload["timestamp"] = getISOTime();
+
+  send_json("BATTERY", payload);
+}
+
 
 /*--------------------------------라인트레이서 제어--------------------------------*/
 
@@ -412,26 +513,35 @@ bool checkAndPrintUID(byte* uid)
       Serial.print("📌 ");
       Serial.println(desc);
 
+      // 위치 갱신 및 도착 메시지 전송
+      current_position = String(desc);
+
       if (strcmp(desc, "CHECKPOINT_A") == 0) 
       {
-        current_position = "CHECKPOINT_A";
         send_arrived("CHECKPOINT_A", "GATE_A");
+        run_command = false;
       } 
       else if (strcmp(desc, "CHECKPOINT_B") == 0) 
       {
-        current_position = "CHECKPOINT_B";
         send_arrived("CHECKPOINT_B", "GATE_B");
-      }
+      } 
       else if (strcmp(desc, "CHECKPOINT_C") == 0) 
       {
-        current_position = "CHECKPOINT_C";
         send_arrived("CHECKPOINT_C", "GATE_C");
-      }
-      else if (strcmp(desc, "CHECKPOINT_D") == 0)
+        run_command = false;
+      } 
+      else if (strcmp(desc, "CHECKPOINT_D") == 0) 
       {
-        current_position = "CHECKPOINT_D";
         send_arrived("CHECKPOINT_D", "GATE_D");
       }
+
+      // 🎯 목적지에 도달한 경우 멈춤
+      if (mission_target != "" && mission_target == String(desc)) {
+        Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 중지");
+        run_command = false;
+        stop_motors();
+      }
+
       return true;
     }
   }
@@ -466,3 +576,4 @@ void reconnectToServer()
     }
   }
 }
+

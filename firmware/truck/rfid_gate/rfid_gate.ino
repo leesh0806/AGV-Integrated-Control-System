@@ -119,7 +119,7 @@ void checkAndPrintUID(byte* uid)
       if (strcmp(desc, "게이트 A") == 0) {
         send_arrive_status("CHECKPOINT_A", "GATE_A");
       } else if (strcmp(desc, "게이트 B") == 0) {
-        send_arrive_status("CHECKPOINT_C", "GATE_B");  // CHECKPOINT_B에서 CHECKPOINT_C로 변경
+        send_arrive_status("CHECKPOINT_B", "GATE_B");  
       }
 
       return;
