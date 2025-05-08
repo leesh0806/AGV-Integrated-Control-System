@@ -30,8 +30,10 @@ UIDEntry registeredCards[] = {
   // { {0x8B, 0xEE, 0xC9, 0x01}, "CHARGE_LOCATION" },
   { {0x86, 0x51, 0x0A, 0x05}, "CHECKPOINT_A" },
   { {0x12, 0x6D, 0x07, 0x05}, "CHECKPOINT_B" },
-  { {0xD9, 0x3F, 0x09, 0x05}, "LOAD_A" },
-  { {0xA3, 0x8F, 0x09, 0x05}, "LOAD_B" },
+  { {0xD9, 0x3F, 0x09, 0x05}, "load_A" },
+  { {0xA3, 0x8F, 0x09, 0x05}, "load_B" },
+  { {0x9C, 0x84, 0x0B, 0x05}, "CHECKPOINT_C" },
+  
 };
 const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
 
@@ -177,7 +179,7 @@ void loop()
   reconnectToServer();
 
   // ✅ 수신 메시지 처리
-  if (client && client.connected() && client.available()) {
+  if (client && client.available()) {
     incoming_msg = client.readStringUntil('\n');
     incoming_msg.trim();
 
@@ -190,31 +192,55 @@ void loop()
 
   // ✅ 주기적인 미션 체크
   unsigned long current_time = millis();
-  if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) {
+  if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
+  {
     last_mission_check = current_time;
-    if (current_position == "UNKNOWN" || current_position == "STANDBY") {
+    if (current_position == "UNKNOWN" || current_position == "STANDBY") 
+    {
       Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
       send_assign_mission();
     }
   }
 
-  // RFID 체크 - 카드가 없으면 이 부분만 건너뛰기
-  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-    Serial.print("UID: ");
-    for (byte i = 0; i < rfid.uid.size; i++) {
-      if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-      Serial.print(rfid.uid.uidByte[i], HEX);
-      if (i < rfid.uid.size - 1) Serial.print("-");
-    }
-    Serial.println();
-
-    // UID 확인 및 서버 전송
-    checkAndPrintUID(rfid.uid.uidByte);
-
-    rfid.PICC_HaltA();
-    rfid.PCD_StopCrypto1();
+    // ✅ 주행 제어
+  obstacle_block = obstacle_detected();
+  if (run_command && !obstacle_block && !battery_empty)
+  {
+    //Serial.println("run");
+    line_trace();
+    send_obstacle(last_distance_cm, false, current_position.c_str());
+  }
+  else if (obstacle_block) 
+  {
+    Serial.println("stop");
+    Serial.print("Distance: ");
+    Serial.print(distance_cm);
+    Serial.println(" cm");
+    stop_motors();
+    send_obstacle(last_distance_cm, true, current_position.c_str());
   }
 
+  // RFID 체크
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
+  {
+    return;
+  }
+
+  Serial.print("UID: ");
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
+    Serial.print(rfid.uid.uidByte[i], HEX);
+    if (i < rfid.uid.size - 1) Serial.print("-");
+  }
+  Serial.println();
+
+  // UID 확인 및 서버 전송
+  checkAndPrintUID(rfid.uid.uidByte);
+
+  // if (run_command)
+  // {
+  //   line_trace();
+  // }
   // 🪫 10초마다 배터리 감소
   if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
     last_battery_drop = current_time;
@@ -241,18 +267,10 @@ void loop()
     send_battery_status();
   }
 
-  // ✅ 주행 제어
-  obstacle_block = obstacle_detected();
-  if (run_command && !obstacle_block && !battery_empty)
-  {
-    line_trace();
-    send_obstacle(last_distance_cm, false, current_position.c_str());
-  }
-  else if (obstacle_block) 
-  {
-    stop_motors();
-    send_obstacle(last_distance_cm, true, current_position.c_str());
-  }
+
+
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
 }
 
 /*------------------------------- 수신 처리--------------------------------*/
@@ -302,6 +320,13 @@ void receive_json(const String& msg)
     run_command = false;
     stop_motors();
   } 
+  else if (strcmp(cmd, "GATE_OPENED") == 0) {
+  const char* gate_id = doc["payload"]["gate_id"];
+  Serial.print("[🚪 게이트 열림 감지] : ");
+  Serial.println(gate_id);
+
+  send_gateopen_message(gate_id);  // 응답 전송
+  }
   else if (strcmp(cmd, "MISSION_ASSIGNED") == 0) {
     const char* target = doc["payload"]["source"];
     mission_target = String(target);
@@ -356,6 +381,19 @@ void send_assign_mission()
   JsonObject payload = doc.createNestedObject("payload");
   send_json("ASSIGN_MISSION", payload);
 }
+
+void send_gateopen_message(const char* gate_id)
+{
+  StaticJsonDocument<256> doc;
+  JsonObject payload = doc.createNestedObject("payload");
+
+  payload["gate_id"] = gate_id;
+  payload["position"] = current_position;
+  payload["timestamp"] = getISOTime();
+
+  send_json("ACK_GATE_OPENED", payload);
+}
+
 
 // 도착 메시지 (ARRIVED)
 void send_arrived(const char* position, const char* gate_id) 
@@ -459,16 +497,16 @@ bool obstacle_detected() {
   duration = pulseIn(ECHO_PIN, HIGH); 
   if (duration == 0)
   {
-    Serial.println("Hello");
+    //Serial.println("Hello");
     return false;  // 실패했으면 장애물 없음
   }
   
   distance_cm = duration * 0.034 / 2.0;  // 거리 계산
   last_distance_cm = distance_cm;  // 전역 변수 업데이트
 
-  Serial.print("Distance: ");
-  Serial.print(distance_cm);
-  Serial.println(" cm");
+  // Serial.print("Distance: ");
+  // Serial.print(distance_cm);
+  // Serial.println(" cm");
 
   return distance_cm < 10.0;  // 10cm 이내면 true
 }
@@ -557,4 +595,3 @@ void reconnectToServer()
     }
   }
 }
-
