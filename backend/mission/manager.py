@@ -21,6 +21,17 @@ class MissionManager:
     def load_from_db(self):
         """데이터베이스에서 미션 로드"""
         print("[DEBUG] DB에서 미션 로드 시작")
+        
+        # 로드 전 동기화 상태 확인
+        is_synced, only_in_db, only_in_queue = self.db.verify_waiting_missions(self.waiting_queue)
+        if not is_synced:
+            print("[WARNING] 로드 전 waiting_queue와 DB가 동기화되지 않았습니다.")
+            if only_in_queue:
+                print(f"[WARNING] waiting_queue에만 있는 미션을 DB에 저장합니다.")
+                for mission in self.waiting_queue:
+                    if mission.mission_id in only_in_queue:
+                        self.db.save_mission(mission)
+        
         missions = self.db.load_all_active_and_waiting_missions()
         print(f"[DEBUG] DB에서 가져온 미션 수: {len(missions)}")
         self.waiting_queue.clear()
@@ -28,26 +39,42 @@ class MissionManager:
         
         for mission_data in missions:
             print(f"[DEBUG] 미션 데이터: {mission_data}")
-            # 튜플 데이터를 Mission 객체로 변환
-            mission = Mission(
-                mission_id=mission_data[0],
-                cargo_type=mission_data[1],
-                cargo_amount=mission_data[2],
-                source=mission_data[3],
-                destination=mission_data[4]
-            )
-            mission.status = MissionStatus[mission_data[5]]  # 문자열을 enum으로 변환
-            print(f"[DEBUG] 변환된 미션: {mission.mission_id}, 상태: {mission.status}")
-            
-            if mission.status == MissionStatus.WAITING:
-                self.waiting_queue.append(mission)
-                print(f"[DEBUG] 대기 큐에 추가: {mission.mission_id}")
-            elif mission.status == MissionStatus.ASSIGNED:
-                self.active_missions[mission_data[6]] = mission  # truck_id를 키로 사용
-                print(f"[DEBUG] 활성 미션에 추가: {mission.mission_id}")
+            try:
+                # 튜플 데이터를 Mission 객체로 변환
+                mission = Mission(
+                    mission_id=mission_data[0],
+                    cargo_type=mission_data[1],
+                    cargo_amount=mission_data[2],
+                    source=mission_data[3],
+                    destination=mission_data[4]
+                )
+                mission.status = MissionStatus[mission_data[5]]  # 문자열을 enum으로 변환
+                mission.assigned_truck_id = mission_data[6]
+                mission.timestamp_created = mission_data[8]
+                mission.timestamp_assigned = mission_data[9]
+                mission.timestamp_completed = mission_data[10]
+                
+                print(f"[DEBUG] 변환된 미션: {mission.mission_id}, 상태: {mission.status.name}, 트럭ID: {mission.assigned_truck_id}")
+                
+                if mission.status == MissionStatus.WAITING:
+                    self.waiting_queue.append(mission)
+                    print(f"[DEBUG] 대기 큐에 추가: {mission.mission_id}")
+                elif mission.status == MissionStatus.ASSIGNED:
+                    self.active_missions[mission.assigned_truck_id] = mission
+                    print(f"[DEBUG] 활성 미션에 추가: {mission.mission_id} (트럭: {mission.assigned_truck_id})")
+                else:
+                    print(f"[DEBUG] 미션 상태 무시: {mission.mission_id} (상태: {mission.status.name})")
+            except Exception as e:
+                print(f"[ERROR] 미션 데이터 변환 중 오류 발생: {e}")
+                continue
         
         print(f"[DEBUG] 최종 대기 큐 크기: {len(self.waiting_queue)}")
         print(f"[DEBUG] 최종 활성 미션 수: {len(self.active_missions)}")
+        
+        # 로드 후 동기화 상태 확인
+        is_synced, only_in_db, only_in_queue = self.db.verify_waiting_missions(self.waiting_queue)
+        if not is_synced:
+            print("[ERROR] 로드 후에도 waiting_queue와 DB가 동기화되지 않았습니다.")
         
         # 대기 중인 미션이 있으면 트럭들에게 알림
         if len(self.waiting_queue) > 0 and hasattr(self, 'command_sender') and self.command_sender:
@@ -93,29 +120,35 @@ class MissionManager:
             
     # 트럭에 미션 할당
     def assign_next_to_truck(self, truck_id):
-        # DB에서 대기 중인 미션 확인
-        waiting_missions = self.db.load_all_waiting_missions()
-        print(f"[DEBUG] 대기 중인 미션 수: {len(waiting_missions)}")
+        """트럭에 다음 미션 할당"""
+        print(f"[DEBUG] {truck_id}의 미션 할당 요청")
         
-        if waiting_missions:
-            # 첫 번째 대기 미션을 가져옴
-            mission_data = waiting_missions[0]
-            print(f"[DEBUG] 할당할 미션 데이터: {mission_data}")
-            mission = Mission(
-                mission_id=mission_data[0],
-                cargo_type=mission_data[1],
-                cargo_amount=mission_data[2],
-                source=mission_data[3],
-                destination=mission_data[4]
-            )
-            mission.status = MissionStatus[mission_data[5]]
-            print(f"[DEBUG] 미션 상태: {mission.status}")
+        # waiting_queue가 비어있으면 DB에서 새로 로드
+        if not self.waiting_queue:
+            print("[DEBUG] waiting_queue가 비어있어 DB에서 새로 로드합니다.")
+            self.load_from_db()
+        
+        print(f"[DEBUG] 현재 waiting_queue 크기: {len(self.waiting_queue)}")
+        
+        if self.waiting_queue:
+            # waiting_queue에서 첫 번째 미션 가져오기
+            mission = self.waiting_queue.popleft()
+            print(f"[DEBUG] 할당할 미션: {mission.mission_id}")
             
-            # 트럭에 할당
-            mission.assign_to_truck(truck_id)
-            self.active_missions[mission.mission_id] = mission
-            self.db.save_mission(mission)
-            return mission
+            try:
+                # 트럭에 할당
+                mission.assign_to_truck(truck_id)
+                self.active_missions[truck_id] = mission
+                self.db.save_mission(mission)
+                print(f"[DEBUG] {truck_id}에 미션 {mission.mission_id} 할당 완료")
+                return mission
+            except Exception as e:
+                print(f"[ERROR] 미션 할당 중 오류 발생: {e}")
+                # 실패한 경우 미션을 다시 waiting_queue에 추가
+                self.waiting_queue.appendleft(mission)
+                return None
+        else:
+            print(f"[DEBUG] {truck_id}에 할당할 대기 중인 미션이 없습니다.")
             
         return None
     
@@ -136,3 +169,9 @@ class MissionManager:
                     status_label="완료됨",
                     timestamp_completed=mission.timestamp_completed
                 )
+
+    def reload_from_db(self):
+        """데이터베이스에서 미션을 다시 로드"""
+        print("[DEBUG] DB에서 미션 다시 로드 시작")
+        self.load_from_db()
+        print("[DEBUG] DB에서 미션 다시 로드 완료")
