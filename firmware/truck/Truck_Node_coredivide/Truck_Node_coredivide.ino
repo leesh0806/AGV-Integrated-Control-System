@@ -135,6 +135,26 @@ void send_arrived(const char* position, const char* gate_id);
 bool isSameUID(byte* uid1, byte* uid2);
 bool checkAndPrintUID(byte* uid);
 
+/*--------------------------------코어 디바이딩--------------------------------*/
+
+TaskHandle_t RFIDTaskHandle;
+
+void RFIDTask(void* parameter) {
+  for (;;) {
+    if (run_command) {
+      if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+        checkAndPrintUID(rfid.uid.uidByte);
+        rfid.PICC_HaltA();
+        rfid.PCD_StopCrypto1();
+      }
+    }
+    // 너무 빠르게 루프 돌지 않도록 아주 짧은 대기
+    vTaskDelay(pdMS_TO_TICKS(10));  // 10ms 대기
+  }
+}
+
+
+
 /*--------------------------------------------------------------------------------*/
 
 void setup() 
@@ -172,6 +192,17 @@ void setup()
   SPI.begin(18, 19, 23, 21);  // SCK, MISO, MOSI, SS
   rfid.PCD_Init();
   Serial.println("✅RC522 RFID 리더기 시작됨!");
+
+    // RFID 전용 Task 실행 (Core 0)
+  xTaskCreatePinnedToCore(
+    RFIDTask,
+    "RFIDTask",
+    4096,
+    NULL,
+    1,
+    &RFIDTaskHandle,
+    0
+  );
 
   // 시간 동기화
   configTime(9 * 3600, 0, "pool.ntp.org", "time.nist.gov");
@@ -252,45 +283,6 @@ void loop()
     loading_in_progress = false;
   }
 
-  // RFID 체크
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
-  {
-    return;
-  }
-
-  Serial.print("UID: ");
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-    Serial.print(rfid.uid.uidByte[i], HEX);
-    if (i < rfid.uid.size - 1) Serial.print("-");
-  }
-  Serial.println();
-
-  // UID 확인 및 서버 전송
-  checkAndPrintUID(rfid.uid.uidByte);
-
-  // // ✅ RFID 체크 (0.3초마다 제한)
-  // static unsigned long last_rfid_check = 0;
-  // const unsigned long RFID_CHECK_INTERVAL = 300;
-  // if (current_time - last_rfid_check >= RFID_CHECK_INTERVAL) {
-  //   last_rfid_check = current_time;
-
-  //   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-  //     Serial.print("UID: ");
-  //     for (byte i = 0; i < rfid.uid.size; i++) {
-  //       if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-  //       Serial.print(rfid.uid.uidByte[i], HEX);
-  //       if (i < rfid.uid.size - 1) Serial.print("-");
-  //     }
-  //     Serial.println();
-
-  //     checkAndPrintUID(rfid.uid.uidByte);
-
-  //     rfid.PICC_HaltA();
-  //     rfid.PCD_StopCrypto1();
-  //   }
-  // }
-
   // 🪫 10초마다 배터리 감소
   if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
     last_battery_drop = current_time;
@@ -316,9 +308,6 @@ void loop()
     last_battery_report = current_time;
     send_battery_status();
   }
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
 
 }
 
