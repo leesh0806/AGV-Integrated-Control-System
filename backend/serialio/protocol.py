@@ -1,10 +1,9 @@
 # backend/serialio/protocol.py
-# 시리얼 명령 포맷 정의
 
 class SerialProtocol:
+    # 예: "GATE_A", "OPEN" -> "GATE_A_OPEN\n"
     @staticmethod
     def build_command(target: str, action: str) -> str:
-        # 예: "GATE_A", "OPEN" -> "GATE_A_OPEN\n"
         return f"{target.upper()}_{action.upper()}\n"
     
     @staticmethod

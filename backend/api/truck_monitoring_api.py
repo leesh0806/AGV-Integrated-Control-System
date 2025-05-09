@@ -14,6 +14,8 @@ TRUCK_STATUS = {
     "TRUCK_01": "STANDBY"
 }
 
+# -------------------------------------------------------------------
+
 # 전역 BatteryManager 인스턴스
 battery_manager = None
 

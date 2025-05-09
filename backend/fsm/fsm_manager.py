@@ -77,12 +77,12 @@ class TruckFSMManager:
 
             # IDLE 상태에서 미션 할당
             if (state == TruckState.IDLE or state == TruckState.WAIT_NEXT_MISSION) and cmd == "ASSIGN_MISSION":
-                print("[DEBUG] ASSIGN_MISSION: DB에서 미션 새로 불러옴")
-                self.mission_manager.load_from_db()
+                print("[DEBUG] ASSIGN_MISSION: 대기 중인 미션 확인")
                 
                 # 다음 미션 존재 여부 확인
-                has_next_mission = len(self.mission_manager.waiting_queue) > 0
-                print(f"[DEBUG] 대기 중인 미션 수: {len(self.mission_manager.waiting_queue)}")
+                waiting_missions = self.mission_manager.get_waiting_missions()
+                has_next_mission = len(waiting_missions) > 0
+                print(f"[DEBUG] 대기 중인 미션 수: {len(waiting_missions)}")
                 
                 # 배터리 레벨 확인
                 if not payload or 'battery_level' not in payload:
@@ -102,7 +102,7 @@ class TruckFSMManager:
                     print(f"[🔋 배터리 체크] {truck_id}의 배터리: {battery_level}% (payload에서 조회)")
                 
                 if has_next_mission:
-                    next_mission = self.mission_manager.waiting_queue[0]
+                    next_mission = waiting_missions[0]
                     print(f"[DEBUG] 다음 미션 정보: ID={next_mission.mission_id}, 상태={next_mission.status.name}")
                     
                     if battery_level <= self.BATTERY_THRESHOLD:  # 배터리가 임계값 이하면
@@ -115,13 +115,12 @@ class TruckFSMManager:
                         return
                     
                     # 배터리가 충분하면 미션 진행
-                    mission = self.mission_manager.assign_next_to_truck(truck_id)
-                    if mission:
+                    if self.mission_manager.assign_mission_to_truck(next_mission.mission_id, truck_id):
                         self.set_state(truck_id, TruckState.MOVE_TO_GATE_FOR_LOAD)
                         print(f"[지시] {truck_id} → CHECKPOINT_A로 이동")
                         self.send_run(truck_id)
                         self.command_sender.send(truck_id, "MISSION_ASSIGNED", {
-                            "source": mission.source
+                            "source": next_mission.source
                         })
                         return
                 else:
@@ -155,8 +154,9 @@ class TruckFSMManager:
                 
                 if current_state == TruckState.MOVE_TO_GATE_FOR_LOAD:
                     # 이미 미션이 할당된 상태면 현재 미션 정보 재전송
-                    mission = self.mission_manager.get_mission_by_truck(truck_id)
-                    if mission:
+                    missions = self.mission_manager.get_missions_by_truck(truck_id)
+                    if missions:
+                        mission = missions[0]  # 첫 번째 미션 사용
                         self.command_sender.send(truck_id, "MISSION_ASSIGNED", {
                             "source": mission.source
                         })
@@ -180,18 +180,17 @@ class TruckFSMManager:
 
             # 충전 중일 때 미션 할당 요청이 오면 NO_MISSION 응답
             elif state == TruckState.CHARGING and cmd == "ASSIGN_MISSION":
-                print("[DEBUG] ASSIGN_MISSION: DB에서 미션 새로 불러옴")
-                self.mission_manager.load_from_db()
+                print("[DEBUG] ASSIGN_MISSION: 대기 중인 미션 확인")
                 
                 # 다음 미션 존재 여부 확인
-                has_next_mission = len(self.mission_manager.waiting_queue) > 0
-                print(f"[DEBUG] 대기 중인 미션 수: {len(self.mission_manager.waiting_queue)}")
+                waiting_missions = self.mission_manager.get_waiting_missions()
+                has_next_mission = len(waiting_missions) > 0
+                print(f"[DEBUG] 대기 중인 미션 수: {len(waiting_missions)}")
                 
                 if has_next_mission:
-                    next_mission = self.mission_manager.waiting_queue[0]
+                    next_mission = waiting_missions[0]
                     print(f"[DEBUG] 다음 미션 정보: ID={next_mission.mission_id}, 상태={next_mission.status.name}")
                     
-                    # 배터리 레벨 확인
                 if self.command_sender:
                     self.command_sender.send(truck_id, "NO_MISSION", {"reason": "CHARGING"})
                 return
@@ -323,7 +322,7 @@ class TruckFSMManager:
                 self.set_state(truck_id, TruckState.MOVE_TO_STANDBY)
                 self.send_run(truck_id)
 
-                mission = self.mission_manager.get_mission_by_truck(truck_id)
+                mission = self.mission_manager.find_mission_by_truck(truck_id)
                 if mission:
                     mission.update_status("COMPLETED")
                     print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")

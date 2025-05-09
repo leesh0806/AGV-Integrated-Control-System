@@ -48,7 +48,6 @@ class AdminMainWindow(QMainWindow):
         # DB 및 미션 매니저 초기화
         self.mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
         self.mission_manager = MissionManager(self.mission_db)
-        self.mission_manager.load_from_db()
 
         # 테이블 헤더 설정 (실제 의미 있는 정보만)
         self.tablewidget.setColumnCount(10)
@@ -85,9 +84,8 @@ class AdminMainWindow(QMainWindow):
         self.tablewidget.setRowCount(0)
         # 매번 새로 DB 인스턴스 생성
         mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
-        rows = mission_db.load_all_missions()
-        for row in rows:
-            mission = Mission.from_row(row)
+        missions = mission_db.get_assigned_and_waiting_missions()
+        for mission in missions:
             row_idx = self.tablewidget.rowCount()
             self.tablewidget.insertRow(row_idx)
             self.tablewidget.setItem(row_idx, 0, QTableWidgetItem(mission.mission_id))
@@ -110,10 +108,15 @@ class AdminMainWindow(QMainWindow):
         cargo_amount = self.spinBox.value()
         source = self.combobox_source.currentText()
         destination = "belt"  # 도착지는 belt로 고정
-        # truck_id를 지정하지 않고, status를 WAITING으로 명시
-        mission = Mission(mission_id, cargo_type, cargo_amount, source, destination)
-        mission.status = MissionStatus.WAITING
-        self.mission_manager.add_mission(mission)
+        
+        # 미션 생성
+        self.mission_manager.create_mission(
+            mission_id=mission_id,
+            cargo_type=cargo_type,
+            cargo_amount=cargo_amount,
+            source=source,
+            destination=destination
+        )
         self.refresh_mission_table()
 
     def delete_selected_mission(self):

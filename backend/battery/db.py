@@ -13,6 +13,7 @@ class BatteryDB:
         self.cursor = self.conn.cursor(dictionary=True)  # 딕셔너리 형태로 결과 반환
         self._create_table()
 
+    # 배터리 로그 테이블 생성
     def _create_table(self):
         query = """
         CREATE TABLE IF NOT EXISTS battery_logs (
@@ -33,6 +34,7 @@ class BatteryDB:
             print(f"[DB 오류] {err}")
             self.conn.rollback()
 
+    # 배터리 상태 로깅
     def log_battery_status(self, truck_id: str, battery_level: float, truck_state: str, event_type: str):
         query = """
         INSERT INTO battery_logs (truck_id, battery_level, truck_state, event_type)
@@ -45,11 +47,8 @@ class BatteryDB:
             print(f"[DB 오류] {err}")
             self.conn.rollback()
 
+    # 배터리 히스토리 조회
     def get_battery_history(self, truck_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """
-        배터리 히스토리 조회
-        :return: [{"id": 1, "truck_id": "TRUCK_01", "battery_level": 85.5, ...}, ...]
-        """
         query = """
         SELECT 
             id,
@@ -69,7 +68,8 @@ class BatteryDB:
         except mysql.connector.Error as err:
             print(f"[DB 오류] {err}")
             return []
-
+        
+    # 최신 배터리 상태 조회
     def get_latest_battery_status(self, truck_id: str):
         query = """
         SELECT battery_level, timestamp
@@ -91,8 +91,8 @@ class BatteryDB:
             print(f"[DB 오류] 배터리 상태 조회 중 오류 발생: {err}")
             return None
 
+    # DB 연결 종료
     def close(self):
-        """DB 연결 종료"""
         try:
             self.cursor.close()
             self.conn.close()

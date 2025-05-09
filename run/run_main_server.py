@@ -7,7 +7,7 @@ import signal
 import sys, os
 import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from backend.api.truck_status_api import app as flask_app
+from backend.api.truck_monitoring_api import app as flask_app
 
 # 설정
 HOST = '0.0.0.0'
@@ -22,7 +22,7 @@ port_map = {
 
 print("[✅ 초기화] 포트 맵:", port_map)
 
-# ✅ DB 연결 설정
+# DB 연결 설정
 db = MissionDB(
     host="localhost",
     user="root",
@@ -30,24 +30,20 @@ db = MissionDB(
     database="dust"
 )
 
-# ✅ AppController 인스턴스 생성
+# AppController 인스턴스 생성
 app = AppController(port_map=port_map, use_fake=True)
 app.mission_manager.db = db  # 실제 DB 설정
 
-# ✅ DB에서 미션 로드
-app.mission_manager.load_from_db()
-
-# ✅ 기존 미션 확인
+# 기존 미션 확인
 print("[🔍 기존 미션 확인 중...]")
-waiting_missions = db.load_all_waiting_missions()
+waiting_missions = db.get_waiting_missions()
 print(f"[ℹ️ 기존 미션 발견] 총 {len(waiting_missions)}개의 대기 중인 미션이 있습니다.")
 
-# ✅ TCP 서버 실행
+# TCP 서버 실행
 server = TCPServer(HOST, PORT, app)
 
 # Flask 서버 실행 함수
 def run_flask():
-    """Flask 웹 서버를 별도 스레드에서 실행"""
     flask_app.run(host="0.0.0.0", port=5001, debug=False, use_reloader=False)
 
 # 종료 신호 핸들링
@@ -56,18 +52,9 @@ def signal_handler(sig, frame):
     
     # 실행 중인 모든 미션을 취소 상태로 변경
     print("[⚠️ 실행 중인 미션 취소 중...]")
-    assigned_missions = db.load_all_assigned_missions()
-    for mission_data in assigned_missions:
-        mission = Mission(
-            mission_id=mission_data[0],
-            cargo_type=mission_data[1],
-            cargo_amount=mission_data[2],
-            source=mission_data[3],
-            destination=mission_data[4]
-        )
-        mission.status = MissionStatus[mission_data[5]]
-        mission.cancel()
-        db.save_mission(mission)
+    assigned_missions = db.get_assigned_missions()
+    for mission in assigned_missions:
+        app.mission_manager.cancel_mission(mission.mission_id)
     print(f"[✅ {len(assigned_missions)}개의 미션이 취소되었습니다.]")
     
     server.stop()
@@ -77,11 +64,9 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-print(f"[✅ 메인 서버 시작됨] TCP 서버: {HOST}:{PORT}, Flask 서버: 0.0.0.0:5001")
+print(f"[메인 서버 시작됨] TCP 서버: {HOST}:{PORT}, Flask 서버: 0.0.0.0:5001")
 
-# 이 스크립트는 TCP 서버와 Flask 서버를 함께 시작합니다.
-# - TCP 서버: 트럭, 게이트, 벨트 등의 IoT 장치와 통신
-# - Flask 서버: 웹 UI에 REST API 제공
+
 if __name__ == "__main__":
     # Flask 서버를 별도 데몬 스레드로 시작
     flask_thread = threading.Thread(target=run_flask, daemon=True)

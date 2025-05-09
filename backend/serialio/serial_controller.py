@@ -8,24 +8,18 @@ from backend.serialio.fake_serial import FakeSerial
 class SerialController:
     def __init__(self, port="/dev/ttyUSB0", baudrate=9600, use_fake=False):
         if use_fake:
-            self.ser = FakeSerial(name=port)  # ✅ 가상 시리얼 사용
+            self.ser = FakeSerial(name=port)
         else:
             self.ser = serial.Serial(port, baudrate, timeout=1)
 
     # 구조화된 명령어 전송
     def send_command(self, target: str, action: str):
-        """
-        구조화된 명령어 전송: ex) GATE_A + OPEN → 'GATE_A:OPEN'
-        """
         command = SerialProtocol.build_command(target, action)
         print(f"[Serial Send] {command.strip()}")
         self.ser.write(command.encode())
 
     # 단순 텍스트 명령 전송
     def write(self, msg: str):
-        """
-        단순 텍스트 명령 전송 (예: BELTACT, BELTOFF 등)
-        """
         try:
             self.ser.write((msg + '\n').encode())
         except Exception as e:
@@ -33,16 +27,6 @@ class SerialController:
 
     # 응답 수신
     def read_response(self, timeout=5):
-        """
-        응답 수신 (ACK 또는 장치 상태 등) → 문자열로 반환
-        ✅ 벨트의 BELTON/BELTOFF/ConA_FULL 같은 응답도 로깅
-        
-        Args:
-            timeout (int): 응답 대기 시간(초). 기본값은 5초.
-        
-        Returns:
-            str: 수신된 응답 문자열. 시간 초과시 None.
-        """
         start_time = time.time()
         wait_count = 0
         
@@ -58,7 +42,6 @@ class SerialController:
                 try:
                     # 반복문으로 여러 줄이 왔을 때 처리 가능하도록
                     line = self.ser.readline().decode().strip()
-                    
                     if not line:
                         time.sleep(0.1)
                         continue
@@ -86,6 +69,7 @@ class SerialController:
                     else:
                         print(f"[ℹ️ 기타 응답] {line}")
                         return line  # 알 수 없는 응답도 반환
+                    
                 except UnicodeDecodeError:
                     print("[⚠️ 디코딩 오류] 응답을 해석할 수 없습니다.")
                     continue
