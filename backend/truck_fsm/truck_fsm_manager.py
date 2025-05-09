@@ -1,12 +1,12 @@
-# backend/fsm/state_machine.py
+# backend/truck_fsm/truck_fsm_manager.py
 
-from .state_enum import TruckState
-from ..mission.status import MissionStatus
+from .truck_state_enum import TruckState
+from ..mission.mission_status import MissionStatus
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..tcpio.truck_commander import TruckCommandSender
 from datetime import datetime
-from ..truck_status.truck_state_manager import TruckStatusManager
+from ..truck_status.truck_status_manager import TruckStatusManager
 
 
 class TruckFSMManager:

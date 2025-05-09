@@ -1,5 +1,5 @@
 # auth package
 
-from .auth_manager import UserAuth
+from .auth_manager import AuthManager
 
-__all__ = ['UserAuth']
+__all__ = ['AuthManager']

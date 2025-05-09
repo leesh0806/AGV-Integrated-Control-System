@@ -1,8 +1,8 @@
-# backend/mission/mission_controller.py
+# backend/mission/mission_manager.py
 
 from .mission import Mission
-from .status import MissionStatus
-from .db import MissionDB
+from .mission_status import MissionStatus
+from .mission_db import MissionDB
 from typing import List, Optional
 
 class MissionManager:

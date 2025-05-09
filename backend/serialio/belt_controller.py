@@ -28,10 +28,6 @@ class BeltController:
 
     # 외부에서 벨트에 명령을 직접 전송할 때 사용
     def send_command(self, cmd: str):
-        """
-        - BELTACT: 벨트 작동 시작 (벨트에서 20초 타이머 관리)
-        - EMRSTOP: 비상 정지
-        """
         if cmd == "BELTACT" and self.container_full:
             print("[⚠️ 벨트 작동 거부] 컨테이너가 가득 찼습니다.")
             return False
@@ -44,16 +40,7 @@ class BeltController:
     # 벨트 장치 또는 중앙 제어로부터 전달된 메시지를 처리
     def handle_message(self, msg):
         msg = msg.strip().upper()
-
-        """
-        - BELTACT: 벨트 작동 시작
-        - EMRSTOP: 비상 정지
-        - A_FULL: 컨테이너 A가 가득 찼음
-        - CONA_FULL: 컨테이너 A가 가득 찼음
-        - BELTON: 벨트 작동 중
-        - BELTOFF: 벨트 정지
-        """
-
+        
         # 벨트 작동 시작
         if msg == "BELTACT":
             if self.is_full:

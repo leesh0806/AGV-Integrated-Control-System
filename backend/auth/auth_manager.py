@@ -1,8 +1,8 @@
-# backend/auth/user_auth.py
+# backend/auth/auth_manager.py
 
 import mysql.connector
 
-class UserAuth:
+class AuthManager:
     def __init__(self, db_config: dict):
         try:
             self.conn = mysql.connector.connect(**db_config)
@@ -12,6 +12,7 @@ class UserAuth:
             print(f"[❌ DB 연결 실패] {err}")
             raise
 
+    # 사용자 인증
     def verify_user(self, username: str, password: str):
         query = "SELECT password, role FROM users WHERE username = %s"
         self.cursor.execute(query, (username,))
@@ -28,6 +29,7 @@ class UserAuth:
 
         return False, None
 
+    # 연결 종료
     def close(self):
         self.cursor.close()
         self.conn.close()

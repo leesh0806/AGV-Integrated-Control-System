@@ -12,6 +12,8 @@ class SerialController:
         else:
             self.ser = serial.Serial(port, baudrate, timeout=1)
 
+    # ----------------------- 명령 전송 -----------------------
+
     # 구조화된 명령어 전송
     def send_command(self, target: str, action: str):
         command = SerialProtocol.build_command(target, action)
@@ -24,6 +26,8 @@ class SerialController:
             self.ser.write((msg + '\n').encode())
         except Exception as e:
             print(f"[SerialController 오류] write 실패: {e}")
+
+    # ----------------------- 응답 수신 -----------------------
 
     # 응답 수신
     def read_response(self, timeout=5):
@@ -46,12 +50,12 @@ class SerialController:
                         time.sleep(0.1)
                         continue
                     
-                    # ✅ FakeSerial 응답일 경우 
+                    # FakeSerial 응답일 경우 
                     # "STATUS:" 프리픽스를 제거
                     if line.startswith("STATUS:"):
                         line = line.replace("STATUS:", "", 1)
 
-                    # ✅ 게이트 응답 처리 개선
+                    # 게이트 응답 처리 개선
                     if "GATE_" in line and "OPENED" in line:
                         print(f"[🚪 게이트 열림 응답] {line}")
                         return line
@@ -59,7 +63,7 @@ class SerialController:
                         print(f"[🚪 게이트 닫힘 응답] {line}")
                         return line
                     
-                    # ✅ 벨트 상태 응답 로깅
+                    # 벨트 상태 응답 로깅
                     elif any(status in line for status in ["BELTON", "BELTOFF", "ConA_FULL"]):
                         print(f"[🔄 벨트 상태] {line}")
                         return line
@@ -79,6 +83,9 @@ class SerialController:
         
         print(f"[⏰ 응답 시간 초과 ({timeout}초)]")
         return None
+    
+
+    # ----------------------- 연결 종료 -----------------------
 
     def close(self):
         try:

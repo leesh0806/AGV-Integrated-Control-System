@@ -5,7 +5,7 @@ import socket
 import threading
 import json
 from backend.tcpio.protocol import TCPProtocol
-from backend.controller.app_controller import AppController
+from backend.app_controller.app_controller import AppController
 
 
 class TCPServer:

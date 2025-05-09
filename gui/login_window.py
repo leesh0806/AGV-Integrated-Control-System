@@ -1,11 +1,10 @@
-# frontend/gui/login_window.py
+# gui/login_window.py
 
 from PyQt6.QtWidgets import QMainWindow, QMessageBox, QLineEdit
 from PyQt6 import uic
 import os
 
-from backend.auth.auth_manager import UserAuth
-from backend.auth.db import AuthDB
+from backend.auth.auth_manager import AuthManager
 from gui.admin_main_window import AdminMainWindow
 
 class LoginWindow(QMainWindow):
@@ -20,7 +19,7 @@ class LoginWindow(QMainWindow):
         self.input_pw.setEchoMode(QLineEdit.EchoMode.Password)
 
         # DB 인증 관리자 설정
-        self.auth_manager = UserAuth({
+        self.auth_manager = AuthManager({
             "host": "localhost",
             "user": "root",
             "password": "jinhyuk2dacibul",

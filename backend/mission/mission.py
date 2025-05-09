@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Optional, Dict, List
-from .status import MissionStatus
+from .mission_status import MissionStatus
 
 class Mission:
     def __init__(self, mission_id: str, cargo_type: str, cargo_amount: float, 

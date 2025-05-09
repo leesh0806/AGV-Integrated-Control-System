@@ -1,4 +1,4 @@
-from backend.controller.app_controller import AppController
+from backend.app_controller.app_controller import AppController
 from backend.tcpio.server import TCPServer
 from backend.mission.mission import Mission
 from backend.mission.db import MissionDB
