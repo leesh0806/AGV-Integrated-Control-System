@@ -5,7 +5,7 @@ import socket
 import threading
 import json
 from backend.tcpio.protocol import TCPProtocol
-from backend.app_controller.app_controller import AppController
+from backend.main_controller.main_controller import MainController
 
 
 class TCPServer:
@@ -16,8 +16,8 @@ class TCPServer:
         self.truck_sockets = {}   # truck_id → socket
         self.running = False
 
-        # AppController 초기화 및 트럭 소켓 맵 설정
-        self.app = app_controller if app_controller else AppController(port_map={})
+        # MainController 초기화 및 트럭 소켓 맵 설정
+        self.app = app_controller if app_controller else MainController(port_map={})
         self.app.set_truck_commander(self.truck_sockets)
 
     def start(self):

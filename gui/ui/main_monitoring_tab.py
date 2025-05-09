@@ -101,8 +101,6 @@ class MainMonitoringTab(QWidget):
             label.setPos(x + w / 2 + 4, y - h / 2 - 10)
             self.scene.addItem(label)
 
-
-
     def get_label(self, key):
         return {
             "A_LOAD": "A 화물 적재 장소",
@@ -130,10 +128,10 @@ class MainMonitoringTab(QWidget):
 
     def update_truck_position_from_api(self):
         try:
-            resp = requests.get("http://localhost:5001/api/truck_status", timeout=0.5)
+            resp = requests.get("http://localhost:5001/api/trucks/TRUCK_01", timeout=0.5)
             if resp.status_code == 200:
                 data = resp.json()
-                pos = data.get("position")
+                pos = data.get("position", {}).get("location")
                 # pos가 load_a, load_b 등 소문자로 올 수 있으니 대문자로 변환
                 pos_key = pos.upper() if pos else None
                 # node_coords의 키와 매칭

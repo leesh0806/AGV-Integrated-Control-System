@@ -1,7 +1,14 @@
 import socket
 import json
 import time
-from backend.serialio.serial_manager import SerialManager
+import sys, os
+
+# 현재 스크립트 경로를 기준으로 프로젝트 루트 경로를 추가합니다
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
+from backend.serialio.port_manager import PortManager
 import threading
 import requests
 
@@ -17,7 +24,7 @@ port_map = {
 }
 
 # 시리얼 매니저 초기화 - 실제 포트 맵 사용
-manager = SerialManager(port_map=port_map, use_fake=True)
+manager = PortManager(port_map=port_map, use_fake=True)
 
 class TruckSimulator:
     def __init__(self):
@@ -25,8 +32,13 @@ class TruckSimulator:
         self.client = None
         self.battery_level = 100
         self.charging = True
-        self.current_position = None
+        self.current_position = "STANDBY"
+        self.run_state = "IDLE"
         self.connect()
+        
+        # 상태 업데이트 타이머 시작
+        self.updater_thread = threading.Thread(target=self.status_update_timer, daemon=True)
+        self.updater_thread.start()
 
     # TCP 연결
     def connect(self):
@@ -58,6 +70,52 @@ class TruckSimulator:
             print("[⚠️ 연결 끊김] 서버에 재연결 시도 중...")
             self.connect()
             self.send(cmd, payload, wait)  # 재시도
+    
+    # 통합 상태 업데이트 전송
+    def send_status_update(self):
+        """통합 상태 업데이트 전송"""
+        timestamp = time.time()
+        
+        status_payload = {
+            "timestamp": timestamp,
+            "battery": {
+                "level": self.battery_level,
+                "is_charging": self.charging
+            },
+            "position": {
+                "current": self.current_position,
+                "run_state": self.run_state
+            }
+        }
+        
+        self.send("STATUS_UPDATE", status_payload, wait=False)
+    
+    # 정기적인 상태 업데이트 타이머
+    def status_update_timer(self, interval=3):
+        """정기적으로 상태 업데이트 전송"""
+        while True:
+            try:
+                # 배터리 상태 업데이트
+                current_level = self.battery_level
+                
+                if self.charging:
+                    self.battery_level = min(100, self.battery_level + 5)
+                    print(f"[DEBUG] 배터리 충전 중: {current_level}% -> {self.battery_level}%")
+                elif self.current_position == "STANDBY":
+                    # STANDBY에서는 배터리 유지
+                    print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
+                else:
+                    self.battery_level = max(0, self.battery_level - 5)
+                    print(f"[DEBUG] 배터리 감소 중: {current_level}% -> {self.battery_level}% (위치: {self.current_position})")
+                
+                # 통합 상태 업데이트 전송
+                self.send_status_update()
+                
+                time.sleep(interval)
+            except Exception as e:
+                print(f"[ERROR] 상태 업데이트 중 오류 발생: {str(e)}")
+                time.sleep(1)
+                continue
 
     # 미션 수신 대기
     def wait_for_mission_response(self, timeout=5.0):
@@ -85,12 +143,14 @@ class TruckSimulator:
                             if reason == "BATTERY_LOW" or reason == "CHARGING":
                                 print(f"[🔋 충전 필요] {reason}")
                                 self.charging = True  # 충전 상태로 설정
+                                self.run_state = "CHARGING"
                                 # 충전이 완료될 때까지 대기
                                 while True:
                                     time.sleep(5)  # 5초마다 배터리 상태 확인
                                     if self.battery_level >= 100:
                                         print("[🔋 충전 완료] 충전 완료 메시지 전송")
                                         self.charging = False
+                                        self.run_state = "IDLE"
                                         self.send("FINISH_CHARGING", wait=False)
                                         return self.wait_for_mission_response()
                             else:
@@ -102,20 +162,24 @@ class TruckSimulator:
                         elif msg.get("cmd") == "START_CHARGING":
                             print("[🔋 충전 시작] 서버로부터 충전 명령 수신")
                             self.charging = True
+                            self.run_state = "CHARGING"
                             # 충전이 완료될 때까지 대기
                             while self.battery_level < 100:
                                 time.sleep(1)
                             print("[🔋 충전 완료] 100% 도달")
                             self.charging = False
+                            self.run_state = "IDLE"
                             self.send("FINISH_CHARGING", wait=False)
                             return self.wait_for_mission_response()
                         elif msg.get("cmd") == "CHARGING_COMPLETED":
                             print("[🔋 충전 완료 메시지 수신]")
                             self.charging = False
+                            self.run_state = "IDLE"
                             # 배터리가 30% 이하일 때만 다시 충전 요청
                             if self.battery_level <= 30:
                                 print(f"[🔋 배터리 부족] {self.battery_level}% - 충전 요청")
                                 self.charging = True
+                                self.run_state = "CHARGING"
                                 self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
                             else:
                                 print(f"[🔋 배터리 충분] {self.battery_level}% - 미션 요청")
@@ -123,6 +187,7 @@ class TruckSimulator:
                             return self.wait_for_mission_response()
                         elif msg.get("cmd") == "RUN":
                             print("[ℹ️ RUN 명령 수신]")
+                            self.run_state = "RUNNING"
                             continue
                         else:
                             print(f"[ℹ️ 기타 메시지] {msg}")
@@ -178,6 +243,7 @@ class TruckSimulator:
                         # RUN 명령 처리
                         elif cmd == "RUN":
                             print("[ℹ️ RUN 명령 수신]")
+                            self.run_state = "RUNNING"
                         
                         # GATE_CLOSED는 이전 게이트에 대한 것이므로 무시
                         elif cmd == "GATE_CLOSED":
@@ -235,6 +301,7 @@ class TruckSimulator:
                         # RUN 명령을 받으면 성공
                         if cmd == "RUN":
                             print("[✅ RUN 명령 수신 - 이동 시작]")
+                            self.run_state = "RUNNING"
                             received_run = True
                             break
                         else:
@@ -263,8 +330,6 @@ class TruckSimulator:
         # 최초 1회만 등록 및 초기화
         self.send("HELLO", {"msg": "register"}, wait=False)
         time.sleep(0.1)
-        self.send("RESET", wait=False)
-        time.sleep(0.1)
         
         # 첫 미션 요청
         self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
@@ -280,14 +345,17 @@ class TruckSimulator:
                 # ✅ 전체 미션 수행
                 print("\n[🚛 트럭 이동] CHECKPOINT_A로 이동 중...")
                 time.sleep(2)  # 이동 시간
-                self.send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
                 self.current_position = "CHECKPOINT_A"
                 self.charging = False
+                
+                # 도착 알림
+                self.send("ARRIVED", {"position": "CHECKPOINT_A", "gate_id": "GATE_A"})
+                
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
                     # RUN 명령을 기다린 후 이동
                     if self.wait_for_run_command():
-                        print("\n[�� 트럭 이동] CHECKPOINT_B로 이동 중...")
+                        print("\n[🚛 트럭 이동] CHECKPOINT_B로 이동 중...")
                     else:
                         print("[❌ 오류] RUN 명령을 받지 못했습니다.")
                         return
@@ -296,21 +364,27 @@ class TruckSimulator:
                     return
 
                 time.sleep(2)  # 이동 시간
+                self.current_position = "CHECKPOINT_B"
                 self.send("ARRIVED", {"position": "CHECKPOINT_B", "gate_id": "GATE_A"})
 
                 print(f"\n[🚛 트럭 이동] {self.source}로 이동 중...")
                 time.sleep(2)  # 이동 시간
+                self.current_position = self.source
                 self.send("ARRIVED", {"position": self.source})  # load_A or load_B
 
                 print("\n[📦 적재 시작]")
                 time.sleep(1)  # 적재 준비 시간
+                self.run_state = "LOADING"
                 self.send("START_LOADING")
                 time.sleep(3)  # 적재 시간
                 self.send("FINISH_LOADING")
+                self.run_state = "IDLE"
                 
                 print("\n[🚛 트럭 이동] CHECKPOINT_C로 이동 중...")
                 time.sleep(2)
+                self.current_position = "CHECKPOINT_C"
                 self.send("ARRIVED", {"position": "CHECKPOINT_C", "gate_id": "GATE_B"})
+                
                 if self.wait_for_gate_response():
                     self.send("ACK_GATE_OPENED")
                     # RUN 명령을 기다린 후 이동
@@ -324,22 +398,26 @@ class TruckSimulator:
                     return
 
                 time.sleep(2)  # 이동 시간
+                self.current_position = "CHECKPOINT_D"
                 self.send("ARRIVED", {"position": "CHECKPOINT_D", "gate_id": "GATE_B"})
 
                 print("\n[🚛 트럭 이동] BELT로 이동 중...")
                 time.sleep(2)  # 이동 시간
+                self.current_position = "BELT"
                 self.send("ARRIVED", {"position": "BELT"})
 
                 print("\n[📦 하차 시작]")
                 time.sleep(1)  # 하차 준비 시간
+                self.run_state = "UNLOADING"
                 self.send("START_UNLOADING")
                 time.sleep(3)  # 하차 시간
                 self.send("FINISH_UNLOADING")
+                self.run_state = "IDLE"
 
                 print("\n[🚛 트럭 이동] STANDBY로 이동 중...")
                 time.sleep(2)  # 이동 시간
-                self.send("ARRIVED", {"position": "STANDBY"})
                 self.current_position = "STANDBY"
+                self.send("ARRIVED", {"position": "STANDBY"})
                 
                 print("\n✅ 한 턴 완료. 다음 미션을 기다립니다.")
                 time.sleep(2)
@@ -355,48 +433,6 @@ class TruckSimulator:
                 print(f"\n❌ 테스트 실패: {e}")
                 break
 
-    def report_battery(self, interval=5, drain=5, charge=3):
-        while True:
-            try:
-                # 현재 배터리 레벨 저장
-                current_level = self.battery_level
-                
-                if self.charging:
-                    self.battery_level = min(100, self.battery_level + charge)
-                    print(f"[DEBUG] 배터리 충전 중: {current_level}% -> {self.battery_level}%")
-                elif self.current_position == "STANDBY":
-                    # STANDBY에서는 배터리 유지
-                    print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
-                else:
-                    self.battery_level = max(0, self.battery_level - drain)
-                    print(f"[DEBUG] 배터리 감소 중: {current_level}% -> {self.battery_level}% (위치: {self.current_position})")
-                
-                # API로 배터리 상태 전송
-                try:
-                    print(f"[DEBUG] API로 배터리 상태 전송: {self.battery_level}% (충전중: {self.charging})")
-                    response = requests.post(
-                        f"http://127.0.0.1:5001/api/truck_battery/TRUCK_01",
-                        json={
-                            "level": self.battery_level,
-                            "is_charging": self.charging
-                        }
-                    )
-                    if response.status_code == 200:
-                        print(f"[DEBUG] 배터리 상태 업데이트 성공: {self.battery_level}% (충전중: {self.charging})")
-                    else:
-                        print(f"[ERROR] 배터리 상태 업데이트 실패: {response.status_code}")
-                except Exception as e:
-                    print(f"[ERROR] 배터리 상태 업데이트 중 오류 발생: {str(e)}")
-                    time.sleep(1)  # 오류 발생 시 잠시 대기
-                    continue
-                
-                time.sleep(interval)
-            except Exception as e:
-                print(f"[ERROR] 배터리 관리 중 오류 발생: {str(e)}")
-                time.sleep(1)
-                continue
-
 if __name__ == "__main__":
     simulator = TruckSimulator()
-    threading.Thread(target=simulator.report_battery, args=(3, 5, 5), daemon=True).start()
     simulator.run_full_mission()

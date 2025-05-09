@@ -10,48 +10,60 @@ from ..truck_status.truck_status_manager import TruckStatusManager
 
 
 class TruckFSMManager:
-    def __init__(self, gate_controller, mission_manager, belt_controller=None, status_manager=None):
+    def __init__(self, gate_controller, mission_manager, belt_controller=None, truck_status_manager=None):
         self.gate_controller = gate_controller
         self.mission_manager = mission_manager
         self.belt_controller = belt_controller
-        self.status_manager = status_manager
+        self.truck_status_manager = truck_status_manager
         self.command_sender = None
         self.BATTERY_THRESHOLD = 30
         self.BATTERY_FULL = 100
 
-    # -------------------------------------------------------------------
+    # -------------------------------- 기본 설정 --------------------------------
 
-    # 명령 전송 설정
     def set_commander(self, commander: 'TruckCommandSender'):
+        """명령 전송 객체 설정"""
         self.command_sender = commander
 
-    # 트럭 상태 조회
     def get_state(self, truck_id):
-        if self.status_manager:
-            return self.status_manager.get_truck_status(truck_id)["position"]["state"]
+        """트럭 상태 조회"""
+        if self.truck_status_manager:
+            status = self.truck_status_manager.get_truck_status(truck_id)
+            status_str = status["position"]["status"]
+            
+            # 문자열 상태를 TruckState 열거형으로 변환
+            try:
+                # 열거형에 직접 있는 경우
+                return TruckState[status_str]
+            except (KeyError, ValueError):
+                # 일반 문자열인 경우 기본값 반환
+                print(f"[⚠️ 상태 변환 실패] {status_str}는 유효한 TruckState가 아님")
+                return TruckState.IDLE
         return TruckState.IDLE
 
-    # 트럭 상태 설정
     def set_state(self, truck_id, new_state):
-        if self.status_manager:
+        """트럭 상태 설정"""
+        if self.truck_status_manager:
             prev = self.get_state(truck_id)
-            self.status_manager.update_position(truck_id, "STANDBY", new_state)
+            self.truck_status_manager.update_position(truck_id, "STANDBY", new_state)
             print(f"[FSM] {truck_id}: {prev} → {new_state}")
 
-    # 트럭 주행 명령
+    # -------------------------------- 명령 전송 --------------------------------
+
     def send_run(self, truck_id):
+        """트럭 주행 명령 전송"""
         if self.command_sender:
             self.command_sender.send(truck_id, "RUN")
 
-    # 트럭 정지 명령
     def send_stop(self, truck_id):
+        """트럭 정지 명령 전송"""
         if self.command_sender:
             self.command_sender.send(truck_id, "STOP")
 
-    # -------------------------------------------------------------------
+    # -------------------------------- 게이트 제어 --------------------------------
 
-    # 게이트 열림 로깅 및 명령 전송
     def _open_gate_and_log(self, gate_id: str, truck_id: str):
+        """게이트 열림 로깅 및 명령 전송"""
         success = self.gate_controller.open_gate(gate_id)
         if success:
             print(f"[🔓 GATE OPEN] {gate_id} ← by {truck_id}")
@@ -59,8 +71,8 @@ class TruckFSMManager:
                 self.command_sender.send(truck_id, "GATE_OPENED", {"gate_id": gate_id})
         return success
 
-    # 게이트 닫기 로깅 및 명령 전송
     def _close_gate_and_log(self, gate_id: str, truck_id: str):
+        """게이트 닫기 로깅 및 명령 전송"""
         success = self.gate_controller.close_gate(gate_id)
         if success:
             print(f"[🔒 GATE CLOSE] {gate_id} ← by {truck_id}")
@@ -68,10 +80,20 @@ class TruckFSMManager:
                 self.command_sender.send(truck_id, "GATE_CLOSED", {"gate_id": gate_id})
         return success
 
-    # -------------------------------------------------------------------
+    # -------------------------------- 배터리 관리 --------------------------------
+    
+    def check_battery(self, truck_id: str) -> bool:
+        """배터리 상태 확인"""
+        if self.truck_status_manager:
+            truck_status = self.truck_status_manager.get_truck_status(truck_id)
+            print(f"[🔋 배터리 체크] {truck_id}의 배터리: {truck_status['battery']['level']}%")
+            return truck_status['battery']['level'] > self.BATTERY_THRESHOLD
+        return False
 
-    # 트리거 처리
+    # -------------------------------- 트리거 처리 --------------------------------
+
     def handle_trigger(self, truck_id, cmd, payload):
+        """트리거에 따른 FSM 상태 변경 처리"""
         try:
             state = self.get_state(truck_id)
             print(f"[FSM] 트리거: {truck_id}, 상태={state}, 트리거={cmd}")
@@ -88,8 +110,8 @@ class TruckFSMManager:
                 # 배터리 레벨 확인
                 if not payload or 'battery_level' not in payload:
                     # status_manager에서 배터리 정보 확인
-                    if self.status_manager:
-                        truck_status = self.status_manager.get_truck_status(truck_id)
+                    if self.truck_status_manager:
+                        truck_status = self.truck_status_manager.get_truck_status(truck_id)
                         battery_level = truck_status["battery"]["level"]
                         print(f"[🔋 배터리 체크] {truck_id}의 배터리: {battery_level}% (status_manager에서 조회)")
                     else:
@@ -111,8 +133,8 @@ class TruckFSMManager:
                         self.set_state(truck_id, TruckState.CHARGING)
                         if self.command_sender:
                             self.command_sender.send(truck_id, "START_CHARGING", {})
-                        if self.status_manager:
-                            self.status_manager.update_battery(truck_id, battery_level, True)
+                        if self.truck_status_manager:
+                            self.truck_status_manager.update_battery(truck_id, battery_level, True)
                         return
                     
                     # 배터리가 충분하면 미션 진행
@@ -141,8 +163,8 @@ class TruckFSMManager:
                         self.set_state(truck_id, TruckState.CHARGING)
                         if self.command_sender:
                             self.command_sender.send(truck_id, "START_CHARGING", {})
-                        if self.status_manager:
-                            self.status_manager.update_battery(truck_id, battery_level, True)
+                        if self.truck_status_manager:
+                            self.truck_status_manager.update_battery(truck_id, battery_level, True)
                     else:
                         print(f"[🔋 충전 불필요] {truck_id}의 배터리: {battery_level}% - 대기 상태 유지")
                         self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
@@ -173,11 +195,11 @@ class TruckFSMManager:
                 else:
                     # 기타 상태면 현재 상태 정보만 전송
                     self.command_sender.send(truck_id, "CURRENT_STATE", {
-                        "state": current_state
+                        "state": str(current_state.name) if hasattr(current_state, 'name') else str(current_state)
                     })
                     return
             
-            # -------------------------------------------------------------------
+            # -------------------------------- 충전 관련 상태 처리 --------------------------------
 
             # 충전 중일 때 미션 할당 요청이 오면 NO_MISSION 응답
             elif state == TruckState.CHARGING and cmd == "ASSIGN_MISSION":
@@ -196,20 +218,16 @@ class TruckFSMManager:
                     self.command_sender.send(truck_id, "NO_MISSION", {"reason": "CHARGING"})
                 return
             
-            # -------------------------------------------------------------------
-
             # 대기장 도착
             elif state == TruckState.MOVE_TO_STANDBY and cmd == "ARRIVED_AT_STANDBY":
                 self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
                 self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
                 return
             
-            # -------------------------------------------------------------------
-
             # 충전 완료
             elif state == TruckState.CHARGING and cmd == "FINISH_CHARGING":
-                if self.status_manager:
-                    truck_status = self.status_manager.get_truck_status(truck_id)
+                if self.truck_status_manager:
+                    truck_status = self.truck_status_manager.get_truck_status(truck_id)
                     if not truck_status["battery"]["level"] >= self.BATTERY_FULL:
                         print(f"[🔋 충전 계속] {truck_id}의 배터리: {truck_status['battery']['level']}%")
                         return
@@ -217,12 +235,12 @@ class TruckFSMManager:
                     self.set_state(truck_id, TruckState.IDLE)
                     if self.command_sender:
                         self.command_sender.send(truck_id, "CHARGING_COMPLETED", {})
-                    self.status_manager.update_battery(truck_id, truck_status["battery"]["level"], False)
+                    self.truck_status_manager.update_battery(truck_id, truck_status["battery"]["level"], False)
                     # 충전 완료 후 미션 할당 시도
                     self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
                     return
             
-            # -------------------------------------------------------------------
+            # -------------------------------- 적재 작업 상태 처리 --------------------------------
 
             # 게이트 A에 도착
             elif state == TruckState.MOVE_TO_GATE_FOR_LOAD and cmd == "ARRIVED_AT_CHECKPOINT_A":
@@ -232,16 +250,12 @@ class TruckFSMManager:
                 self._open_gate_and_log(gate_id, truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # 게이트 열림 확인
-            elif state == TruckState.WAIT_GATE_OPEN_FOR_LOAD and cmd == "ACK_GATE_OPENED":
+            elif (state == TruckState.WAIT_GATE_OPEN_FOR_LOAD or "WAIT_GATE_OPEN" in str(state)) and cmd == "ACK_GATE_OPENED":
                 self.set_state(truck_id, TruckState.MOVE_TO_LOAD)
                 self.send_run(truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # CHECKPOINT_B 도착 (GATE_A 닫기)
             elif state == TruckState.MOVE_TO_LOAD and cmd == "ARRIVED_AT_CHECKPOINT_B":
                 # self.send_stop(truck_id)  # 트럭 정지
@@ -249,29 +263,25 @@ class TruckFSMManager:
                 self._close_gate_and_log(gate_id, truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # 적재장 도착
             elif state == TruckState.MOVE_TO_LOAD and (cmd == "ARRIVED_AT_LOAD_A" or cmd == "ARRIVED_AT_LOAD_B"):
                 self.set_state(truck_id, TruckState.WAIT_LOAD)
                 self.send_stop(truck_id)  # 트럭 정지
                 return
             
-            # -------------------------------------------------------------------
-
             # 적재 시작
             elif state == TruckState.WAIT_LOAD and cmd == "START_LOADING":
                 self.set_state(truck_id, TruckState.LOADING)
                 return
             
-            # -------------------------------------------------------------------
-
             # 적재 완료
             elif state == TruckState.LOADING and cmd == "FINISH_LOADING":
                 self.set_state(truck_id, TruckState.MOVE_TO_GATE_FOR_UNLOAD)
                 print(f"[지시] {truck_id} → CHECKPOINT_C로 이동")
                 self.send_run(truck_id)
                 return
+
+            # -------------------------------- 하차 작업 상태 처리 --------------------------------
 
             # 게이트 B에 도착
             elif state == TruckState.MOVE_TO_GATE_FOR_UNLOAD and cmd == "ARRIVED_AT_CHECKPOINT_C":
@@ -281,16 +291,12 @@ class TruckFSMManager:
                 self._open_gate_and_log(gate_id, truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # 게이트 B 열림 확인
             elif state == TruckState.WAIT_GATE_OPEN_FOR_UNLOAD and cmd == "ACK_GATE_OPENED":
                 self.set_state(truck_id, TruckState.MOVE_TO_UNLOAD)
                 self.send_run(truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # CHECKPOINT_D 도착 (GATE_B 닫기)
             elif state == TruckState.MOVE_TO_UNLOAD and cmd == "ARRIVED_AT_CHECKPOINT_D":
                 # self.send_stop(truck_id)  # 트럭 정지
@@ -298,18 +304,20 @@ class TruckFSMManager:
                 self._close_gate_and_log(gate_id, truck_id)
                 return
             
-            # -------------------------------------------------------------------
-
             # 벨트 도착
-            elif state == TruckState.MOVE_TO_UNLOAD and cmd == "ARRIVED_AT_BELT":
+            elif (state == TruckState.MOVE_TO_LOAD or state == TruckState.MOVE_TO_UNLOAD) and cmd == "ARRIVED_AT_BELT":
                 self.set_state(truck_id, TruckState.WAIT_UNLOAD)
                 self.send_stop(truck_id)  # 트럭 정지
                 return
 
-            # -------------------------------------------------------------------
+            # STANDBY 도착
+            elif (state == TruckState.MOVE_TO_LOAD or state == TruckState.MOVE_TO_STANDBY) and cmd == "ARRIVED_AT_STANDBY":
+                self.set_state(truck_id, TruckState.WAIT_NEXT_MISSION)
+                self.handle_trigger(truck_id, "ASSIGN_MISSION", {})
+                return
 
             # 하차 시작
-            elif state == TruckState.WAIT_UNLOAD and cmd == "START_UNLOADING":
+            elif (state == TruckState.WAIT_UNLOAD or state == TruckState.MOVE_TO_LOAD) and cmd == "START_UNLOADING":
                 self.set_state(truck_id, TruckState.UNLOADING)
                 if self.belt_controller:
                     print(f"[FSM] {truck_id} → 벨트에 BELTACT 명령 전송")
@@ -317,10 +325,8 @@ class TruckFSMManager:
                         print(f"[⚠️ 경고] {truck_id} → 벨트 작동 거부됨 (컨테이너 가득 참)")
                 return
 
-            # -------------------------------------------------------------------
-
             # 하차 완료
-            elif state == TruckState.UNLOADING and cmd == "FINISH_UNLOADING":
+            elif (state == TruckState.UNLOADING or state == TruckState.MOVE_TO_LOAD) and cmd == "FINISH_UNLOADING":
                 self.set_state(truck_id, TruckState.MOVE_TO_STANDBY)
                 self.send_run(truck_id)
 
@@ -340,7 +346,7 @@ class TruckFSMManager:
                     )
                 return
 
-            # -------------------------------------------------------------------
+            # -------------------------------- 비상 상황 처리 --------------------------------
 
             # 비상 상황
             elif cmd == "EMERGENCY_TRIGGERED":
@@ -351,29 +357,24 @@ class TruckFSMManager:
                     self.belt_controller.send_command("EMRSTOP")
                 return
 
-            # -------------------------------------------------------------------
-
             # 비상 상황 해제
             elif state == TruckState.EMERGENCY_STOP and cmd == "RESET":
                 self.set_state(truck_id, TruckState.IDLE)
                 return
         
-            # -------------------------------------------------------------------
-
             # 상태 초기화
             elif cmd == "RESET":
                 print(f"[🔁 RESET] {truck_id} 상태를 IDLE로 초기화")
+                
+                # 트럭에 할당된 미션이 있으면 대기 상태로 되돌림
+                mission = self.mission_manager.find_mission_by_truck(truck_id)
+                if mission:
+                    print(f"[⚠️ 미션 취소] {mission.mission_id} 대기 상태로 복귀")
+                    self.mission_manager.cancel_mission(mission.mission_id)
+                
                 self.set_state(truck_id, TruckState.IDLE)
                 return
 
             print(f"[FSM] 상태 전이 없음: 상태={state}, 트리거={cmd}")
         except Exception as e:
             print(f"[FSM] 오류 발생: {e}")
-
-    def check_battery(self, truck_id: str) -> bool:
-        """배터리 상태 확인"""
-        if self.status_manager:
-            truck_status = self.status_manager.get_truck_status(truck_id)
-            print(f"[🔋 배터리 체크] {truck_id}의 배터리: {truck_status['battery']['level']}%")
-            return truck_status['battery']['level'] > 30  # 30% 이상이면 True
-        return False

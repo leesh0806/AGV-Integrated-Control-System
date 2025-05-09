@@ -1,54 +1,71 @@
-# backend/mission/mission.py
-
 from datetime import datetime
 from typing import Optional, Dict, List
 from .mission_status import MissionStatus
 
+
 class Mission:
-    def __init__(self, mission_id: str, cargo_type: str, cargo_amount: float, 
-                source: str, destination: str, assigned_truck_id: Optional[str] = None):
+    def __init__(self, mission_id: str, cargo_type: str, cargo_amount: float,
+                 source: str, destination: str, assigned_truck_id: Optional[str] = None,
+                 status: MissionStatus = MissionStatus.WAITING,
+                 timestamp_created: Optional[datetime] = None,
+                 timestamp_assigned: Optional[datetime] = None,
+                 timestamp_completed: Optional[datetime] = None):
+        
         self.mission_id = mission_id
         self.cargo_type = cargo_type
         self.cargo_amount = cargo_amount
         self.source = source
         self.destination = destination
         self.assigned_truck_id = assigned_truck_id
-        self.status = MissionStatus.WAITING
-        self.timestamp_created = datetime.now()
-        self.timestamp_assigned = None
-        self.timestamp_completed = None
-        
-    # 트럭에 미션 할당
+        self.status = status
+        self.timestamp_created = timestamp_created or datetime.now()
+        self.timestamp_assigned = timestamp_assigned
+        self.timestamp_completed = timestamp_completed
+
+    # ------------------ 미션 할당 ----------------------------
+
     def assign_to_truck(self, truck_id: str) -> None:
+        """트럭에 미션 할당"""
         if self.status != MissionStatus.WAITING:
             raise ValueError("대기 중인 미션만 할당 가능합니다")
+        
         self.assigned_truck_id = truck_id
         self.status = MissionStatus.ASSIGNED
         self.timestamp_assigned = datetime.now()
-    
-    # 미션 완료 처리    
+
+    # ------------------ 미션 완료 ----------------------------
+
     def complete(self) -> None:
+        """미션 완료 처리"""
         if self.status not in [MissionStatus.ASSIGNED, MissionStatus.DROPPING_OFF]:
             raise ValueError("할당된 미션만 완료할 수 있습니다")
+        
         self.status = MissionStatus.COMPLETED
         self.timestamp_completed = datetime.now()
-    
-    # 미션 취소
+
+    # ------------------ 미션 취소 ----------------------------
+
     def cancel(self) -> None:
+        """미션 취소"""
         if self.status == MissionStatus.COMPLETED:
             raise ValueError("완료된 미션은 취소할 수 없습니다")
+        
         self.status = MissionStatus.CANCELED
-    
-    # 미션 상태 업데이트
+
+    # ------------------ 상태 전이 ----------------------------
+
     def update_status(self, new_status: MissionStatus) -> None:
+        """미션 상태 업데이트"""
         if not self._is_valid_status_transition(new_status):
-            raise ValueError(f"잘못된 상태 전이: {self.status} -> {new_status}")
+            raise ValueError(f"잘못된 상태 전이: {self.status} → {new_status}")
+        
         self.status = new_status
+        
         if new_status == MissionStatus.COMPLETED:
             self.timestamp_completed = datetime.now()
-    
-    # 상태 전이 유효성 검사
+
     def _is_valid_status_transition(self, new_status: MissionStatus) -> bool:
+        """상태 전이 유효성 검사"""
         valid_transitions = {
             MissionStatus.WAITING: [MissionStatus.ASSIGNED, MissionStatus.CANCELED],
             MissionStatus.ASSIGNED: [
@@ -84,9 +101,11 @@ class Mission:
             MissionStatus.COMPLETED: []
         }
         return new_status in valid_transitions.get(self.status, [])
-    
-    # 딕셔너리 직렬화   
+
+    # ------------------ 데이터 직렬화 ----------------------------
+
     def to_dict(self) -> Dict:
+        """미션 객체를 딕셔너리로 변환"""
         return {
             "mission_id": self.mission_id,
             "cargo_type": self.cargo_type,
@@ -102,20 +121,19 @@ class Mission:
             "timestamp_assigned": self.timestamp_assigned.isoformat() if self.timestamp_assigned else None,
             "timestamp_completed": self.timestamp_completed.isoformat() if self.timestamp_completed else None,
         }
-    
-    # DB 로우 데이터에서 Mission 객체 생성
+
     @staticmethod
-    def from_row(row) -> 'Mission':
-        mission = Mission(
-            mission_id=row[0],
-            cargo_type=row[1],
-            cargo_amount=row[2],
-            source=row[3],
-            destination=row[4]
+    def from_row(row: Dict) -> 'Mission':
+        """DB 로우에서 Mission 객체 생성"""
+        return Mission(
+            mission_id=row["mission_id"],
+            cargo_type=row["cargo_type"],
+            cargo_amount=row["cargo_amount"],
+            source=row["source"],
+            destination=row["destination"],
+            assigned_truck_id=row["assigned_truck_id"],
+            status=MissionStatus[row["status_code"]],
+            timestamp_created=row["timestamp_created"],
+            timestamp_assigned=row["timestamp_assigned"],
+            timestamp_completed=row["timestamp_completed"]
         )
-        mission.status = MissionStatus[row[5]]
-        mission.assigned_truck_id = row[7]
-        mission.timestamp_created = row[8]
-        mission.timestamp_assigned = row[9]
-        mission.timestamp_completed = row[10]
-        return mission

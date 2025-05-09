@@ -1,12 +1,17 @@
-from backend.app_controller.app_controller import AppController
-from backend.tcpio.server import TCPServer
-from backend.mission.mission import Mission
-from backend.mission.db import MissionDB
-from backend.mission.status import MissionStatus
 import signal
 import sys, os
+
+# 현재 스크립트 경로를 기준으로 프로젝트 루트 경로를 추가합니다
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
+from backend.main_controller.main_controller import MainController
+from backend.tcpio.server import TCPServer
+from backend.mission.mission import Mission
+from backend.mission.mission_db import MissionDB
+from backend.mission.mission_status import MissionStatus
 import threading
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.api.api import app as flask_app
 
 # 설정
@@ -23,20 +28,19 @@ port_map = {
 print("[초기화] 포트 맵:", port_map)
 
 # DB 연결 설정
-db = MissionDB(
+mission_db = MissionDB(
     host="localhost",
     user="root",
     password="jinhyuk2dacibul",
     database="dust"
 )
 
-# AppController 인스턴스 생성
-app = AppController(port_map=port_map, use_fake=True)
-app.mission_manager.db = db  # 실제 DB 설정
+# MainController 인스턴스 생성
+app = MainController(port_map=port_map, use_fake=True)
 
 # 기존 미션 확인
 print("[🔍 기존 미션 확인 중...]")
-waiting_missions = db.get_waiting_missions()
+waiting_missions = mission_db.get_waiting_missions()
 print(f"[ℹ️ 기존 미션 발견] 총 {len(waiting_missions)}개의 대기 중인 미션이 있습니다.")
 
 # TCP 서버 실행
@@ -52,13 +56,14 @@ def signal_handler(sig, frame):
     
     # 실행 중인 모든 미션을 취소 상태로 변경
     print("[⚠️ 실행 중인 미션 취소 중...]")
-    assigned_missions = db.get_assigned_missions()
-    for mission in assigned_missions:
+    waiting_missions = mission_db.get_waiting_missions()
+    for mission_data in waiting_missions:
+        mission = Mission.from_row(mission_data)
         app.mission_manager.cancel_mission(mission.mission_id)
-    print(f"[✅ {len(assigned_missions)}개의 미션이 취소되었습니다.]")
+    print(f"[✅ {len(waiting_missions)}개의 미션이 취소되었습니다.]")
     
     server.stop()
-    db.close()  # DB 연결 종료
+    mission_db.close()  # DB 연결 종료
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
