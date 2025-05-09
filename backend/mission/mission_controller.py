@@ -1,9 +1,9 @@
-# backend/mission/manager.py
+# backend/mission/mission_controller.py
 
-from typing import List, Optional, Dict
-from .status import MissionStatus
 from .mission import Mission
+from .status import MissionStatus
 from .db import MissionDB
+from typing import List, Optional
 
 class MissionManager:
     def __init__(self, db: MissionDB):

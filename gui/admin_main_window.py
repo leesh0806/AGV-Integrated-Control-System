@@ -3,7 +3,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6 import uic
 
 from backend.mission.db import MissionDB
-from backend.mission.manager import MissionManager
+from backend.mission.mission_controller import MissionManager
 from backend.mission.mission import Mission
 from backend.mission.status import MissionStatus
 

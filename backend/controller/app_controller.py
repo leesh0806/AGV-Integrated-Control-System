@@ -1,25 +1,21 @@
 # backend/controller/app_controller.py
 
-from backend.serialio.serial_manager import SerialManager
+from backend.serialio.port_manager import SerialManager
 from backend.serialio.belt_controller import BeltController
 from backend.serialio.gate_controller import GateController
 
 from backend.mission.db import MissionDB
-from backend.mission.manager import MissionManager
-from backend.mission.mission import Mission
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from backend.fsm.fsm_manager import TruckFSMManager
-    from backend.fsm.truck_manager import TruckManager
+from backend.mission.mission_controller import MissionManager
 
 from backend.tcpio.truck_commander import TruckCommandSender
-from backend.api.truck_monitoring_api import set_truck_position
+from backend.api.api import set_truck_position
 
-from backend.battery.db import BatteryDB
-from backend.battery.manager import BatteryManager
+from backend.truck_status.truck_state_manager import TruckStatusManager
+from backend.truck_status.db import TruckStatusDB
 
 from backend.fsm.state_enum import TruckState
+from backend.fsm.state_machine import TruckFSMManager
+from backend.fsm.truck_message_handler import MessageHandler
 
 
 class AppController:
@@ -27,42 +23,39 @@ class AppController:
         # Serial 연결
         self.serial_manager = SerialManager(port_map, use_fake=use_fake)
 
-        # DB 연결
+        # Mission DB 초기화
         self.db = MissionDB(
             host="localhost",
             user="root",
             password="jinhyuk2dacibul",
             database="dust"
         )
+        self.mission_manager = MissionManager(self.db)
 
-        # 배터리 DB 및 매니저 초기화
-        self.battery_db = BatteryDB(
+        # TruckStatusDB 초기화
+        self.status_db = TruckStatusDB(
             host="localhost",
             user="root",
             password="jinhyuk2dacibul",
             database="dust"
         )
-        self.battery_manager = BatteryManager(self.battery_db)
+        self.status_manager = TruckStatusManager(self.status_db)
 
         # 장치 컨트롤러들
         self.belt_controller = BeltController(self.serial_manager.controllers["BELT"])
         self.gate_controller = GateController(self.serial_manager)
-
-        # 미션 및 FSM 관리자
-        self.mission_manager = MissionManager(self.db)
-
-        from backend.fsm.fsm_manager import TruckFSMManager
-        from backend.fsm.truck_manager import TruckManager
-
+        
+        # FSM 관리자
         self.fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,
             mission_manager=self.mission_manager,
             belt_controller=self.belt_controller,
-            battery_manager=self.battery_manager
+            status_manager=self.status_manager
         )
 
-        self.truck_manager = TruckManager(self.fsm_manager)
-        self.truck_manager.set_battery_manager(self.battery_manager)  # 배터리 매니저 설정
+        # 트럭 메시지 핸들러
+        self.truck_manager = MessageHandler(self.fsm_manager)
+        self.truck_manager.set_status_manager(self.status_manager)
 
         # 초기 TruckCommandSender 설정
         self.set_truck_commander({})

@@ -7,7 +7,7 @@ import signal
 import sys, os
 import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from backend.api.truck_monitoring_api import app as flask_app
+from backend.api.api import app as flask_app
 
 # 설정
 HOST = '0.0.0.0'
@@ -20,7 +20,7 @@ port_map = {
     "BELT": "BELT"
 }
 
-print("[✅ 초기화] 포트 맵:", port_map)
+print("[초기화] 포트 맵:", port_map)
 
 # DB 연결 설정
 db = MissionDB(

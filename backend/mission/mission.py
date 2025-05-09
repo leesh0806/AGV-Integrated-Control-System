@@ -5,8 +5,6 @@ from typing import Optional, Dict, List
 from .status import MissionStatus
 
 class Mission:
-    """미션 객체 클래스"""
-    
     def __init__(self, mission_id: str, cargo_type: str, cargo_amount: float, 
                 source: str, destination: str, assigned_truck_id: Optional[str] = None):
         self.mission_id = mission_id

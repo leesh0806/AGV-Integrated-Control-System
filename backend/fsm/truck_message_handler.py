@@ -1,19 +1,23 @@
-# backend/fsm/truck_manager.py
+# backend/fsm/message_handler.py
 
-from backend.battery.manager import BatteryManager
+from .state_machine import TruckFSMManager
 
-class TruckManager:
+class MessageHandler:
     def __init__(self, fsm_manager):
         self.fsm_manager = fsm_manager
-        self.battery_manager = None
+        self.status_manager = None
 
-    def set_battery_manager(self, battery_manager: BatteryManager):
-        self.battery_manager = battery_manager
+    def set_status_manager(self, status_manager):
+        self.status_manager = status_manager
 
     def handle_message(self, msg: dict):
         truck_id = msg.get("sender")
-        cmd = msg.get("cmd", "").upper()
+        cmd = msg.get("cmd", "").strip().upper()
         payload = msg.get("payload", {})
+
+        if not truck_id:
+            print("[MessageHandler] sender가 없음")
+            return
 
         if cmd == "ARRIVED":
             position = payload.get("position", "UNKNOWN")
@@ -50,8 +54,8 @@ class TruckManager:
         elif cmd == "BATTERY_LEVEL":
             level = payload.get("level")
             print(f"[트럭 {truck_id}] 배터리 상태: {level}%")
-            if self.battery_manager:
-                self.battery_manager.update_battery(truck_id, level)
+            if self.status_manager:
+                self.status_manager.update_battery(truck_id, level)
             return
 
         elif cmd == "FINISH_CHARGING":
@@ -60,8 +64,8 @@ class TruckManager:
 
         elif cmd == "HELLO":
             # HELLO 명령은 트럭 등록을 위한 초기 명령이므로 무시
-            print(f"[TruckManager] 트럭 등록 확인: {truck_id}")
+            print(f"[MessageHandler] 트럭 등록 확인: {truck_id}")
             return
 
         else:
-            print(f"[TruckManager] 알 수 없는 명령: {cmd}")
+            print(f"[MessageHandler] 알 수 없는 명령: {cmd}")
