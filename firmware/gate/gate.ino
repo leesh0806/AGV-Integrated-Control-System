@@ -13,28 +13,28 @@ bool BisOpen = false;
 void openGate_A() 
 {
   gateServo_A.write(90);  // 열림 위치
-  Serial.println("🔓 게이트A 열림");
+  Serial.println("STATUS:GATE_A:OPENED");
   AisOpen = true;
 }
 
 void closeGate_A() 
 {
   gateServo_A.write(5);  // 닫힘 위치
-  Serial.println("🔒 게이트A 닫힘");
+  Serial.println("STATUS:GATE_A:CLOSED");
   AisOpen = false;
 }
 
 void openGate_B() 
 {
   gateServo_B.write(90);  // 열림 위치
-  Serial.println("🔓 게이트B 열림");
+  Serial.println("STATUS:GATE_B:OPENED");
   BisOpen = true;
 }
 
 void closeGate_B() 
 {
   gateServo_B.write(5);  // 닫힘 위치
-  Serial.println("🔒 게이트B 닫힘");
+  Serial.println("STATUS:GATE_B:CLOSED");
   BisOpen = false;
 }
 
@@ -44,9 +44,9 @@ void setup()
   Serial.begin(9600);
   gateServo_A.attach(GATE_A);
   gateServo_B.attach(GATE_B);
-  closeGate_A ();  // 초기 상태 닫힘
-  closeGate_B ();  // 초기 상태 닫힘
-  Serial.println("🚦 Gate Controller Ready (Test Mode)");
+  closeGate_A();  // 초기 상태 닫힘
+  closeGate_B();  // 초기 상태 닫힘
+  Serial.println("STATUS:SYSTEM:READY");
 }
 
 void loop() {
@@ -56,19 +56,20 @@ void loop() {
 
     if (cmd == "GATE_A_OPEN") {
       openGate_A();
-      Serial.println("GATE_A_OPENED");
+      Serial.println("ACK:GATE_A_OPEN:OK");
     } else if (cmd == "GATE_A_CLOSE") {
       closeGate_A();
-      Serial.println("GATE_A_CLOSED");
+      Serial.println("ACK:GATE_A_CLOSE:OK");
     } else if (cmd == "GATE_B_OPEN") {
       openGate_B();
-      Serial.println("GATE_B_OPENED");
+      Serial.println("ACK:GATE_B_OPEN:OK");
     } else if (cmd == "GATE_B_CLOSE") {
       closeGate_B();
-      Serial.println("GATE_B_CLOSED");
+      Serial.println("ACK:GATE_B_CLOSE:OK");
     } else {
-      Serial.print("❓ Unknown Command: ");
-      Serial.println(cmd);
+      Serial.print("ACK:");
+      Serial.print(cmd);
+      Serial.println(":ERROR");
     }
   }
 }

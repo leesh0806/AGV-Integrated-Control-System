@@ -4,7 +4,7 @@ from .truck_state_enum import TruckState
 from ..mission.mission_status import MissionStatus
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ..tcpio.truck_commander import TruckCommandSender
+    from ..tcpio.truck_command_sender import TruckCommandSender
 from datetime import datetime
 from ..truck_status.truck_status_manager import TruckStatusManager
 
@@ -412,7 +412,7 @@ class TruckFSMManager:
                 self.set_state(truck_id, TruckState.UNLOADING)
                 if self.belt_controller:
                     print(f"[FSM] {truck_id} → 벨트에 BELT_RUN 명령 전송")
-                    if not self.belt_controller.write("BELT_RUN"):
+                    if not self.belt_controller.send_command("BELT", "RUN"):
                         print(f"[⚠️ 경고] {truck_id} → 벨트 작동 거부됨 (컨테이너 가득 참)")
                 return
 
@@ -472,7 +472,7 @@ class TruckFSMManager:
                 self.set_state(truck_id, TruckState.UNLOADING)
                 if self.belt_controller:
                     print(f"[FSM] {truck_id} → 벨트에 BELT_RUN 명령 전송")
-                    if not self.belt_controller.write("BELT_RUN"):
+                    if not self.belt_controller.send_command("BELT", "RUN"):
                         print(f"[⚠️ 경고] {truck_id} → 벨트 작동 거부됨 (컨테이너 가득 참)")
                 return
 
@@ -505,7 +505,7 @@ class TruckFSMManager:
                 self.send_stop(truck_id)  # 트럭 정지
                 if self.belt_controller:
                     print(f"[FSM] {truck_id} → 벨트에 EMRSTOP 명령 전송")
-                    self.belt_controller.write("EMRSTOP")
+                    self.belt_controller.send_command("BELT", "EMRSTOP")
                 return
 
             # 비상 상황 해제

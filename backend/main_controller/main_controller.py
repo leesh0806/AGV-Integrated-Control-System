@@ -8,15 +8,18 @@ from backend.mission.mission_manager import MissionManager
 from backend.truck_status.truck_status_db import TruckStatusDB
 from backend.truck_status.truck_status_manager import TruckStatusManager
 
-from backend.tcpio.truck_commander import TruckCommandSender
+from backend.tcpio.truck_command_sender import TruckCommandSender
 from backend.truck_fsm.truck_fsm_manager import TruckFSMManager
 from backend.truck_fsm.truck_message_handler import TruckMessageHandler
 
 
 class MainController:
-    def __init__(self, port_map, use_fake=False, fake_devices=None):
+    def __init__(self, port_map, use_fake=False, fake_devices=None, debug=False):
+        # 디버그 모드 설정
+        self.debug = debug
+        
         # Serial 연결 및 장치 컨트롤러 생성
-        self.device_manager = DeviceManager(port_map, use_fake=use_fake, fake_devices=fake_devices)
+        self.device_manager = DeviceManager(port_map, use_fake=use_fake, fake_devices=fake_devices, debug=debug)
 
         # Mission DB 초기화
         self.mission_db = MissionDB(

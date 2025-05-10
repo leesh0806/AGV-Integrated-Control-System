@@ -36,7 +36,6 @@ class Mission:
     # ------------------ 미션 완료 ----------------------------
 
     def complete(self) -> None:
-        """미션 완료 처리"""
         if self.status != MissionStatus.ASSIGNED:
             raise ValueError("할당된 미션만 완료할 수 있습니다")
         
@@ -46,7 +45,6 @@ class Mission:
     # ------------------ 미션 취소 ----------------------------
 
     def cancel(self) -> None:
-        """미션 취소"""
         if self.status == MissionStatus.COMPLETED:
             raise ValueError("완료된 미션은 취소할 수 없습니다")
         
@@ -55,7 +53,6 @@ class Mission:
     # ------------------ 상태 전이 ----------------------------
 
     def update_status(self, new_status) -> None:
-        """미션 상태 업데이트"""
         # 문자열로 상태가 전달된 경우 MissionStatus로 변환
         if isinstance(new_status, str):
             try:
@@ -73,7 +70,6 @@ class Mission:
             self.timestamp_completed = datetime.now()
 
     def _is_valid_status_transition(self, new_status: MissionStatus) -> bool:
-        """상태 전이 유효성 검사"""
         valid_transitions = {
             MissionStatus.WAITING: [MissionStatus.ASSIGNED, MissionStatus.CANCELED],
             MissionStatus.ASSIGNED: [MissionStatus.COMPLETED, MissionStatus.CANCELED, MissionStatus.ERROR],
@@ -86,7 +82,6 @@ class Mission:
     # ------------------ 데이터 직렬화 ----------------------------
 
     def to_dict(self) -> Dict:
-        """미션 객체를 딕셔너리로 변환"""
         return {
             "mission_id": self.mission_id,
             "cargo_type": self.cargo_type,
@@ -105,7 +100,6 @@ class Mission:
 
     @staticmethod
     def from_row(row: Dict) -> 'Mission':
-        """DB 로우에서 Mission 객체 생성"""
         return Mission(
             mission_id=row["mission_id"],
             cargo_type=row["cargo_type"],

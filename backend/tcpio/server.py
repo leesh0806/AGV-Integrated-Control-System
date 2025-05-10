@@ -109,9 +109,6 @@ class TCPServer:
         print("[🔌 TCP 서버 종료됨]")
 
     def send_command(self, client_socket, cmd, payload=None):
-        """
-        클라이언트에게 명령을 전송
-        """
         msg = {
             "sender": "SERVER",
             "receiver": "TRUCK_01",

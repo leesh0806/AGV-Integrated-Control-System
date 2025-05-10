@@ -1,7 +1,6 @@
 import signal
 import sys, os
 
-# 현재 스크립트 경로를 기준으로 프로젝트 루트 경로를 추가합니다
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
@@ -30,12 +29,16 @@ port_map = {
 print("[초기화] 포트 맵:", port_map)
 
 # 하드웨어 사용 여부 설정
-USE_FAKE_HARDWARE = False  # 전체 가상 모드 여부 (False로 설정)
+USE_FAKE_HARDWARE = True  # 전체 가상 모드 여부 (True로 설정)
 
 # 특정 장치만 가상 모드로 설정 (모든 장치 실제 연결)
 FAKE_DEVICES = []  # 가상 모드로 실행할 장치 목록(비워둠)
 
+# 디버그 모드 설정
+DEBUG_MODE = False  # 디버그 로그를 출력하지 않음 (필요시 True로 변경)
+
 print(f"[초기화] 하드웨어 설정: 기본 모드={'가상' if USE_FAKE_HARDWARE else '실제'}, 가상 장치={FAKE_DEVICES}")
+print(f"[초기화] 디버그 모드: {'활성화' if DEBUG_MODE else '비활성화'}")
 
 # DB 연결 설정
 mission_db = MissionDB(
@@ -57,7 +60,12 @@ truck_status_db = TruckStatusDB(
 truck_status_db.reset_all_statuses()
 
 # MainController 인스턴스 생성 (벨트는 실제 하드웨어, 게이트는 가상 모드)
-main_controller = MainController(port_map=port_map, use_fake=USE_FAKE_HARDWARE, fake_devices=FAKE_DEVICES)
+main_controller = MainController(
+    port_map=port_map, 
+    use_fake=USE_FAKE_HARDWARE, 
+    fake_devices=FAKE_DEVICES,
+    debug=DEBUG_MODE
+)
 
 # 앱의 트럭 상태 초기화 (메모리에 있는 상태도 초기화)
 main_controller.truck_status_manager.reset_all_trucks()

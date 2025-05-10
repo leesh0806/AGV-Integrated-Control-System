@@ -1,5 +1,3 @@
-# backend/tcpio/truck_commander.py
-
 from .protocol import TCPProtocol
 import json
 
@@ -8,7 +6,6 @@ class TruckCommandSender:
         self.truck_sockets = truck_sockets
     
     def send(self, truck_id: str, cmd: str, payload: dict = None) -> bool:
-        """트럭에 명령 전송"""
         if not self.is_registered(truck_id):
             print(f"[⚠️ 경고] {truck_id}가 등록되지 않음")
             return False
@@ -34,4 +31,4 @@ class TruckCommandSender:
             return False
 
     def is_registered(self, truck_id: str) -> bool:
-        return truck_id in self.truck_sockets
+        return truck_id in self.truck_sockets 
