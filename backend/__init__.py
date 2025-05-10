@@ -6,7 +6,7 @@ from .mission.mission_db import MissionDB
 from .mission.mission_manager import MissionManager
 from .truck_fsm.truck_fsm_manager import TruckFSMManager
 from .truck_fsm.truck_message_handler import TruckMessageHandler
-from .serialio.port_manager import PortManager
+from .serialio.device_manager import DeviceManager
 from .serialio.belt_controller import BeltController
 from .serialio.gate_controller import GateController
 from .tcpio.server import TCPServer

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Main Monitoring</string>
+  </property>
+  <layout class="QHBoxLayout" name="mainHorizontalLayout">
+   <item>
+    <widget class="QGraphicsView" name="graphicsview_map">
+     <property name="minimumSize">
+      <size>
+       <width>820</width>
+       <height>220</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="rightVBoxLayout">
+     <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>배터리 상태</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_battery">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_battery1">
+          <item>
+           <widget class="QLabel" name="label_battery_truck1">
+            <property name="text">
+             <string>TRUCK_01</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="progressbar_battery_truck1">
+            <property name="value">
+             <number>24</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_battery2">
+          <item>
+           <widget class="QLabel" name="label_battery_truck2">
+            <property name="text">
+             <string>TRUCK_02</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="progressbar_battery_truck2">
+            <property name="value">
+             <number>24</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_battery3">
+          <item>
+           <widget class="QLabel" name="label_battery_truck3">
+            <property name="text">
+             <string>TRUCK_03</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="progressbar_battery_truck3">
+            <property name="value">
+             <number>24</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_velocity">
+       <property name="text">
+        <string>주행 속도</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSlider" name="horizontalslider_velocity">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_alert">
+       <property name="text">
+        <string>긴급 알림</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTextEdit" name="textEdit"/>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui> 

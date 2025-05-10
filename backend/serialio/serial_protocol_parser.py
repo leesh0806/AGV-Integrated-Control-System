@@ -1,6 +1,6 @@
-# backend/serialio/protocol.py
+# backend/serialio/serial_protocol_parser.py
 
-class SerialProtocol:
+class SerialProtocolParser:
     # 예: "GATE_A", "OPEN" -> "GATE_A_OPEN\n"
     @staticmethod
     def build_command(target: str, action: str) -> str:

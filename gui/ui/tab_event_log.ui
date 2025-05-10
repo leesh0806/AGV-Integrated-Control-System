@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Event Log</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>이벤트 로그</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label_filter">
+       <property name="text">
+        <string>필터:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_log_level">
+       <item>
+        <property name="text">
+         <string>모든 로그</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>정보</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>경고</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>오류</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>긴급</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>기간:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateEdit_start"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>~</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateEdit_end"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_apply_filter">
+       <property name="text">
+        <string>적용</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_refresh_log">
+       <property name="text">
+        <string>새로고침</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="tableWidget_log">
+     <column>
+      <property name="text">
+       <string>시간</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>로그 레벨</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>소스</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>메시지</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="pushButton_export_log">
+       <property name="text">
+        <string>로그 내보내기</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_clear_log">
+       <property name="text">
+        <string>로그 지우기</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui> 

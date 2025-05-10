@@ -8,7 +8,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
-from backend.serialio.port_manager import PortManager
+from backend.serialio.device_manager import DeviceManager
 import threading
 import requests
 
@@ -24,14 +24,14 @@ port_map = {
 }
 
 # 시리얼 매니저 초기화 - 실제 포트 맵 사용
-manager = PortManager(port_map=port_map, use_fake=True)
+manager = DeviceManager(port_map=port_map, use_fake=True)
 
 class TruckSimulator:
     def __init__(self):
         self.source = None
         self.client = None
         self.battery_level = 100
-        self.charging = True
+        self.charging = False
         self.current_position = "STANDBY"
         self.run_state = "IDLE"
         self.connect()
@@ -135,7 +135,13 @@ class TruckSimulator:
                     try:
                         msg = json.loads(line)
                         if msg.get("cmd") == "MISSION_ASSIGNED":
-                            self.source = msg["payload"]["source"].upper()
+                            source = msg["payload"]["source"]
+                            # source가 비어있는 경우 기본값 설정
+                            if not source:
+                                source = "LOAD_A"
+                                print(f"[⚠️ 경고] 빈 source 값을 수신함 - 기본값 '{source}'을 사용합니다")
+                            
+                            self.source = source.upper()
                             print(f"[✅ 미션 수신] → source = {self.source}")
                             return True
                         elif msg.get("cmd") == "NO_MISSION":

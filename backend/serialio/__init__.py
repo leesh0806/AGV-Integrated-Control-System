@@ -1,5 +1,5 @@
 # serialio package
 
-from .port_manager import PortManager
+from .device_manager import DeviceManager
 from .belt_controller import BeltController
 from .gate_controller import GateController

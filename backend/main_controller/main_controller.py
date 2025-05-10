@@ -1,4 +1,4 @@
-from backend.serialio.port_manager import PortManager
+from backend.serialio.device_manager import DeviceManager
 from backend.serialio.belt_controller import BeltController
 from backend.serialio.gate_controller import GateController
 
@@ -14,11 +14,11 @@ from backend.truck_fsm.truck_message_handler import TruckMessageHandler
 
 
 class MainController:
-    def __init__(self, port_map, use_fake=False):
-        # Serial 연결
-        self.serial_manager = PortManager(port_map, use_fake=use_fake)
+    def __init__(self, port_map, use_fake=False, fake_devices=None):
+        # Serial 연결 및 장치 컨트롤러 생성
+        self.device_manager = DeviceManager(port_map, use_fake=use_fake, fake_devices=fake_devices)
 
-        # Mission DB 초기화 (MySQL)
+        # Mission DB 초기화
         self.mission_db = MissionDB(
             host="localhost",
             user="root",
@@ -27,7 +27,7 @@ class MainController:
         )
         self.mission_manager = MissionManager(self.mission_db)
 
-        # TruckStatusDB 초기화 (MySQL)
+        # TruckStatusDB 초기화
         self.status_db = TruckStatusDB(
             host="localhost",
             user="root",
@@ -36,12 +36,24 @@ class MainController:
         )
         self.truck_status_manager = TruckStatusManager(self.status_db)
 
-        # 장치 컨트롤러들 설정
-        # 벨트 컨트롤러는 이미 PortManager에서 생성됨
-        self.belt_controller = self.serial_manager.controllers.get("BELT")
+        # 장치 컨트롤러 가져오기
+        self.belt_controller = self.device_manager.get_controller("BELT")
         
-        # 게이트 컨트롤러는 따로 생성
-        self.gate_controller = GateController(self.serial_manager)
+        # 게이트 컨트롤러들 참조
+        self.gate_controllers = {
+            gate_id: self.device_manager.get_controller(gate_id)
+            for gate_id in ["GATE_A", "GATE_B"]
+            if self.device_manager.get_controller(gate_id) is not None
+        }
+        
+        # 대표 게이트 컨트롤러 (FSM용)
+        if "GATE_A" in self.gate_controllers:
+            self.gate_controller = self.gate_controllers["GATE_A"]
+        elif "GATE_B" in self.gate_controllers:
+            self.gate_controller = self.gate_controllers["GATE_B"]
+        else:
+            print("[⚠️ 경고] 사용 가능한 게이트 컨트롤러가 없습니다")
+            self.gate_controller = None
         
         # FSM 관리자
         self.truck_fsm_manager = TruckFSMManager(
@@ -95,7 +107,10 @@ class MainController:
     def _handle_manual_belt_command(self, cmd: str):
         """수동 벨트 제어"""
         print(f"[⚙️ 수동 벨트 제어] CMD: {cmd}")
-        self.belt_controller.handle_message(cmd)
+        if self.belt_controller:
+            self.belt_controller.handle_message(cmd)
+        else:
+            print("[❌ 오류] 벨트 컨트롤러를 찾을 수 없습니다")
 
     # 수동 게이트 제어 명령 처리
     def _handle_manual_gate_command(self, cmd: str):
@@ -104,10 +119,15 @@ class MainController:
         if len(parts) == 3:
             gate_id = f"GATE_{parts[1]}"
             action = parts[2]
-            if action == "OPEN":
-                self.gate_controller.open_gate(gate_id)
-            elif action == "CLOSE":
-                self.gate_controller.close_gate(gate_id)
+            
+            gate_controller = self.gate_controllers.get(gate_id)
+            if gate_controller:
+                if action == "OPEN":
+                    gate_controller.open_gate(gate_id)
+                elif action == "CLOSE":
+                    gate_controller.close_gate(gate_id)
+            else:
+                print(f"[❌ 오류] {gate_id} 컨트롤러를 찾을 수 없습니다")
         else:
             print(f"[❌ 게이트 명령 포맷 오류] {cmd}")
 
@@ -117,5 +137,5 @@ class MainController:
         print("[🔌 시스템 종료 중...]")
         self.mission_db.close()
         self.status_db.close()
-        self.serial_manager.close_all()
+        self.device_manager.close_all()
         print("[✅ 시스템 종료 완료]") 

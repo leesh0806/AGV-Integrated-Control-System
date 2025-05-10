@@ -8,12 +8,12 @@
 
 /*--------------------------------WiFi 설정--------------------------------*/
 
-const char* ssid = "addinedu_class_1(2.4G)";
+const char* ssid = "addinedu_class_2 (2.4G)";
 const char* password = "addinedu1";
 
 /*--------------------------------PC 서버 주소 및 포트--------------------------------*/
 
-IPAddress serverIP(192, 168, 2, 23);  // ← PC IP로 바꾸세요
+IPAddress serverIP(192, 168, 0, 166);  // ← PC IP로 바꾸세요
 const int serverPort = 8001;  
 WiFiClient client;
 String incoming_msg = "";
@@ -34,7 +34,8 @@ UIDEntry registeredCards[] = {
   { {0xA3, 0x8F, 0x09, 0x05}, "load_B" },
   { {0x9C, 0x84, 0x0B, 0x05}, "CHECKPOINT_C" },
   { {0x83, 0x58, 0xAE, 0x1A}, "BELT" },
-  { {0xD3, 0xAF, 0xC3, 0x18}, "CHECKPOINT_D" },
+  { {0x63, 0x9D, 0x9F, 0x35}, "CHECKPOINT_D" },
+  { {0xF3, 0x16, 0x63, 0x1B}, "STANDBY" },
   
 };
 const int numRegistered = sizeof(registeredCards) / sizeof(registeredCards[0]);
@@ -66,6 +67,13 @@ unsigned long wait_start_loading_time = 0;
 
 bool loading_in_progress = false;
 unsigned long loading_start_time = 0;
+
+/*-------------------------unloading 변수들--------------------------------*/
+bool wait_start_unloading = false;
+unsigned long wait_start_unloading_time = 0;
+
+bool unloading_in_progress = false;
+unsigned long unloading_start_time = 0;
 
 /*--------------------------------가상 배터리 잔량 체크--------------------------------*/
 
@@ -109,9 +117,9 @@ bool battery_empty = false;  // 배터리 0% 상태 플래그
 
 /*--------------------------------PID 제어 변수--------------------------------*/
 
-double Kp = 0.1075;
-double Kd = 0.03;
-double Ki = 0.01;       
+double Kp = 0.1020;
+double Kd = 0.2;
+double Ki = 0.0001;       
 double integral = 0.0;  // 누적 적분값
 double PID_control;
 int last_error = 0;
@@ -250,7 +258,35 @@ void loop()
     Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
     send_finish_loading();
     loading_in_progress = false;
+
+
+      // 💡 미션이 적재까지라면 여기서 초기화
+    if (mission_target == "LOAD_A" || mission_target == "load_A" || 
+    mission_target == "LOAD_B" || mission_target == "load_B") {
+    Serial.println("📦 [미션 완료] 적재 완료 → mission_target 초기화");
+    mission_target = "";
   }
+  }
+
+  // 언로딩 시작 지연 처리
+  if (wait_start_unloading && (current_time - wait_start_unloading_time >= 2000)) {
+    Serial.println("🕒 언로딩 시작 메시지 전송 (2초 지연 후)");
+    send_start_unloading();
+    unloading_in_progress = true;
+    unloading_start_time = current_time;
+    wait_start_unloading = false;
+  }
+
+  // 언로딩 완료 로직 (5초 뒤)
+  if (unloading_in_progress && (current_time - unloading_start_time >= 5000)) {
+    Serial.println("✅ 언로딩 완료 메시지 전송 (5초 경과)");
+    send_finish_unloading();
+    unloading_in_progress = false;
+
+    Serial.println("📦 [미션 완료] 언로딩 완료 → mission_target 초기화");
+    mission_target = "";
+  }
+    
 
   // RFID 체크
   if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
@@ -379,6 +415,7 @@ void receive_json(const String& msg)
   Serial.println(gate_id);
 
   send_gateopen_message(gate_id);  // 응답 전송
+  run_command = true;
   }
   else if (strcmp(cmd, "MISSION_ASSIGNED") == 0) 
   {
@@ -480,6 +517,7 @@ void send_obstacle(float distance_cm, bool detected, const char* position)
   
   send_json("OBSTACLE", payload);
 }
+
 //로딩 시작 메세지
 void send_start_loading() 
 {
@@ -502,6 +540,27 @@ void send_finish_loading()
 
   send_json("FINISH_LOADING", payload);
 }
+//언로딩 시작 메세지
+void send_start_unloading() {
+  StaticJsonDocument<128> doc;
+  JsonObject payload = doc.createNestedObject("payload");
+
+  payload["position"] = current_position;
+  payload["timestamp"] = getISOTime();
+
+  send_json("START_UNLOADING", payload);
+}
+
+void send_finish_unloading() {
+  StaticJsonDocument<128> doc;
+  JsonObject payload = doc.createNestedObject("payload");
+
+  payload["position"] = current_position;
+  payload["timestamp"] = getISOTime();
+
+  send_json("FINISH_UNLOADING", payload);
+}
+
 
 void send_battery_status() {
   StaticJsonDocument<128> doc;
@@ -621,24 +680,25 @@ bool checkAndPrintUID(byte* uid)
       } 
       else if (strcmp(desc, "CHECKPOINT_B") == 0) 
       {
-        send_arrived("CHECKPOINT_B", "GATE_B");
+        send_arrived("CHECKPOINT_B", "GATE_A");
       } 
       else if (strcmp(desc, "CHECKPOINT_C") == 0) 
       {
-        send_arrived("CHECKPOINT_C", "GATE_C");
+        send_arrived("CHECKPOINT_C", "GATE_B");
         run_command = false;
       } 
       else if (strcmp(desc, "CHECKPOINT_D") == 0) 
       {
-        send_arrived("CHECKPOINT_D", "GATE_D");
+        send_arrived("CHECKPOINT_D", "GATE_B");
       }
       else if (strcmp(desc, "load_A") == 0)                        //load_A
       {
         send_arrived("load_A", "LOAD_A");
-
         // 현재 목적지가 load_A인 경우에만 적재 시작 대기
-        if (mission_target == "load_A") 
+        if ((mission_target == "LOAD_A")or(mission_target == "load_A")) 
         {
+          Serial.println(mission_target);
+          Serial.println("Debug1");
           wait_start_loading = true;
           wait_start_loading_time = millis();
         }
@@ -647,7 +707,7 @@ bool checkAndPrintUID(byte* uid)
       {
         send_arrived("load_B", "LOAD_B");
 
-        if (mission_target == "load_B") 
+        if ((mission_target == "load_B") or (mission_target == "LOAD_B")) 
         {
           wait_start_loading = true;
           wait_start_loading_time = millis();
@@ -656,7 +716,24 @@ bool checkAndPrintUID(byte* uid)
       else if (strcmp(desc, "BELT") == 0) 
       {
         send_arrived("BELT", "BELT");
+        wait_start_unloading = true;
+        wait_start_unloading_time = millis();
+        
       }
+      else if (strcmp(desc, "STANDBY") == 0) 
+      {
+        send_arrived("STANDBY", "STANDBY");
+        run_command = false;
+
+        if (mission_target == "") {
+          Serial.println("🎯 [미션 종료] STANDBY 도달 → 미션 초기화");
+          mission_target = "";  // 미션 종료
+          send_assign_mission();  // 다음 미션 요청
+        } else {
+          Serial.println("📭 [대기 상태] STANDBY 도달 → 미션 없음, 대기 중...");
+        }
+      } 
+
 
       // 🎯 목적지에 도달한 경우 멈춤
       if (mission_target != "" && mission_target == String(desc)) {

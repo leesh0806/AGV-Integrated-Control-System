@@ -26,9 +26,15 @@ class BeltController:
         except Exception as e:
             self.log(f"[보고 오류] {e}")
 
+    # GateController와 인터페이스 통일을 위한 send_command 메서드 추가
+    def send_command(self, belt_id: str, action: str):
+        """GateController와 인터페이스 통일을 위한 메서드"""
+        print(f"[BeltController] 명령 전송: {belt_id} → {action}")
+        return self.write(action)
+
     # 외부에서 벨트에 명령을 직접 전송할 때 사용
-    def send_command(self, cmd: str):
-        if cmd == "BELTACT" and self.container_full:
+    def write(self, cmd: str):
+        if cmd == "BELT_RUN" and self.container_full:
             print("[⚠️ 벨트 작동 거부] 컨테이너가 가득 찼습니다.")
             return False
             
@@ -36,13 +42,23 @@ class BeltController:
         self.controller.write(cmd)
         return True
     
+    # 시리얼 인터페이스와 호환성을 위한 메서드
+    def read_response(self, timeout=5):
+        """SerialInterface와 호환되는 read_response 메서드"""
+        return self.controller.read_response(timeout=timeout)
+    
+    def close(self):
+        """SerialInterface와 호환되는 close 메서드"""
+        self.running = False
+        if hasattr(self.controller, 'close'):
+            self.controller.close()
 
     # 벨트 장치 또는 중앙 제어로부터 전달된 메시지를 처리
     def handle_message(self, msg):
         msg = msg.strip().upper()
         
         # 벨트 작동 시작
-        if msg == "BELTACT":
+        if msg == "BELT_RUN":
             if self.is_full:
                 self.log("무시됨: 컨테이너 A_FULL 상태")
                 return
@@ -118,12 +134,6 @@ class BeltController:
 
     # 벨트 응답 처리
     def handle_response(self, response: str):
-        """
-        벨트 응답 처리
-        - BELTON: 벨트 작동 시작
-        - BELTOFF: 벨트 정지
-        - ConA_FULL: 컨테이너 가득 참
-        """
         if response == "ConA_FULL":
             self.container_full = True
             print("[⚠️ 컨테이너 상태] 가득 참")

@@ -37,7 +37,7 @@ class Mission:
 
     def complete(self) -> None:
         """미션 완료 처리"""
-        if self.status not in [MissionStatus.ASSIGNED, MissionStatus.DROPPING_OFF]:
+        if self.status != MissionStatus.ASSIGNED:
             raise ValueError("할당된 미션만 완료할 수 있습니다")
         
         self.status = MissionStatus.COMPLETED
@@ -54,9 +54,17 @@ class Mission:
 
     # ------------------ 상태 전이 ----------------------------
 
-    def update_status(self, new_status: MissionStatus) -> None:
+    def update_status(self, new_status) -> None:
         """미션 상태 업데이트"""
+        # 문자열로 상태가 전달된 경우 MissionStatus로 변환
+        if isinstance(new_status, str):
+            try:
+                new_status = MissionStatus[new_status]
+            except KeyError:
+                raise ValueError(f"유효하지 않은 상태: {new_status}")
+        
         if not self._is_valid_status_transition(new_status):
+            print(f"[⚠️ 잘못된 상태 전이] {self.status} → {new_status}")
             raise ValueError(f"잘못된 상태 전이: {self.status} → {new_status}")
         
         self.status = new_status
@@ -68,34 +76,7 @@ class Mission:
         """상태 전이 유효성 검사"""
         valid_transitions = {
             MissionStatus.WAITING: [MissionStatus.ASSIGNED, MissionStatus.CANCELED],
-            MissionStatus.ASSIGNED: [
-                MissionStatus.EN_ROUTE_TO_PICKUP,
-                MissionStatus.CANCELED
-            ],
-            MissionStatus.EN_ROUTE_TO_PICKUP: [
-                MissionStatus.ARRIVED_AT_PICKUP,
-                MissionStatus.ERROR
-            ],
-            MissionStatus.ARRIVED_AT_PICKUP: [
-                MissionStatus.PICKING_UP,
-                MissionStatus.ERROR
-            ],
-            MissionStatus.PICKING_UP: [
-                MissionStatus.EN_ROUTE_TO_DROPOFF,
-                MissionStatus.ERROR
-            ],
-            MissionStatus.EN_ROUTE_TO_DROPOFF: [
-                MissionStatus.ARRIVED_AT_DROPOFF,
-                MissionStatus.ERROR
-            ],
-            MissionStatus.ARRIVED_AT_DROPOFF: [
-                MissionStatus.DROPPING_OFF,
-                MissionStatus.ERROR
-            ],
-            MissionStatus.DROPPING_OFF: [
-                MissionStatus.COMPLETED,
-                MissionStatus.ERROR
-            ],
+            MissionStatus.ASSIGNED: [MissionStatus.COMPLETED, MissionStatus.CANCELED, MissionStatus.ERROR],
             MissionStatus.ERROR: [MissionStatus.CANCELED],
             MissionStatus.CANCELED: [],
             MissionStatus.COMPLETED: []

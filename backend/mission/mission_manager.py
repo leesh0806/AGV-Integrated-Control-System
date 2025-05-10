@@ -175,9 +175,13 @@ class MissionManager:
         mission_data = self.db.find_mission_by_id(mission_id)
         return Mission.from_row(mission_data) if mission_data else None
 
-    def get_missions_by_truck(self, truck_id: str) -> List[Mission]:
+    def get_assigned_missions_by_truck(self, truck_id: str) -> List[Mission]:
         mission_rows = self.db.get_missions_by_truck(truck_id)
         return [Mission.from_row(row) for row in mission_rows]
+
+    def find_assigned_mission_by_truck(self, truck_id: str) -> Optional[Mission]:
+        missions = self.get_assigned_missions_by_truck(truck_id)
+        return missions[0] if missions else None
 
     def get_waiting_missions(self) -> List[Mission]:
         mission_rows = self.db.get_waiting_missions()

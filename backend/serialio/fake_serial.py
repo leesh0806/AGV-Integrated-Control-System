@@ -56,9 +56,43 @@ class FakeSerial:
                 print(f"[FakeSerial:{self.name}] {gate_id} 닫힘 작업 시작 (0.5초 소요)")
                 self._schedule_delayed_response(0.5, f"ACK:{gate_id}_CLOSED")
                 return None  # 즉시 응답 없음, 지연 후 응답이 전송됨
+        
+        # 직접 "OPEN" 명령도 처리
+        elif msg == "OPEN":
+            # 장치 이름이 아닌 현재 제어 중인 게이트 ID(GATE_A, GATE_B 등)를 사용
+            # 이 부분이 문제 - 현재 SerialInterface에서는 인스턴스 이름을 응답에 사용함
+            # 응답 시 self.name이 게이트 ID가 아닌 경우 문제가 발생할 수 있음
+            print(f"[FakeSerial:{self.name}] {self.name} 직접 OPEN 명령 감지")
+            
+            # 장치 이름에서 게이트 ID를 추출하거나 그대로 사용
+            if "GATE_" in self.name:
+                gate_id = self.name  # 이미 게이트 ID인 경우
+            else:
+                # 이름에 따라 게이트 ID를 결정 (FakeSerial 이름을 게이트 ID로 설정한 경우 사용)
+                gate_id = self.name
+            
+            # 응답 메시지 예약
+            self._schedule_delayed_response(0.5, f"ACK:{gate_id}_OPENED")
+            return None  # 즉시 응답 없음, 지연 후 응답이 전송됨
+            
+        # 직접 "CLOSE" 명령도 처리
+        elif msg == "CLOSE":
+            # 응답 시 적절한 게이트 ID 사용
+            print(f"[FakeSerial:{self.name}] {self.name} 직접 CLOSE 명령 감지")
+            
+            # 장치 이름에서 게이트 ID를 추출하거나 그대로 사용
+            if "GATE_" in self.name:
+                gate_id = self.name  # 이미 게이트 ID인 경우
+            else:
+                # 이름에 따라 게이트 ID를 결정 (FakeSerial 이름을 게이트 ID로 설정한 경우 사용)
+                gate_id = self.name
+            
+            # 응답 메시지 예약
+            self._schedule_delayed_response(0.5, f"ACK:{gate_id}_CLOSED")
+            return None  # 즉시 응답 없음, 지연 후 응답이 전송됨
 
         # ✅ 벨트 명령 시뮬레이션
-        elif msg == "BELTACT":
+        elif msg == "BELT_RUN":
             print(f"[FakeSerial:{self.name}] 벨트 작동 명령 감지")
             self._schedule_delayed_response(0.5, "STATUS:BELT:RUNNING")
             self._schedule_delayed_response(20, "STATUS:BELT:STOPPED")

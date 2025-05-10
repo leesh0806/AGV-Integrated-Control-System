@@ -120,10 +120,10 @@ class MissionDB:
         return self.execute(query)
 
     def get_assigned_and_waiting_missions(self) -> List[Dict[str, Any]]:
-        """할당된 미션과 대기 미션 조회"""
+        """할당된 미션과 대기 미션, 완료된 미션 조회"""
         query = """
             SELECT * FROM missions
-            WHERE status_code IN ('WAITING', 'ASSIGNED')
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLETED')
             ORDER BY timestamp_created ASC
         """
         return self.execute(query)
@@ -146,18 +146,20 @@ class MissionDB:
 
     # ------------------ 미션 상태 업데이트 ----------------------------
 
-    def update_mission_status(self, mission_id: str, status_code: str, status_label: str) -> bool:
-        """미션 상태 업데이트"""
+    def update_mission_completion(self, mission_id: str, status_code: str, status_label: str, timestamp_completed: datetime = None) -> bool:
+        """미션 완료 처리"""
         try:
             query = """
                 UPDATE missions
-                SET status_code = %s, status_label = %s
+                SET status_code = %s, 
+                    status_label = %s,
+                    timestamp_completed = %s
                 WHERE mission_id = %s
             """
-            self.execute(query, (status_code, status_label, mission_id))
+            self.execute(query, (status_code, status_label, timestamp_completed, mission_id))
             return True
         except Exception as err:
-            print(f"[❌ 미션 상태 업데이트 실패] {err}")
+            print(f"[❌ 미션 완료 처리 실패] {err}")
             return False
     
     def update_mission_assignment(self, mission_id: str, truck_id: str) -> bool:
