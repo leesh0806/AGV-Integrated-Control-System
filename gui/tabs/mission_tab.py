@@ -1,12 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QComboBox, QLineEdit, QSpinBox, QRadioButton, QButtonGroup, QLabel, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QComboBox, QLineEdit, QSpinBox, QRadioButton, QButtonGroup, QLabel, QVBoxLayout, QMessageBox
 from PyQt6.QtCore import QRect
 from PyQt6 import uic
 import os
-import requests
-from datetime import datetime
-
-from backend.mission.mission_db import MissionDB
-from backend.mission.mission_manager import MissionManager
+from gui.api_client import api_client
 
 
 class MissionTab(QWidget):
@@ -22,193 +18,221 @@ class MissionTab(QWidget):
         else:
             print(f"[경고] UI 파일을 찾을 수 없습니다: {ui_path}")
             
-        # 미션 DB 및 매니저 초기화
-        self.mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
-        self.mission_manager = MissionManager(self.mission_db)
-        
         # 초기화
         self.init_ui()
         
     def init_ui(self):
         """UI 초기화"""
-        # 테이블 위젯 참조
+        # 미션 추가 버튼 이벤트 연결
+        add_button = self.findChild(QWidget, "pushbutton_add")
+        if add_button:
+            add_button.clicked.connect(self.add_mission)
+        else:
+            print("[경고] 'pushbutton_add' 버튼을 찾을 수 없습니다")
+        
+        # 미션 새로고침 버튼 이벤트 연결
+        refresh_button = self.findChild(QWidget, "pushbutton_refresh")
+        if refresh_button:
+            refresh_button.clicked.connect(self.refresh_mission_table)
+        else:
+            print("[경고] 'pushbutton_refresh' 버튼을 찾을 수 없습니다")
+            
+        # 미션 삭제 버튼 이벤트 연결
+        delete_button = self.findChild(QWidget, "pushbutton_delete")
+        if delete_button:
+            delete_button.clicked.connect(self.delete_selected_mission)
+        else:
+            print("[경고] 'pushbutton_delete' 버튼을 찾을 수 없습니다")
+            
+        # 미션 테이블 참조
         self.tablewidget = self.findChild(QWidget, "tablewidget")
+        
+        # 디버깅: 테이블 위젯 존재 여부 확인
+        if not self.tablewidget:
+            print("[경고] 'tablewidget' 테이블을 찾을 수 없습니다")
+            # UI에 있는 모든 위젯 이름 출력
+            for child in self.findChildren(QWidget):
+                if hasattr(child, 'objectName'):
+                    print(f"[디버그] 발견된 위젯: {child.objectName()}")
+        else:
+            print("[정보] 테이블 위젯을 찾았습니다")
+            
+        # 미션 테이블 설정
         if self.tablewidget:
             # 테이블 헤더 설정
             self.tablewidget.setColumnCount(11)
             self.tablewidget.setHorizontalHeaderLabels([
-                "미션ID", "화물종류", "수량", "출발지", "도착지", "상태코드", "상태설명", "트럭ID", "생성시각", "배정시각", "완료시각"
+                "미션 ID", "화물 종류", "화물 양", "출발지", "목적지", 
+                "상태 코드", "상태 레이블", "할당 트럭", "생성 시간", "할당 시간", "완료 시간"
             ])
+            
+            # 초기 데이터 로드
             self.refresh_mission_table()
-
-        # 버튼 이벤트 연결
-        self.pushbutton_add = self.findChild(QWidget, "pushbutton_add")
-        if self.pushbutton_add:
-            self.pushbutton_add.clicked.connect(self.add_mission)
-        
-        self.pushbutton_delete = self.findChild(QWidget, "pushbutton_delete")
-        if self.pushbutton_delete:
-            self.pushbutton_delete.clicked.connect(self.delete_selected_mission)
-        
-        self.pushbutton_refresh = self.findChild(QWidget, "pushbutton_refresh") 
-        if self.pushbutton_refresh:
-            self.pushbutton_refresh.clicked.connect(self.refresh_button_clicked)
-
-        # 위젯 참조
-        self.lineedit_type = self.findChild(QLineEdit, "lineedit_type")
-        self.spinBox = self.findChild(QSpinBox, "spinBox")
-        self.combobox_source = self.findChild(QComboBox, "combobox_source")
-        
-        # UI에서 콤보박스 아이템이 이미 설정되어 있으므로 확인만 수행
-        if self.combobox_source:
-            print(f"[✅ 콤보박스 설정 확인] 아이템 수: {self.combobox_source.count()}개")
-            for i in range(self.combobox_source.count()):
-                print(f"  - 아이템 {i}: {self.combobox_source.itemText(i)}")
-        else:
-            print("[❌ 오류] combobox_source를 찾을 수 없습니다")
-        
+            
     def refresh_mission_table(self):
         """미션 테이블 데이터 갱신"""
         if not hasattr(self, 'tablewidget') or not self.tablewidget:
+            print("[오류] 테이블 위젯이 없어 미션 데이터를 표시할 수 없습니다")
             return
             
         self.tablewidget.setRowCount(0)
         
         # API로 미션 데이터 가져오기
         try:
-            response = requests.get("http://127.0.0.1:5001/api/missions")
-            if response.status_code == 200:
-                missions = response.json()
-                
-                for mission in missions:
-                    row_idx = self.tablewidget.rowCount()
-                    self.tablewidget.insertRow(row_idx)
-                    
-                    # 기본 정보 표시
-                    self.tablewidget.setItem(row_idx, 0, QTableWidgetItem(str(mission.get('mission_id', ''))))
-                    self.tablewidget.setItem(row_idx, 1, QTableWidgetItem(str(mission.get('cargo_type', ''))))
-                    self.tablewidget.setItem(row_idx, 2, QTableWidgetItem(str(mission.get('cargo_amount', ''))))
-                    self.tablewidget.setItem(row_idx, 3, QTableWidgetItem(str(mission.get('source', ''))))
-                    self.tablewidget.setItem(row_idx, 4, QTableWidgetItem(str(mission.get('destination', ''))))
-                    
-                    # 상태 처리
-                    status = mission.get('status', {})
-                    status_code = ''
-                    status_label = ''
-                    
-                    if isinstance(status, dict):
-                        status_code = status.get('code', '')
-                        status_label = status.get('label', '')
-                    elif isinstance(status, str):
-                        status_code = status
-                    else:
-                        status_code = str(status)
-                    
-                    self.tablewidget.setItem(row_idx, 5, QTableWidgetItem(status_code))
-                    if status_label:
-                        self.tablewidget.setItem(row_idx, 6, QTableWidgetItem(status_label))
-                    
-                    # 나머지 정보 표시
-                    self.tablewidget.setItem(row_idx, 7, QTableWidgetItem(str(mission.get('assigned_truck_id', ''))))
-                    self.tablewidget.setItem(row_idx, 8, QTableWidgetItem(str(mission.get('timestamp_created', ''))))
-                    self.tablewidget.setItem(row_idx, 9, QTableWidgetItem(str(mission.get('timestamp_assigned', ''))))
-                    self.tablewidget.setItem(row_idx, 10, QTableWidgetItem(str(mission.get('timestamp_completed', ''))))
-                
-                return
+            missions = api_client.get_all_missions()
+            print(f"[정보] API에서 {len(missions)}개의 미션을 가져왔습니다")
             
-        except Exception as e:
-            print(f"[ERROR] API에서 미션 정보를 가져오는 중 오류 발생: {e}")
-            # API 호출 실패 시 기존 방식으로 DB에서 직접 가져옴
-        
-        # 기존 방식: DB에서 직접 가져오기
-        mission_db = MissionDB(host="localhost", user="root", password="jinhyuk2dacibul", database="dust")
-        missions = mission_db.get_assigned_and_waiting_missions()
-        
-        for mission in missions:
-            row_idx = self.tablewidget.rowCount()
-            self.tablewidget.insertRow(row_idx)
-            
-            # 딕셔너리 형식으로 가져온 경우 (DB에서 직접 가져옴)
-            if isinstance(mission, dict):
+            for mission in missions:
+                row_idx = self.tablewidget.rowCount()
+                self.tablewidget.insertRow(row_idx)
+                
+                # 기본 정보 표시
                 self.tablewidget.setItem(row_idx, 0, QTableWidgetItem(str(mission.get('mission_id', ''))))
                 self.tablewidget.setItem(row_idx, 1, QTableWidgetItem(str(mission.get('cargo_type', ''))))
                 self.tablewidget.setItem(row_idx, 2, QTableWidgetItem(str(mission.get('cargo_amount', ''))))
                 self.tablewidget.setItem(row_idx, 3, QTableWidgetItem(str(mission.get('source', ''))))
                 self.tablewidget.setItem(row_idx, 4, QTableWidgetItem(str(mission.get('destination', ''))))
                 
-                # DB에서는 status_code와 status_label 필드로 분리되어 있음
-                self.tablewidget.setItem(row_idx, 5, QTableWidgetItem(str(mission.get('status_code', ''))))
-                self.tablewidget.setItem(row_idx, 6, QTableWidgetItem(str(mission.get('status_label', ''))))
+                # 상태 처리
+                status = mission.get('status', {})
+                status_code = ''
+                status_label = ''
                 
+                if isinstance(status, dict):
+                    status_code = status.get('code', '')
+                    status_label = status.get('label', '')
+                elif isinstance(status, str):
+                    status_code = status
+                else:
+                    status_code = str(status)
+                
+                self.tablewidget.setItem(row_idx, 5, QTableWidgetItem(status_code))
+                if status_label:
+                    self.tablewidget.setItem(row_idx, 6, QTableWidgetItem(status_label))
+                
+                # 나머지 정보 표시
                 self.tablewidget.setItem(row_idx, 7, QTableWidgetItem(str(mission.get('assigned_truck_id', ''))))
                 self.tablewidget.setItem(row_idx, 8, QTableWidgetItem(str(mission.get('timestamp_created', ''))))
                 self.tablewidget.setItem(row_idx, 9, QTableWidgetItem(str(mission.get('timestamp_assigned', ''))))
                 self.tablewidget.setItem(row_idx, 10, QTableWidgetItem(str(mission.get('timestamp_completed', ''))))
-            else:
-                # Mission 객체인 경우 (이전 코드)
-                self.tablewidget.setItem(row_idx, 0, QTableWidgetItem(mission.mission_id))
-                self.tablewidget.setItem(row_idx, 1, QTableWidgetItem(mission.cargo_type))
-                self.tablewidget.setItem(row_idx, 2, QTableWidgetItem(str(mission.cargo_amount)))
-                self.tablewidget.setItem(row_idx, 3, QTableWidgetItem(mission.source))
-                self.tablewidget.setItem(row_idx, 4, QTableWidgetItem(mission.destination))
-                self.tablewidget.setItem(row_idx, 5, QTableWidgetItem(mission.status.name))
-                self.tablewidget.setItem(row_idx, 6, QTableWidgetItem(mission.status.value))
-                self.tablewidget.setItem(row_idx, 7, QTableWidgetItem(str(mission.assigned_truck_id)))
-                self.tablewidget.setItem(row_idx, 8, QTableWidgetItem(str(mission.timestamp_created)))
-                self.tablewidget.setItem(row_idx, 9, QTableWidgetItem(str(mission.timestamp_assigned)))
-                self.tablewidget.setItem(row_idx, 10, QTableWidgetItem(str(mission.timestamp_completed)))
                 
-        mission_db.close()
-
+        except Exception as e:
+            print(f"[ERROR] 미션 정보를 가져오는 중 오류 발생: {e}")
+            QMessageBox.critical(self, "오류", f"미션 정보를 가져오는 중 오류가 발생했습니다: {e}")
+            
     def add_mission(self):
         """새 미션 추가"""
-        if not hasattr(self, 'lineedit_type') or not self.lineedit_type:
-            print("[❌ 오류] lineedit_type 위젯을 찾을 수 없습니다")
-            return
+        try:
+            # 미션 입력값 가져오기 - UI 파일의 위젯 이름 사용
+            lineedit_type = self.findChild(QWidget, "lineedit_type")
+            if not lineedit_type:
+                print("[경고] 'lineedit_type' 필드를 찾을 수 없습니다")
+                cargo_type = "기본 화물"
+            else:
+                cargo_type = lineedit_type.text() or "기본 화물"
+                
+            spinBox = self.findChild(QWidget, "spinBox")
+            if not spinBox:
+                print("[경고] 'spinBox' 스핀박스를 찾을 수 없습니다")
+                cargo_amount = 1.0
+            else:
+                cargo_amount = float(spinBox.value())
+                
+            source_widget = self.findChild(QWidget, "combobox_source")
+            if not source_widget:
+                print("[경고] 'combobox_source' 콤보박스를 찾을 수 없습니다")
+                source = "LOAD_A"
+            else:
+                source = source_widget.currentText()
+                
+            # 목적지는 UI에 없으므로 하드코딩
+            destination = "BELT"
             
-        if not hasattr(self, 'combobox_source') or not self.combobox_source:
-            print("[❌ 오류] combobox_source 위젯을 찾을 수 없습니다")
-            return
+            # 미션 ID 생성 (UI에는 없으므로 현재 시간 기반으로 생성)
+            from datetime import datetime
+            mission_id = f"MISSION_{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
-        # mission_id를 더 짧은 포맷으로 자동 생성 (예: mission_YYMMDD_HHMMSS)
-        now = datetime.now().strftime("%y%m%d_%H%M%S")
-        mission_id = f"mission_{now}"
-        cargo_type = self.lineedit_type.text()
-        cargo_amount = self.spinBox.value()
-        
-        # 콤보박스에서 선택된 값 가져오기
-        source = self.combobox_source.currentText()
-        if not source:
-            # 기본값 설정 (이제는 발생하지 않아야 함)
-            source = "LOAD_A"
-            print("[⚠️ 경고] source 값이 비어있습니다. 기본값 'LOAD_A'를 사용합니다")
-        
-        print(f"[📝 미션 생성] ID={mission_id}, 화물={cargo_type}, 수량={cargo_amount}, 출발지={source}")
-        
-        destination = "belt"  # 도착지는 belt로 고정
-        
-        # 미션 생성
-        self.mission_manager.create_mission(
-            mission_id=mission_id,
-            cargo_type=cargo_type,
-            cargo_amount=cargo_amount,
-            source=source,
-            destination=destination
-        )
-        self.refresh_mission_table()
-
+            # 입력값 검증
+            if not cargo_type or cargo_amount <= 0 or not source or not destination:
+                QMessageBox.warning(self, "입력 오류", "모든 필드를 올바르게 입력해주세요.")
+                return
+                
+            if source == destination:
+                QMessageBox.warning(self, "입력 오류", "출발지와 목적지가 같을 수 없습니다.")
+                return
+                
+            # 미션 데이터 생성
+            mission_data = {
+                "mission_id": mission_id,
+                "cargo_type": cargo_type,
+                "cargo_amount": cargo_amount,
+                "source": source,
+                "destination": destination
+            }
+            
+            print(f"[정보] 미션 생성 시도: {mission_data}")
+            
+            # API로 미션 생성
+            response = api_client.create_mission(mission_data)
+            
+            # 성공 메시지 표시
+            QMessageBox.information(self, "미션 생성", f"미션 {mission_id}이(가) 성공적으로 생성되었습니다.")
+            
+            # 미션 테이블 갱신
+            self.refresh_mission_table()
+            
+            # 입력 필드 초기화
+            if lineedit_type:
+                lineedit_type.clear()
+                
+            if spinBox:
+                spinBox.setValue(1)
+            
+        except Exception as e:
+            print(f"[ERROR] 미션 생성 중 오류 발생: {e}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "오류", f"미션 생성 중 오류가 발생했습니다: {e}")
+            
     def delete_selected_mission(self):
-        """선택한 미션 삭제"""
-        if not hasattr(self, 'tablewidget') or not self.tablewidget:
+        """선택된 미션 삭제"""
+        if not self.tablewidget:
+            print("[오류] 테이블 위젯이 없어 미션을 삭제할 수 없습니다")
             return
             
-        selected = self.tablewidget.currentRow()
-        if selected < 0:
+        # 선택된 행 가져오기
+        selected_rows = self.tablewidget.selectedItems()
+        if not selected_rows:
+            QMessageBox.warning(self, "선택 오류", "삭제할 미션을 선택해주세요.")
             return
-        mission_id = self.tablewidget.item(selected, 0).text()
-        self.mission_manager.cancel_mission(mission_id)
-        self.refresh_mission_table()
-
-    def refresh_button_clicked(self):
-        """미션 테이블 새로고침 버튼 클릭 이벤트"""
-        self.refresh_mission_table() 
+            
+        # 선택된 행의 미션 ID 가져오기
+        mission_id_items = [self.tablewidget.item(item.row(), 0) for item in selected_rows]
+        unique_mission_ids = list(set([item.text() for item in mission_id_items if item is not None]))
+        
+        if not unique_mission_ids:
+            QMessageBox.warning(self, "선택 오류", "삭제할 미션을 선택해주세요.")
+            return
+            
+        # 삭제 확인 메시지 표시
+        if len(unique_mission_ids) == 1:
+            msg = f"미션 '{unique_mission_ids[0]}'을(를) 취소하시겠습니까?"
+        else:
+            msg = f"{len(unique_mission_ids)}개의 미션을 취소하시겠습니까?"
+            
+        reply = QMessageBox.question(self, "미션 취소", msg, 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # 선택된 미션 취소
+            for mission_id in unique_mission_ids:
+                try:
+                    api_client.cancel_mission(mission_id)
+                    print(f"[INFO] 미션 취소: {mission_id}")
+                except Exception as e:
+                    print(f"[ERROR] 미션 취소 중 오류 발생: {e}")
+                    QMessageBox.critical(self, "오류", f"미션 '{mission_id}' 취소 중 오류가 발생했습니다: {e}")
+            
+            # 미션 테이블 갱신
+            self.refresh_mission_table()
+            QMessageBox.information(self, "미션 취소", "선택한 미션이 취소되었습니다.") 

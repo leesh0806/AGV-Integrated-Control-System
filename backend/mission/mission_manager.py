@@ -102,8 +102,13 @@ class MissionManager:
             return False
         
         try:
+            print(f"[디버그] 미션 {mission_id}의 현재 상태: {mission_data['status_code']}")
+            
             mission = Mission.from_row(mission_data)
             mission.complete()
+            
+            print(f"[디버그] 미션 {mission_id}의 새 상태: {mission.status.name}")
+            print(f"[디버그] 완료 시간: {mission.timestamp_completed}")
             
             mission_data = (
                 mission.mission_id,
@@ -119,15 +124,37 @@ class MissionManager:
                 mission.timestamp_completed
             )
             
-            if self.db.save_mission(mission_data):
-                print(f"[✅ 미션 완료 처리] {mission_id}")
-                return True
+            # 직접 DB에 완료 상태 업데이트 (save_mission 메서드 대신)
+            status_code = mission.status.name
+            status_label = mission.status.value
+            timestamp_completed = mission.timestamp_completed
             
-            print(f"[❌ 미션 완료 실패] {mission_id}")
-            return False
-        
+            # 두 가지 방법으로 DB 업데이트 시도
+            save_result = self.db.save_mission(mission_data)
+            update_result = self.db.update_mission_completion(
+                mission_id=mission.mission_id,
+                status_code=status_code,
+                status_label=status_label,
+                timestamp_completed=timestamp_completed
+            )
+            
+            if save_result and update_result:
+                print(f"[✅ 미션 완료 처리] {mission_id} (DB 저장 및 업데이트 성공)")
+                return True
+            elif save_result:
+                print(f"[⚠️ 미션 완료 처리] {mission_id} (DB 저장만 성공, 업데이트 실패)")
+                return True
+            elif update_result:
+                print(f"[⚠️ 미션 완료 처리] {mission_id} (DB 업데이트만 성공, 저장 실패)")
+                return True
+            else:
+                print(f"[❌ 미션 완료 실패] {mission_id} (DB 저장 및 업데이트 실패)")
+                return False
+            
         except Exception as err:
             print(f"[❌ 미션 완료 실패] {err}")
+            import traceback
+            traceback.print_exc()
             return False
 
     # ------------------ 미션 취소 ----------------------------

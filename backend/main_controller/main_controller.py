@@ -14,12 +14,21 @@ from backend.truck_fsm.truck_message_handler import TruckMessageHandler
 
 
 class MainController:
-    def __init__(self, port_map, use_fake=False, fake_devices=None, debug=False):
+    def __init__(self, port_map, use_fake=False, fake_devices=None, debug=False, facility_status_manager=None):
         # 디버그 모드 설정
         self.debug = debug
         
+        # 시설 상태 관리자 저장
+        self.facility_status_manager = facility_status_manager
+        
         # Serial 연결 및 장치 컨트롤러 생성
-        self.device_manager = DeviceManager(port_map, use_fake=use_fake, fake_devices=fake_devices, debug=debug)
+        self.device_manager = DeviceManager(
+            port_map=port_map, 
+            use_fake=use_fake, 
+            fake_devices=fake_devices, 
+            debug=debug, 
+            facility_status_manager=facility_status_manager
+        )
 
         # Mission DB 초기화
         self.mission_db = MissionDB(
@@ -141,4 +150,6 @@ class MainController:
         self.mission_db.close()
         self.status_db.close()
         self.device_manager.close_all()
+        if self.facility_status_manager:
+            self.facility_status_manager.close()
         print("[✅ 시스템 종료 완료]") 

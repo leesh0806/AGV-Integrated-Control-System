@@ -31,12 +31,13 @@ except ImportError:
 
 
 class DeviceManager:
-    def __init__(self, port_map: dict, use_fake=False, fake_devices=None, debug=False):
+    def __init__(self, port_map: dict, use_fake=False, fake_devices=None, debug=False, facility_status_manager=None):
         self.controllers = {}
         self.interfaces = {}
         self.use_fake = use_fake
         self.fake_devices = fake_devices or []
         self.debug = debug
+        self.facility_status_manager = facility_status_manager
         
         if use_fake and not fake_devices:
             print(f"[DeviceManager] 시리얼 관리자 초기화 - 모든 장치 가상 모드")
@@ -97,11 +98,11 @@ class DeviceManager:
         # 장치 유형에 따라 적절한 컨트롤러 생성
         if "BELT" in device_id.upper():
             print(f"[DeviceManager] 벨트 컨트롤러 생성: {device_id}")
-            return BeltController(device_interface)
+            return BeltController(device_interface, self.facility_status_manager)
         elif "GATE" in device_id.upper():
             print(f"[DeviceManager] 게이트 컨트롤러 생성: {device_id}")
             # 게이트 컨트롤러 생성 시 게이트 ID 전달
-            controller = GateController(device_interface)
+            controller = GateController(device_interface, self.facility_status_manager)
             controller.current_gate_id = device_id  # 현재 게이트 ID 설정
             return controller
         else:

@@ -423,18 +423,11 @@ class TruckFSMManager:
 
                 mission = self.mission_manager.find_assigned_mission_by_truck(truck_id)
                 if mission:
-                    mission.complete()
-                    print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")
-
-                    status_code = mission.status.name if isinstance(mission.status, MissionStatus) else str(mission.status)
-                    status_label = mission.status.value if isinstance(mission.status, MissionStatus) else str(mission.status)
-
-                    self.mission_manager.db.update_mission_completion(
-                        mission_id=mission.mission_id,
-                        status_code=status_code,
-                        status_label=status_label,
-                        timestamp_completed=mission.timestamp_completed
-                    )
+                    # mission.complete() 대신 MissionManager의 complete_mission 사용
+                    if self.mission_manager.complete_mission(mission.mission_id):
+                        print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")
+                    else:
+                        print(f"[❌ 미션 완료 실패] {mission.mission_id} - 데이터베이스 업데이트 실패")
                 return
 
             # STANDBY 도착
@@ -483,18 +476,11 @@ class TruckFSMManager:
 
                 mission = self.mission_manager.find_assigned_mission_by_truck(truck_id)
                 if mission:
-                    mission.complete()
-                    print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")
-
-                    status_code = mission.status.name if isinstance(mission.status, MissionStatus) else str(mission.status)
-                    status_label = mission.status.value if isinstance(mission.status, MissionStatus) else str(mission.status)
-
-                    self.mission_manager.db.update_mission_completion(
-                        mission_id=mission.mission_id,
-                        status_code=status_code,
-                        status_label=status_label,
-                        timestamp_completed=mission.timestamp_completed
-                    )
+                    # mission.complete() 대신 MissionManager의 complete_mission 사용
+                    if self.mission_manager.complete_mission(mission.mission_id):
+                        print(f"[✅ 미션 완료] {mission.mission_id} 완료 처리됨")
+                    else:
+                        print(f"[❌ 미션 완료 실패] {mission.mission_id} - 데이터베이스 업데이트 실패")
                 return
 
             # -------------------------------- 비상 상황 처리 --------------------------------

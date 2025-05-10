@@ -496,6 +496,17 @@ class SettingsTab(QWidget):
             
         self.settings['network'].update(network_settings)
         
+        # API 클라이언트 설정 업데이트
+        try:
+            from gui.api_client import api_client
+            api_client.update_config(
+                server_address=network_settings.get('server_address'),
+                api_port=network_settings.get('api_port')
+            )
+            print(f"[INFO] API 클라이언트 설정 업데이트: {network_settings.get('server_address')}:{network_settings.get('api_port')}")
+        except Exception as e:
+            print(f"[ERROR] API 클라이언트 설정 업데이트 실패: {e}")
+        
         # DB에 설정 저장
         if self.save_settings_to_db({"network": network_settings}):
             QMessageBox.information(self, "설정 적용", "네트워크 설정이 적용되었습니다.")

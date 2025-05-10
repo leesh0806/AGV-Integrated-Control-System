@@ -3,8 +3,10 @@ from PyQt6.QtGui import QPen, QBrush, QColor, QPainterPath
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6 import uic
 import os
-import requests
 import math
+
+# 공통 API 클라이언트 가져오기
+from gui.api_client import api_client
 
 # 트럭 아이콘 클래스 직접 포함
 from PyQt6.QtWidgets import QGraphicsPixmapItem
@@ -163,48 +165,48 @@ class MonitoringTab(QWidget):
     def update_truck_position_from_api(self):
         """트럭 위치 업데이트 (API 호출)"""
         try:
-            resp = requests.get("http://localhost:5001/api/trucks/TRUCK_01", timeout=0.5)
-            if resp.status_code == 200:
-                data = resp.json()
-                # location 키를 사용하여 위치 데이터 가져오기 (current가 아님)
-                pos = data.get("position", {}).get("location")
-                status = data.get("position", {}).get("status", "IDLE")
+            # api_client를 사용하여 트럭 정보 조회
+            data = api_client.get_truck("TRUCK_01")
+            
+            # location 키를 사용하여 위치 데이터 가져오기
+            pos = data.get("position", {}).get("location")
+            status = data.get("position", {}).get("status", "IDLE")
+            
+            # 위치 정보가 있을 때만 디버그 메시지 출력
+            if pos:
+                print(f"[DEBUG] 트럭 위치 데이터: {data.get('position', {})}")
+            
+            # 위치 매핑 테이블 - 백엔드에서 보내는 위치를 맵 좌표 키로 변환
+            location_mapping = {
+                "STANDBY": "STANDBY",
+                "CHECKPOINT_A": "CHECKPOINT_A", 
+                "CHECKPOINT_B": "CHECKPOINT_B",
+                "CHECKPOINT_C": "CHECKPOINT_C",
+                "CHECKPOINT_D": "CHECKPOINT_D",
+                "GATE_A": "GATE_A",
+                "GATE_B": "GATE_B",
+                "LOAD_A": "A_LOAD",     # 백엔드: LOAD_A -> GUI: A_LOAD
+                "LOAD_B": "B_LOAD",     # 백엔드: LOAD_B -> GUI: B_LOAD
+                "BELT": "BELT"
+            }
+            
+            # pos가 None이 아닐 때만 처리
+            if pos:
+                # 대문자로 통일
+                pos_upper = pos.upper()
+                # 맵 좌표 키로 변환
+                node = location_mapping.get(pos_upper)
                 
-                # 위치 정보가 있을 때만 디버그 메시지 출력
-                if pos:
-                    print(f"[DEBUG] 트럭 위치 데이터: {data.get('position', {})}")
-                
-                # 위치 매핑 테이블 - 백엔드에서 보내는 위치를 맵 좌표 키로 변환
-                location_mapping = {
-                    "STANDBY": "STANDBY",
-                    "CHECKPOINT_A": "CHECKPOINT_A", 
-                    "CHECKPOINT_B": "CHECKPOINT_B",
-                    "CHECKPOINT_C": "CHECKPOINT_C",
-                    "CHECKPOINT_D": "CHECKPOINT_D",
-                    "GATE_A": "GATE_A",
-                    "GATE_B": "GATE_B",
-                    "LOAD_A": "A_LOAD",     # 백엔드: LOAD_A -> GUI: A_LOAD
-                    "LOAD_B": "B_LOAD",     # 백엔드: LOAD_B -> GUI: B_LOAD
-                    "BELT": "BELT"
-                }
-                
-                # pos가 None이 아닐 때만 처리
-                if pos:
-                    # 대문자로 통일
-                    pos_upper = pos.upper()
-                    # 맵 좌표 키로 변환
-                    node = location_mapping.get(pos_upper)
+                if node in self.node_coords:
+                    self.truck.update_position(*self.node_coords[node])
+                    # STANDBY가 아니거나 상태가 변경되었을 때만 로그 출력
+                    if (pos_upper != "STANDBY") or (status != "IDLE"):
+                        print(f"[DEBUG] 트럭 위치 업데이트: {node} (상태: {status})")
+                else:
+                    print(f"[DEBUG] 매핑되지 않은 위치: {pos_upper} -> {node}")
                     
-                    if node in self.node_coords:
-                        self.truck.update_position(*self.node_coords[node])
-                        # STANDBY가 아니거나 상태가 변경되었을 때만 로그 출력
-                        if (pos_upper != "STANDBY") or (status != "IDLE"):
-                            print(f"[DEBUG] 트럭 위치 업데이트: {node} (상태: {status})")
-                    else:
-                        print(f"[DEBUG] 매핑되지 않은 위치: {pos_upper} -> {node}")
-                        
         except Exception as e:
-            print(f"[ERROR] 트럭 위치 업데이트 실패: {e}")  # 오류 로깅 추가
+            print(f"[ERROR] 트럭 위치 업데이트 실패: {e}")
         
     def refresh_battery_status(self):
         """배터리 상태 업데이트"""
@@ -222,8 +224,8 @@ class MonitoringTab(QWidget):
         progressbar_battery_truck1, progressbar_battery_truck2, progressbar_battery_truck3 = widgets
         
         try:
-            response = requests.get("http://127.0.0.1:5001/api/truck_battery")
-            data = response.json()
+            # api_client를 사용하여 모든 트럭 배터리 정보 조회
+            data = api_client.get_all_truck_batteries()
             
             # 주기적으로 반복되는 로그는 TRUCK_01에 실제 데이터가 있을 때만 출력
             if "TRUCK_01" in data and data["TRUCK_01"]:
@@ -231,8 +233,6 @@ class MonitoringTab(QWidget):
             
             def update_battery_bar(progress_bar, truck_data, truck_id):
                 if not truck_data:  # 데이터가 없는 경우
-                    # 디버그 메시지 제거
-                    # print(f"[DEBUG] 트럭 데이터 없음: {truck_data}")
                     # 기본값 설정 - 등록되지 않은 트럭은 회색으로 표시
                     level = 0
                     is_charging = False
@@ -252,13 +252,16 @@ class MonitoringTab(QWidget):
                             margin: 0.5px;
                         }}
                     """
+                    
                     progress_bar.setStyleSheet(style)
-                    progress_bar.setValue(level)
+                    progress_bar.setValue(0)
                     # 트럭 미등록 표시 추가
                     progress_bar.setFormat(f"{truck_id} (미등록)")
                     return
                     
-                level = int(truck_data.get("level", 100))
+                # 배터리 레벨 (기본값 0)
+                level = float(truck_data.get("level", 0))
+                # 충전 중 여부 (기본값 False)
                 is_charging = truck_data.get("is_charging", False)
                 
                 # 배터리 상태가 변경되었을 때만 로그 출력
@@ -272,18 +275,16 @@ class MonitoringTab(QWidget):
                 progress_bar.last_level = level
                 progress_bar.last_charging = is_charging
                 
-                # 배터리 레벨에 따른 색상 설정
-                if level <= 30:
-                    color = "#FF0000"  # 빨간색 (위험)
-                elif level <= 50:
-                    color = "#FFA500"  # 주황색 (경고)
-                else:
-                    color = "#00FF00"  # 초록색 (정상)
-                
-                # 충전 중일 때는 파란색으로 표시
+                # 배터리 상태에 따른 색상 설정
                 if is_charging:
-                    color = "#0000FF"  # 파란색
-                
+                    color = "#0000FF"  # 충전 중: 파란색
+                elif level <= 30:
+                    color = "#FF0000"  # 배터리 위험: 빨간색
+                elif level <= 50:
+                    color = "#FFA500"  # 배터리 경고: 주황색
+                else:
+                    color = "#00FF00"  # 배터리 충분: 초록색
+                    
                 # 스타일시트 설정
                 style = f"""
                     QProgressBar {{
@@ -298,27 +299,35 @@ class MonitoringTab(QWidget):
                         margin: 0.5px;
                     }}
                 """
+                
+                # 프로그레스바 업데이트
                 progress_bar.setStyleSheet(style)
-                progress_bar.setValue(level)
+                progress_bar.setValue(int(level))
                 # 기본 형식으로 복원
                 progress_bar.setFormat("%p%")
                 
-                # 스타일시트 로그는 출력하지 않음
-                # print(f"[DEBUG] 프로그레스바 업데이트: {level}% (스타일: {style})")
-            
-            # TRUCK_01 배터리 상태 업데이트
-            truck1_data = data.get("TRUCK_01", {})
-            update_battery_bar(progressbar_battery_truck1, truck1_data, "TRUCK_01")
-            
-            # TRUCK_02 배터리 상태 업데이트
-            truck2_data = data.get("TRUCK_02", {})
-            update_battery_bar(progressbar_battery_truck2, truck2_data, "TRUCK_02")
-            
-            # TRUCK_03 배터리 상태 업데이트
-            truck3_data = data.get("TRUCK_03", {})
-            update_battery_bar(progressbar_battery_truck3, truck3_data, "TRUCK_03")
-            
+            # 각 트럭 배터리 상태 업데이트
+            update_battery_bar(progressbar_battery_truck1, data.get("TRUCK_01", {}), "TRUCK_01")
+            update_battery_bar(progressbar_battery_truck2, data.get("TRUCK_02", {}), "TRUCK_02")
+            update_battery_bar(progressbar_battery_truck3, data.get("TRUCK_03", {}), "TRUCK_03")
+                
         except Exception as e:
-            print(f"[ERROR] 배터리 상태 업데이트 중 오류 발생: {e}")
+            print(f"[ERROR] 배터리 상태 업데이트 실패: {e}")
             import traceback
-            traceback.print_exc()  # 상세한 오류 정보 출력 
+            traceback.print_exc()  # 상세한 오류 정보 출력
+            # 에러 발생 시 모든 배터리 표시 비활성화
+            for widget in widgets:
+                widget.setValue(0)
+                widget.setStyleSheet("""
+                    QProgressBar {
+                        border: 2px solid grey;
+                        border-radius: 5px;
+                        text-align: center;
+                        background-color: #f0f0f0;
+                    }
+                    QProgressBar::chunk {
+                        background-color: #999999;
+                        width: 10px;
+                        margin: 0.5px;
+                    }
+                """) 

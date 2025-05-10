@@ -11,8 +11,10 @@ from backend.mission.mission import Mission
 from backend.mission.mission_db import MissionDB
 from backend.mission.mission_status import MissionStatus
 from backend.truck_status.truck_status_db import TruckStatusDB
+from backend.facility_status.facility_status_manager import FacilityStatusManager
+from backend.facility_status.facility_status_db import FacilityStatusDB
 import threading
-from backend.rest_api.server import app as flask_server
+from backend.rest_api.app import app as flask_server  # app.py에서 Flask 서버 가져오기
 
 # 설정
 HOST = '0.0.0.0'
@@ -56,19 +58,34 @@ truck_status_db = TruckStatusDB(
     database="dust"
 )
 
+# 시설 상태 데이터베이스 설정 및 초기화
+facility_status_db = FacilityStatusDB(
+    host="localhost",
+    user="root",
+    password="jinhyuk2dacibul",
+    database="dust"
+)
+
 # 트럭 상태 초기화 - 시뮬레이터 시작 시마다 상태 리셋
 truck_status_db.reset_all_statuses()
 
-# MainController 인스턴스 생성 (벨트는 실제 하드웨어, 게이트는 가상 모드)
+# 시설 상태 매니저 생성
+facility_status_manager = FacilityStatusManager(facility_status_db)
+
+# MainController 인스턴스 생성 (시설 상태 매니저 전달)
 main_controller = MainController(
     port_map=port_map, 
     use_fake=USE_FAKE_HARDWARE, 
     fake_devices=FAKE_DEVICES,
-    debug=DEBUG_MODE
+    debug=DEBUG_MODE,
+    facility_status_manager=facility_status_manager
 )
 
 # 앱의 트럭 상태 초기화 (메모리에 있는 상태도 초기화)
 main_controller.truck_status_manager.reset_all_trucks()
+
+# 시설 상태 초기화
+facility_status_manager.reset_all_facilities()
 
 # 기존 미션 확인
 print("[🔍 기존 미션 확인 중...]")
@@ -96,6 +113,8 @@ def signal_handler(sig, frame):
     
     server.stop()
     mission_db.close()  # DB 연결 종료
+    truck_status_db.close()  # 트럭 상태 DB 연결 종료
+    facility_status_db.close()  # 시설 상태 DB 연결 종료
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)

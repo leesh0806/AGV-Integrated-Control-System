@@ -53,21 +53,38 @@ class MissionDB:
 
     def execute(self, query: str, params: Tuple = None) -> List[Dict[str, Any]]:
         """쿼리 실행 및 결과 반환"""
+        conn = None
+        cursor = None
         try:
             conn = self.get_connection()
             cursor = conn.cursor(dictionary=True)
+            
+            # 디버깅 로그
+            param_str = str(params) if params else "없음"
+            print(f"[DB 쿼리 실행] {query[:100]}{'...' if len(query) > 100 else ''}")
+            print(f"[DB 파라미터] {param_str[:100]}{'...' if len(param_str) > 100 else ''}")
+            
             cursor.execute(query, params)
             if query.strip().upper().startswith("SELECT"):
                 result = cursor.fetchall()
+                print(f"[DB 조회 결과] {len(result)}개 행 반환")
             else:
                 conn.commit()
                 result = []
-            cursor.close()
-            conn.close()
+                print(f"[DB 변경 완료] 영향받은 행 수: {cursor.rowcount}")
             return result
         except mysql.connector.Error as err:
-            print(f"[❌ 쿼리 실행 실패] {err}")
+            print(f"[❌ DB 쿼리 실행 실패] 오류 코드: {err.errno}, 메시지: {err.msg}")
+            print(f"[❌ 실패한 쿼리] {query}")
+            print(f"[❌ 실패한 파라미터] {params}")
+            if conn and conn.is_connected():
+                conn.rollback()
             return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
 
     def execute_transaction(self, queries: List[Dict[str, Any]]) -> bool:
         """트랜잭션 실행"""
@@ -89,6 +106,13 @@ class MissionDB:
     def save_mission(self, mission_data: Tuple) -> bool:
         """미션 저장"""
         try:
+            # 로그 출력을 위한 미션 데이터 파싱
+            mission_id = mission_data[0] if len(mission_data) > 0 else "알 수 없음"
+            status_code = mission_data[5] if len(mission_data) > 5 else "알 수 없음"
+            timestamp_completed = mission_data[10] if len(mission_data) > 10 else None
+            
+            print(f"[미션 저장 시작] ID: {mission_id}, 상태: {status_code}, 완료 시간: {timestamp_completed}")
+            
             query = """
                 INSERT INTO missions (
                     mission_id, cargo_type, cargo_amount, source, destination,
@@ -102,10 +126,15 @@ class MissionDB:
                     timestamp_assigned = VALUES(timestamp_assigned),
                     timestamp_completed = VALUES(timestamp_completed)
             """
-            self.execute(query, mission_data)
+            result = self.execute(query, mission_data)
+            print(f"[미션 저장 완료] ID: {mission_id}, 상태: {status_code}")
             return True
         except Exception as err:
             print(f"[❌ 미션 저장 실패] {err}")
+            if mission_data and len(mission_data) > 0:
+                print(f"[❌ 저장 실패한 미션 ID] {mission_data[0]}")
+            import traceback
+            traceback.print_exc()
             return False
 
     # ------------------ 미션 조회 ----------------------------
@@ -156,10 +185,15 @@ class MissionDB:
                     timestamp_completed = %s
                 WHERE mission_id = %s
             """
-            self.execute(query, (status_code, status_label, timestamp_completed, mission_id))
+            params = (status_code, status_label, timestamp_completed, mission_id)
+            print(f"[미션 업데이트] 미션 ID: {mission_id}, 상태: {status_code}, 완료 시간: {timestamp_completed}")
+            result = self.execute(query, params)
+            print(f"[미션 업데이트 결과] {result}")
             return True
         except Exception as err:
             print(f"[❌ 미션 완료 처리 실패] {err}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def update_mission_assignment(self, mission_id: str, truck_id: str) -> bool:
