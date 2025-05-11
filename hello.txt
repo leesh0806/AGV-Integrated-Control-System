@@ -1,0 +1,1872 @@
+
+(qt_venv) jinhyuk2me@jinhyuk2box:~/project_ws/iot_dust$ python3 run/run_main_server.py 
+[초기화] 포트 맵: {'GATE_A': '/dev/ttyACM1', 'GATE_B': '/dev/ttyACM1', 'BELT': '/dev/ttyACM0'}
+[초기화] 하드웨어 설정: 기본 모드=가상, 가상 장치=[]
+[초기화] 디버그 모드: 비활성화
+[✅ DB 초기화 완료] 미션 테이블 생성 완료
+[DEBUG] 트럭 상태 데이터베이스 초기화 완료
+[DEBUG] 시설 상태 데이터베이스 초기화 완료
+[✅ 트럭 상태 초기화 완료] 모든 트럭 상태 기록이 삭제되었습니다
+[DeviceManager] 시리얼 관리자 초기화 - 모든 장치 가상 모드
+[DeviceManager] 포트 맵: {'GATE_A': '/dev/ttyACM1', 'GATE_B': '/dev/ttyACM1', 'BELT': '/dev/ttyACM0'}
+[DeviceManager] 디버그 모드: 비활성화
+[DeviceManager ⚠️] 포트 /dev/ttyACM1에 여러 장치가 매핑됨: ['GATE_A', 'GATE_B']
+[DeviceManager] 컨트롤러 생성: GATE_A → /dev/ttyACM1 (가상 모드)
+[DeviceManager] 새 인터페이스 생성: /dev/ttyACM1 (가상 모드)
+[DeviceManager] 게이트 컨트롤러 생성: GATE_A
+[DeviceManager] GATE_A 컨트롤러 등록 완료 (가상 모드)
+[DeviceManager] 컨트롤러 생성: GATE_B → /dev/ttyACM1 (가상 모드)
+[DeviceManager] 기존 인터페이스 재사용: /dev/ttyACM1 (가상 모드)
+[DeviceManager] 게이트 컨트롤러 생성: GATE_B
+[DeviceManager] GATE_B 컨트롤러 등록 완료 (가상 모드)
+[DeviceManager] 컨트롤러 생성: BELT → /dev/ttyACM0 (가상 모드)
+[DeviceManager] 새 인터페이스 생성: /dev/ttyACM0 (가상 모드)
+[DeviceManager] 벨트 컨트롤러 생성: BELT
+[DeviceManager] BELT 컨트롤러 등록 완료 (가상 모드)
+[DeviceManager] 등록된 컨트롤러: ['GATE_A', 'GATE_B', 'BELT']
+[✅ DB 초기화 완료] 미션 테이블 생성 완료
+[DEBUG] 트럭 상태 데이터베이스 초기화 완료
+[✅ FSM 매니저 초기화 완료]
+[✅ 새 메시지 핸들러 초기화 완료]
+[✅ 메시지 핸들러에 상태 관리자 설정됨]
+[✅ MainController 초기화 완료]
+[✅ 트럭 상태 초기화 완료] 모든 트럭 상태 기록이 삭제되었습니다
+[✅ 메모리 상태 초기화 완료] 모든 트럭 상태가 초기화되었습니다
+[✅ 시설 상태 초기화 완료] 모든 시설 상태 기록이 삭제되었습니다
+[✅ 메모리 상태 초기화 완료] 모든 시설 상태가 초기화되었습니다
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_A: CLOSED (동작: IDLE)
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_B: CLOSED (동작: IDLE)
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=STOPPED, operation=IDLE, container=EMPTY
+[🧭 벨트 상태] BELT: STOPPED (동작: IDLE, 컨테이너: EMPTY)
+[🔍 기존 미션 확인 중...]
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 0개 행 반환
+[ℹ️ 기존 미션 발견] 총 0개의 대기 중인 미션이 있습니다.
+[INFO] TCP 서버 인스턴스를 system_api 모듈에 전달합니다.
+
+[등록된 URL 규칙]
+  /static/<path:filename> - 메서드: GET, HEAD, OPTIONS
+  /api/trucks - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/<truck_id> - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/positions - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/<truck_id>/position - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/batteries - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/<truck_id>/battery - 메서드: GET, HEAD, OPTIONS
+  /api/trucks/<truck_id>/battery - 메서드: POST, OPTIONS
+  /api/truck_position - 메서드: GET, HEAD, OPTIONS
+  /api/truck_battery - 메서드: GET, HEAD, OPTIONS
+  /api/truck_battery/<truck_id> - 메서드: POST, OPTIONS
+  /api/missions - 메서드: GET, HEAD, OPTIONS
+  /api/missions/<mission_id> - 메서드: GET, HEAD, OPTIONS
+  /api/missions - 메서드: POST, OPTIONS
+  /api/missions/<mission_id>/complete - 메서드: POST, OPTIONS
+  /api/missions/<mission_id>/cancel - 메서드: POST, OPTIONS
+  /api/facilities - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/gates/<gate_id> - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/belt/<belt_id> - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/gates - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/belts - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/gates/<gate_id>/history - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/belt/<belt_id>/history - 메서드: GET, HEAD, OPTIONS
+  /api/facilities/gates/<gate_id>/control - 메서드: POST, OPTIONS
+  /api/facilities/belt/<belt_id>/control - 메서드: POST, OPTIONS
+  /api/system/tcp/restart - 메서드: POST, OPTIONS
+  /api/system/status - 메서드: GET, HEAD, OPTIONS
+  /api/system/tcp/status - 메서드: GET, HEAD, OPTIONS
+
+[메인 서버 시작됨] TCP 서버: 0.0.0.0:8001, Flask 서버: 0.0.0.0:5001
+[🚀 TCP 서버 시작] 0.0.0.0:8001
+ * Serving Flask app 'backend.rest_api.app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://192.168.35.40:5001
+Press CTRL+C to quit
+[DEBUG] MissionManager 초기화
+[✅ DB 초기화 완료] 미션 테이블 생성 완료
+[DEBUG] MissionManager 초기화 완료
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 106개 행 반환
+127.0.0.1 - - [11/May/2025 18:13:46] "GET /api/missions HTTP/1.1" 200 -
+[DEBUG] FacilityStatusManager 초기화
+[DEBUG] 시설 상태 데이터베이스 초기화 완료
+[DEBUG] FacilityStatusManager 초기화 완료
+127.0.0.1 - - [11/May/2025 18:13:47] "GET /api/facilities/belt/BELT HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:47] "GET /api/facilities/gates/GATE_A HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:47] "GET /api/facilities/gates/GATE_B HTTP/1.1" 200 -
+[DEBUG] TruckStatusManager 초기화
+[DEBUG] 트럭 상태 데이터베이스 초기화 완료
+[DEBUG] TruckStatusManager 초기화 완료
+127.0.0.1 - - [11/May/2025 18:13:48] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:48] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:48] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:49] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:49] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 클라이언트 연결됨] ('127.0.0.1', 38702)
+[❌ 연결 종료] ('127.0.0.1', 38702)
+[🔌 트럭 연결 종료] TEMP_38702
+127.0.0.1 - - [11/May/2025 18:13:49] "GET /api/system/tcp/status HTTP/1.1" 200 -
+[✅ 클라이언트 연결됨] ('127.0.0.1', 38706)
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "register"}}
+[🔗 등록] 트럭 'TRUCK_01' 소켓 등록
+[📨 MainController] sender=TRUCK_01, cmd=HELLO
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=HELLO
+[MessageHandler] 트럭 등록 확인: TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954829.1300209, "battery": {"level": 80, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:13:49] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 80% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "register"}}
+[📨 MainController] sender=TRUCK_01, cmd=HELLO
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=HELLO
+[MessageHandler] 트럭 등록 확인: TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ASSIGN_MISSION", "payload": {"battery_level": 80}}
+[📨 MainController] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[FSM] 트리거: TRUCK_01, 명령: ASSIGN_MISSION
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 0개 행 반환
+[대기 미션 조회] 0개 미션 조회됨
+[미션 없음] 트럭 TRUCK_01에 할당할 미션이 없음
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "NO_MISSION", "payload": {"message": "\ubbf8\uc158\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \ub098\uc911\uc5d0 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.", "wait_time": 10}}
+[🚚 명령 전송] TRUCK_01 ← NO_MISSION | payload={'message': '미션이 없습니다. 나중에 다시 시도하세요.', 'wait_time': 10}
+[대기 상태 유지] 트럭 TRUCK_01는 이미 대기 위치에 있고 할당할 미션이 없음
+127.0.0.1 - - [11/May/2025 18:13:50] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:50] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:50] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:51] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:51] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:51] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:13:52] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:52] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954832.1302345, "battery": {"level": 80, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:13:52] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 80% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:13:53] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:53] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:53] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 저장 시작] ID: mission_250511_181353, 상태: WAITING, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181353', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'WAITING', '대기중', None, datetime.datetime(...
+[DB 변경 완료] 영향받은 행 수: 1
+[미션 저장 완료] ID: mission_250511_181353, 상태: WAITING
+[✅ 미션 생성 완료] mission_250511_181353
+127.0.0.1 - - [11/May/2025 18:13:53] "POST /api/missions HTTP/1.1" 201 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:13:54] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:54] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:54] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 107개 행 반환
+127.0.0.1 - - [11/May/2025 18:13:54] "GET /api/missions HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:55] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:55] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954835.1304088, "battery": {"level": 80, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:13:55] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 80% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:13:56] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:56] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:56] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_170228',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_170228, 상태: CANCELED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_170228', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'CANCELED', '취소됨', 'TRUCK_01', datetime.da...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_170228, 상태: CANCELED
+[✅ 미션 취소 완료] mission_250511_170228
+127.0.0.1 - - [11/May/2025 18:13:56] "POST /api/missions/mission_250511_170228/cancel HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 106개 행 반환
+127.0.0.1 - - [11/May/2025 18:13:56] "GET /api/missions HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:57] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:57] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:57] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:13:58] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:58] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954838.1305728, "battery": {"level": 80, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:13:58] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 80% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:13:59] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:59] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:13:59] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_170506',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_170506, 상태: CANCELED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_170506', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'CANCELED', '취소됨', 'TRUCK_01', datetime.da...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_170506, 상태: CANCELED
+[✅ 미션 취소 완료] mission_250511_170506
+127.0.0.1 - - [11/May/2025 18:13:59] "POST /api/missions/mission_250511_170506/cancel HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 105개 행 반환
+127.0.0.1 - - [11/May/2025 18:13:59] "GET /api/missions HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ASSIGN_MISSION", "payload": {"battery_level": 80}}
+[📨 MainController] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[FSM] 트리거: TRUCK_01, 명령: ASSIGN_MISSION
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 1개 행 반환
+[대기 미션 조회] 1개 미션 조회됨
+  - 미션 ID: mission_250511_181353, 출발지: LOAD_A
+[미션 자동 할당] 트럭 TRUCK_01에 대기 미션 mission_250511_181353 할당
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181353',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_181353, 상태: ASSIGNED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181353', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'ASSIGNED', '트럭 배정됨', 'TRUCK_01', datetime...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181353, 상태: ASSIGNED
+[✅ 미션 할당 완료] mission_250511_181353 → TRUCK_01
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.IDLE
+[상태 전이] TRUCK_01: TruckState.IDLE → TruckState.ASSIGNED (이벤트: ASSIGN_MISSION)
+[미션 할당] TRUCK_01: 미션 mission_250511_181353, 출발지 LOAD_A, 적재 위치 LOAD_A, 방향 INBOUND
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "MISSION_ASSIGNED", "payload": {"mission_id": "mission_250511_181353", "source": "LOAD_A"}}
+[🚚 명령 전송] TRUCK_01 ← MISSION_ASSIGNED | payload={'mission_id': 'mission_250511_181353', 'source': 'LOAD_A'}
+127.0.0.1 - - [11/May/2025 18:14:00] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:00] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:00] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:01] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:01] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954841.130766, "battery": {"level": 80, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181353", "target": null}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:01] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 80% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_170922',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_170922, 상태: CANCELED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_170922', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'CANCELED', '취소됨', 'TRUCK_01', datetime.da...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_170922, 상태: CANCELED
+[✅ 미션 취소 완료] mission_250511_170922
+127.0.0.1 - - [11/May/2025 18:14:02] "POST /api/missions/mission_250511_170922/cancel HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 104개 행 반환
+127.0.0.1 - - [11/May/2025 18:14:02] "GET /api/missions HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:02] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:02] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:02] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.ASSIGNED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이] TRUCK_01: TruckState.ASSIGNED → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_A, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_A, 방향 INBOUND
+[게이트 제어] 열기: GATE_A, 체크포인트: CHECKPOINT_A, 방향: INBOUND
+[🔓 게이트 열기 시도] GATE_A ← by TRUCK_01
+[게이트 열기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_A: CLOSED (동작: OPENING)
+[Serial Send] GATE_A_OPEN
+[게이트 열림 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:14:03] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:03] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:03] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_A_OPEN: SUCCESS
+[게이트 열림 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_A: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_A ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:04] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:04] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954844.1310122, "battery": {"level": 77, "is_charging": false}, "position": {"current": "CHECKPOINT_A", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181353", "target": "CHECKPOINT_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:04] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 77% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_A, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_171357',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_171357, 상태: CANCELED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_171357', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'CANCELED', '취소됨', 'TRUCK_01', datetime.da...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_171357, 상태: CANCELED
+[✅ 미션 취소 완료] mission_250511_171357
+127.0.0.1 - - [11/May/2025 18:14:04] "POST /api/missions/mission_250511_171357/cancel HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 103개 행 반환
+127.0.0.1 - - [11/May/2025 18:14:04] "GET /api/missions HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:05] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:05] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:05] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_B, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_B, 방향 INBOUND
+[게이트 제어] 닫기: GATE_A, 체크포인트: CHECKPOINT_B, 방향: INBOUND
+[🔒 게이트 닫기 시도] GATE_A ← by TRUCK_01
+[게이트 닫기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_A: OPENED (동작: CLOSING)
+[Serial Send] GATE_A_CLOSE
+[게이트 닫힘 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_A_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_A: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_A ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:06] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:06] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:06] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:07] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:07] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954847.1312172, "battery": {"level": 74, "is_charging": false}, "position": {"current": "CHECKPOINT_B", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181353", "target": "CHECKPOINT_B"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:07] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 저장 시작] ID: mission_250511_181407, 상태: WAITING, 완료 시간: None
+[🔋 배터리 상태] TRUCK_01: 74% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_B, 상태=RUNNING
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181407', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'WAITING', '대기중', None, datetime.datetime(...
+[DB 변경 완료] 영향받은 행 수: 1
+[미션 저장 완료] ID: mission_250511_181407, 상태: WAITING
+[✅ 미션 생성 완료] mission_250511_181407
+127.0.0.1 - - [11/May/2025 18:14:07] "POST /api/missions HTTP/1.1" 201 -
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_B, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_B, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "LOAD_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: LOAD_A → LOAD_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: LOAD_A → LOAD_A
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_LOADING → MissionPhase.AT_LOADING
+[이동 경로] TRUCK_01: LOAD_A → CHECKPOINT_C (방향: INBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:08] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:08] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:08] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 104개 행 반환
+127.0.0.1 - - [11/May/2025 18:14:08] "GET /api/missions HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_LOADING
+[FSM] 트리거: TRUCK_01, 명령: START_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_LOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.LOADING (이벤트: START_LOADING)
+[적재 시작] TRUCK_01: 위치 LOAD_A에서 적재 작업 시작
+127.0.0.1 - - [11/May/2025 18:14:09] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:09] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:09] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:10] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:10] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954850.131424, "battery": {"level": 73, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181353", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:10] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 저장 시작] ID: mission_250511_181410, 상태: WAITING, 완료 시간: None
+[🔋 배터리 상태] TRUCK_01: 73% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=IDLE
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181410', '기본 화물', 1.0, 'LOAD_B', 'BELT', 'WAITING', '대기중', None, datetime.datetime(...
+[DB 변경 완료] 영향받은 행 수: 1
+[미션 저장 완료] ID: mission_250511_181410, 상태: WAITING
+[✅ 미션 생성 완료] mission_250511_181410
+127.0.0.1 - - [11/May/2025 18:14:10] "POST /api/missions HTTP/1.1" 201 -
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code IN ('WAITING', 'ASSIGNED', 'COMPLE...
+[DB 파라미터] 없음
+[DB 조회 결과] 105개 행 반환
+127.0.0.1 - - [11/May/2025 18:14:10] "GET /api/missions HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:11] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:11] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:11] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:12] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:12] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:12] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:13] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:13] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954853.1316257, "battery": {"level": 72, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181353", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:13] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 72% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:14] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:14] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_LOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_LOADING, 상태: TruckState.LOADING
+[상태 전이] TRUCK_01: TruckState.LOADING → TruckState.MOVING (이벤트: FINISH_LOADING)
+[적재 완료] TRUCK_01: 적재 작업 완료, 다음 위치로 이동
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:14] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:15] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:15] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:15] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:16] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:16] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954856.1317754, "battery": {"level": 69, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181353", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:16] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 69% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_C, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_C, 방향 OUTBOUND
+[게이트 제어] 열기: GATE_B, 체크포인트: CHECKPOINT_C, 방향: OUTBOUND
+[🔓 게이트 열기 시도] GATE_B ← by TRUCK_01
+[게이트 열기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_B: CLOSED (동작: OPENING)
+[Serial Send] GATE_B_OPEN
+[게이트 열림 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_B_OPEN: SUCCESS
+[게이트 열림 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_B: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_B ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:17] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:17] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:17] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:18] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:18] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:18] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_D, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_D, 방향 OUTBOUND
+[게이트 제어] 닫기: GATE_B, 체크포인트: CHECKPOINT_D, 방향: OUTBOUND
+[🔒 게이트 닫기 시도] GATE_B ← by TRUCK_01
+[게이트 닫기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_B: OPENED (동작: CLOSING)
+[Serial Send] GATE_B_CLOSE
+[게이트 닫힘 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:14:19] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:19] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:19] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_B_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_B: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_B ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954859.131974, "battery": {"level": 68, "is_charging": false}, "position": {"current": "CHECKPOINT_D", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181353", "target": "CHECKPOINT_D"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+[🔋 배터리 상태] TRUCK_01: 68% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_D, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:20] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:20] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:20] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:21] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:21] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:21] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "BELT"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: BELT → BELT
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: BELT → BELT
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_UNLOADING → MissionPhase.AT_UNLOADING
+[이동 경로] TRUCK_01: BELT → STANDBY (방향: OUTBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:22] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:22] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954862.1321344, "battery": {"level": 67, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181353", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:22] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 67% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: START_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_UNLOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.UNLOADING (이벤트: START_UNLOADING)
+[하차 시작] TRUCK_01: 위치 BELT에서 하차 작업 시작
+[벨트 작동] TRUCK_01 → 벨트에 RUN 명령 전송
+[BeltController] 명령 전송: BELT_RUN
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=RUNNING, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: RUNNING (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: RUNNING, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_RUN
+127.0.0.1 - - [11/May/2025 18:14:23] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:23] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:23] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:24] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:24] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:24] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:25] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:25] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954865.132368, "battery": {"level": 66, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181353", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:25] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 66% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:26] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:26] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:26] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:27] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:27] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:27] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_UNLOADING, 상태: TruckState.UNLOADING
+[상태 전이] TRUCK_01: TruckState.UNLOADING → TruckState.MOVING (이벤트: FINISH_UNLOADING)
+[하차 완료] TRUCK_01: 하차 작업 완료, 바로 대기장소로 복귀
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+[벨트 중지] TRUCK_01 → 벨트에 STOP 명령 전송
+[BeltController] 명령 전송: BELT_STOP
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=STOPPED, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: STOPPED (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: STOPPED, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_STOP
+[언로딩 완료 확장] TRUCK_01: 방향을 RETURN로 설정
+127.0.0.1 - - [11/May/2025 18:14:28] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:28] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954868.132557, "battery": {"level": 63, "is_charging": false}, "position": {"current": "BELT", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181353", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:28] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 63% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:29] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:29] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:29] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "STANDBY"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 STANDBY, 방향 RETURN
+[방향 전환] TRUCK_01: RETURN → INBOUND
+[미션 완료] TRUCK_01: 미션 mission_250511_181353 완료 및 대기 상태로 전환
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181353',)
+[DB 조회 결과] 1개 행 반환
+[디버그] 미션 mission_250511_181353의 현재 상태: ASSIGNED
+[디버그] 미션 mission_250511_181353의 새 상태: COMPLETED
+[디버그] 완료 시간: 2025-05-11 18:14:29.691785
+[미션 저장 시작] ID: mission_250511_181353, 상태: COMPLETED, 완료 시간: 2025-05-11 18:14:29.691785
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181353', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'COMPLETED', '완료됨', 'TRUCK_01', datetime.d...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181353, 상태: COMPLETED
+[미션 업데이트] 미션 ID: mission_250511_181353, 상태: COMPLETED, 완료 시간: 2025-05-11 18:14:29.691785
+[DB 쿼리 실행] 
+                UPDATE missions
+                SET status_code = %s, 
+                    status_l...
+[DB 파라미터] ('COMPLETED', '완료됨', datetime.datetime(2025, 5, 11, 18, 14, 29, 691785), 'mission_250511_181353')
+[DB 변경 완료] 영향받은 행 수: 0
+[미션 업데이트 결과] []
+[✅ 미션 완료 처리] mission_250511_181353 (DB 저장 및 업데이트 성공)
+127.0.0.1 - - [11/May/2025 18:14:30] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:30] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:30] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 할당 시도] TRUCK_01에 새 미션 할당 시도
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.WAITING
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ASSIGN_MISSION
+[미션 할당 실패] TRUCK_01에 할당할 미션이 없음 - 상태 초기화
+127.0.0.1 - - [11/May/2025 18:14:31] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:31] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954871.1327984, "battery": {"level": 63, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:31] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 63% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ASSIGN_MISSION", "payload": {"battery_level": 63}}
+[📨 MainController] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[FSM] 트리거: TRUCK_01, 명령: ASSIGN_MISSION
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 2개 행 반환
+[대기 미션 조회] 2개 미션 조회됨
+  - 미션 ID: mission_250511_181407, 출발지: LOAD_A
+  - 미션 ID: mission_250511_181410, 출발지: LOAD_B
+[미션 자동 할당] 트럭 TRUCK_01에 대기 미션 mission_250511_181407 할당
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181407',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_181407, 상태: ASSIGNED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181407', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'ASSIGNED', '트럭 배정됨', 'TRUCK_01', datetime...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181407, 상태: ASSIGNED
+[✅ 미션 할당 완료] mission_250511_181407 → TRUCK_01
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.IDLE
+[상태 전이] TRUCK_01: TruckState.IDLE → TruckState.ASSIGNED (이벤트: ASSIGN_MISSION)
+[미션 할당] TRUCK_01: 미션 mission_250511_181407, 출발지 LOAD_A, 적재 위치 LOAD_A, 방향 INBOUND
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "MISSION_ASSIGNED", "payload": {"mission_id": "mission_250511_181407", "source": "LOAD_A"}}
+[🚚 명령 전송] TRUCK_01 ← MISSION_ASSIGNED | payload={'mission_id': 'mission_250511_181407', 'source': 'LOAD_A'}
+127.0.0.1 - - [11/May/2025 18:14:32] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:32] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:32] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:33] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:33] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:33] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:34] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:34] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954874.132992, "battery": {"level": 63, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181407", "target": null}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:34] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 63% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.ASSIGNED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이] TRUCK_01: TruckState.ASSIGNED → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_A, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_A, 방향 INBOUND
+[게이트 제어] 열기: GATE_A, 체크포인트: CHECKPOINT_A, 방향: INBOUND
+[🔓 게이트 열기 시도] GATE_A ← by TRUCK_01
+[게이트 열기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_A: CLOSED (동작: OPENING)
+[Serial Send] GATE_A_OPEN
+[게이트 열림 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:14:35] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:35] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:35] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_A_OPEN: SUCCESS
+[게이트 열림 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_A: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_A ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:36] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:36] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:36] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:37] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:37] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954877.1331997, "battery": {"level": 60, "is_charging": false}, "position": {"current": "CHECKPOINT_A", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181407", "target": "CHECKPOINT_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:37] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 60% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_A, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_B, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_B, 방향 INBOUND
+[게이트 제어] 닫기: GATE_A, 체크포인트: CHECKPOINT_B, 방향: INBOUND
+[🔒 게이트 닫기 시도] GATE_A ← by TRUCK_01
+[게이트 닫기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_A: OPENED (동작: CLOSING)
+[Serial Send] GATE_A_CLOSE
+[게이트 닫힘 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_A_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_A: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_A ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:38] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:38] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:38] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:39] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:39] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:39] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "LOAD_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: LOAD_A → LOAD_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: LOAD_A → LOAD_A
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_LOADING → MissionPhase.AT_LOADING
+[이동 경로] TRUCK_01: LOAD_A → CHECKPOINT_C (방향: INBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:40] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:40] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954880.1334155, "battery": {"level": 59, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181407", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:40] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 59% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_LOADING
+[FSM] 트리거: TRUCK_01, 명령: START_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_LOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.LOADING (이벤트: START_LOADING)
+[적재 시작] TRUCK_01: 위치 LOAD_A에서 적재 작업 시작
+127.0.0.1 - - [11/May/2025 18:14:41] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:41] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:41] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:42] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:42] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:42] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:43] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:43] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954883.133632, "battery": {"level": 58, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181407", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:43] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 58% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:44] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:44] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:44] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:45] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:45] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:45] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:46] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:46] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954886.1339166, "battery": {"level": 57, "is_charging": false}, "position": {"current": "LOAD_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181407", "target": "LOAD_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:46] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 57% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_A, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_LOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_LOADING, 상태: TruckState.LOADING
+[상태 전이] TRUCK_01: TruckState.LOADING → TruckState.MOVING (이벤트: FINISH_LOADING)
+[적재 완료] TRUCK_01: 적재 작업 완료, 다음 위치로 이동
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:47] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:47] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:47] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:48] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:48] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:48] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_C, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_C, 방향 OUTBOUND
+[게이트 제어] 열기: GATE_B, 체크포인트: CHECKPOINT_C, 방향: OUTBOUND
+[🔓 게이트 열기 시도] GATE_B ← by TRUCK_01
+[게이트 열기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_B: CLOSED (동작: OPENING)
+[Serial Send] GATE_B_OPEN
+[게이트 열림 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_B_OPEN: SUCCESS
+[게이트 열림 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_B: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_B ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:14:49] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:49] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954889.1341646, "battery": {"level": 54, "is_charging": false}, "position": {"current": "CHECKPOINT_C", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181407", "target": "CHECKPOINT_C"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:49] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 54% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_C, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_C, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_C, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:50] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:50] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:50] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_D, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_D, 방향 OUTBOUND
+[게이트 제어] 닫기: GATE_B, 체크포인트: CHECKPOINT_D, 방향: OUTBOUND
+[🔒 게이트 닫기 시도] GATE_B ← by TRUCK_01
+[게이트 닫기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_B: OPENED (동작: CLOSING)
+[Serial Send] GATE_B_CLOSE
+[게이트 닫힘 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:14:51] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:51] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:51] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_B_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_B: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_B ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:52] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:52] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954892.1343658, "battery": {"level": 51, "is_charging": false}, "position": {"current": "CHECKPOINT_D", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181407", "target": "CHECKPOINT_D"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:52] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 51% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_D, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:53] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:53] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:53] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "BELT"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: BELT → BELT
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: BELT → BELT
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_UNLOADING → MissionPhase.AT_UNLOADING
+[이동 경로] TRUCK_01: BELT → STANDBY (방향: OUTBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:14:54] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:54] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:54] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: START_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_UNLOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.UNLOADING (이벤트: START_UNLOADING)
+[하차 시작] TRUCK_01: 위치 BELT에서 하차 작업 시작
+[벨트 작동] TRUCK_01 → 벨트에 RUN 명령 전송
+[BeltController] 명령 전송: BELT_RUN
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=RUNNING, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: RUNNING (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: RUNNING, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_RUN
+127.0.0.1 - - [11/May/2025 18:14:55] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:55] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954895.1345458, "battery": {"level": 50, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181407", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:55] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 50% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:56] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:56] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:56] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:57] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:57] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:57] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:58] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:58] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954898.1347535, "battery": {"level": 49, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181407", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:14:58] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 49% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:14:59] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:59] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:14:59] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_UNLOADING, 상태: TruckState.UNLOADING
+[상태 전이] TRUCK_01: TruckState.UNLOADING → TruckState.MOVING (이벤트: FINISH_UNLOADING)
+[하차 완료] TRUCK_01: 하차 작업 완료, 바로 대기장소로 복귀
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+[벨트 중지] TRUCK_01 → 벨트에 STOP 명령 전송
+[BeltController] 명령 전송: BELT_STOP
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=STOPPED, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: STOPPED (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: STOPPED, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_STOP
+[언로딩 완료 확장] TRUCK_01: 방향을 RETURN로 설정
+127.0.0.1 - - [11/May/2025 18:15:00] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:00] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:00] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:01] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:01] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954901.1348996, "battery": {"level": 46, "is_charging": false}, "position": {"current": "BELT", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181407", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:01] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 46% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "STANDBY"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 STANDBY, 방향 RETURN
+[방향 전환] TRUCK_01: RETURN → INBOUND
+[미션 완료] TRUCK_01: 미션 mission_250511_181407 완료 및 대기 상태로 전환
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181407',)
+[DB 조회 결과] 1개 행 반환
+[디버그] 미션 mission_250511_181407의 현재 상태: ASSIGNED
+[디버그] 미션 mission_250511_181407의 새 상태: COMPLETED
+[디버그] 완료 시간: 2025-05-11 18:15:01.679470
+[미션 저장 시작] ID: mission_250511_181407, 상태: COMPLETED, 완료 시간: 2025-05-11 18:15:01.679470
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181407', '기본 화물', 1.0, 'LOAD_A', 'BELT', 'COMPLETED', '완료됨', 'TRUCK_01', datetime.d...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181407, 상태: COMPLETED
+[미션 업데이트] 미션 ID: mission_250511_181407, 상태: COMPLETED, 완료 시간: 2025-05-11 18:15:01.679470
+[DB 쿼리 실행] 
+                UPDATE missions
+                SET status_code = %s, 
+                    status_l...
+[DB 파라미터] ('COMPLETED', '완료됨', datetime.datetime(2025, 5, 11, 18, 15, 1, 679470), 'mission_250511_181407')
+[DB 변경 완료] 영향받은 행 수: 0
+[미션 업데이트 결과] []
+[✅ 미션 완료 처리] mission_250511_181407 (DB 저장 및 업데이트 성공)
+127.0.0.1 - - [11/May/2025 18:15:02] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:02] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:02] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 할당 시도] TRUCK_01에 새 미션 할당 시도
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.WAITING
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ASSIGN_MISSION
+[미션 할당 실패] TRUCK_01에 할당할 미션이 없음 - 상태 초기화
+127.0.0.1 - - [11/May/2025 18:15:03] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:03] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:03] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ASSIGN_MISSION", "payload": {"battery_level": 46}}
+[📨 MainController] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[FSM] 트리거: TRUCK_01, 명령: ASSIGN_MISSION
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 1개 행 반환
+[대기 미션 조회] 1개 미션 조회됨
+  - 미션 ID: mission_250511_181410, 출발지: LOAD_B
+[미션 자동 할당] 트럭 TRUCK_01에 대기 미션 mission_250511_181410 할당
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181410',)
+[DB 조회 결과] 1개 행 반환
+[미션 저장 시작] ID: mission_250511_181410, 상태: ASSIGNED, 완료 시간: None
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181410', '기본 화물', 1.0, 'LOAD_B', 'BELT', 'ASSIGNED', '트럭 배정됨', 'TRUCK_01', datetime...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181410, 상태: ASSIGNED
+[✅ 미션 할당 완료] mission_250511_181410 → TRUCK_01
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.IDLE
+[상태 전이] TRUCK_01: TruckState.IDLE → TruckState.ASSIGNED (이벤트: ASSIGN_MISSION)
+[미션 할당] TRUCK_01: 미션 mission_250511_181410, 출발지 LOAD_B, 적재 위치 LOAD_B, 방향 INBOUND
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "MISSION_ASSIGNED", "payload": {"mission_id": "mission_250511_181410", "source": "LOAD_B"}}
+[🚚 명령 전송] TRUCK_01 ← MISSION_ASSIGNED | payload={'mission_id': 'mission_250511_181410', 'source': 'LOAD_B'}
+127.0.0.1 - - [11/May/2025 18:15:04] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:04] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:04] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954904.1350532, "battery": {"level": 46, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "ASSIGNED"}, "mission": {"mission_id": "mission_250511_181410", "target": null}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+[🔋 배터리 상태] TRUCK_01: 46% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=ASSIGNED
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=ASSIGNED
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=ASSIGNED
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:05] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:05] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:05] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:06] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:06] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:06] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.ASSIGNED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이] TRUCK_01: TruckState.ASSIGNED → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_A, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_A, 방향 INBOUND
+[게이트 제어] 열기: GATE_A, 체크포인트: CHECKPOINT_A, 방향: INBOUND
+[🔓 게이트 열기 시도] GATE_A ← by TRUCK_01
+[게이트 열기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_A: CLOSED (동작: OPENING)
+[Serial Send] GATE_A_OPEN
+[게이트 열림 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:15:07] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:07] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:07] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_A_OPEN: SUCCESS
+[게이트 열림 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_A: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_A ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_A", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_A → CHECKPOINT_A
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954907.1352377, "battery": {"level": 45, "is_charging": false}, "position": {"current": "CHECKPOINT_A", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181410", "target": "CHECKPOINT_A"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+[🔋 배터리 상태] TRUCK_01: 45% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_A, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_A, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:15:08] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:08] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:08] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:09] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:09] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:09] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_B, 방향 INBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_B, 방향 INBOUND
+[게이트 제어] 닫기: GATE_A, 체크포인트: CHECKPOINT_B, 방향: INBOUND
+[🔒 게이트 닫기 시도] GATE_A ← by TRUCK_01
+[게이트 닫기 요청] → GATE_A
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_A: OPENED (동작: CLOSING)
+[Serial Send] GATE_A_CLOSE
+[게이트 닫힘 대기 중] GATE_A - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_A_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_A
+[게이트 상태 업데이트] GATE_A: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_A - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_A: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_A ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_A)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_A"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_A'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_B", "gate_id": "GATE_A"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_B → CHECKPOINT_B
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:15:10] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:10] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954910.135449, "battery": {"level": 42, "is_charging": false}, "position": {"current": "CHECKPOINT_B", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181410", "target": "CHECKPOINT_B"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:10] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 42% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_B, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_B, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_B, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:11] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:11] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:11] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "LOAD_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: LOAD_B → LOAD_B
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: LOAD_B → LOAD_B
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_LOADING → MissionPhase.AT_LOADING
+[이동 경로] TRUCK_01: LOAD_B → CHECKPOINT_C (방향: INBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:15:12] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:12] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:12] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_LOADING
+[FSM] 트리거: TRUCK_01, 명령: START_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_LOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.LOADING (이벤트: START_LOADING)
+[적재 시작] TRUCK_01: 위치 LOAD_B에서 적재 작업 시작
+127.0.0.1 - - [11/May/2025 18:15:13] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:13] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954913.1356766, "battery": {"level": 41, "is_charging": false}, "position": {"current": "LOAD_B", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181410", "target": "LOAD_B"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:13] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 41% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_B, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_B, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_B, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:14] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:14] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:14] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:15] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:15] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:15] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:16] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:16] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954916.1358356, "battery": {"level": 40, "is_charging": false}, "position": {"current": "LOAD_B", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181410", "target": "LOAD_B"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:16] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 40% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_B, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_B, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_B, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:17] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:17] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:17] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:18] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:18] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:18] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_LOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_LOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_LOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_LOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_LOADING, 상태: TruckState.LOADING
+[상태 전이] TRUCK_01: TruckState.LOADING → TruckState.MOVING (이벤트: FINISH_LOADING)
+[적재 완료] TRUCK_01: 적재 작업 완료, 다음 위치로 이동
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:15:19] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:19] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954919.1359794, "battery": {"level": 37, "is_charging": false}, "position": {"current": "LOAD_B", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181410", "target": "LOAD_B"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:19] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 37% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=LOAD_B, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=LOAD_B, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=LOAD_B, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:20] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:20] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:20] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_C, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_C, 방향 OUTBOUND
+[게이트 제어] 열기: GATE_B, 체크포인트: CHECKPOINT_C, 방향: OUTBOUND
+[🔓 게이트 열기 시도] GATE_B ← by TRUCK_01
+[게이트 열기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=OPENING
+[🚪 게이트 상태] GATE_B: CLOSED (동작: OPENING)
+[Serial Send] GATE_B_OPEN
+[게이트 열림 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+[✅ 명령 응답] GATE_B_OPEN: SUCCESS
+[게이트 열림 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: CLOSED → OPENED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=IDLE
+[🚪 게이트 상태] GATE_B: OPENED (동작: IDLE)
+[🔓 GATE OPEN] GATE_B ← by TRUCK_01
+[📤 게이트 열림 알림] TRUCK_01에게 GATE_OPENED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_OPENED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_C", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_C → CHECKPOINT_C
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ACK_GATE_OPENED", "payload": {"gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ACK_GATE_OPENED
+[FSM] 트리거: TRUCK_01, 명령: ACK_GATE_OPENED
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ACK_GATE_OPENED, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.MOVING (이벤트: ACK_GATE_OPENED)
+[게이트 열림 후 이동] TRUCK_01: 게이트가 열렸으므로 자동으로 이동합니다.
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+127.0.0.1 - - [11/May/2025 18:15:21] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:21] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:21] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:22] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:22] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954922.136138, "battery": {"level": 34, "is_charging": false}, "position": {"current": "CHECKPOINT_C", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181410", "target": "CHECKPOINT_C"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:22] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 34% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_C, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_C, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_C, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 CHECKPOINT_D, 방향 OUTBOUND
+[체크포인트 도착] TRUCK_01: 체크포인트 CHECKPOINT_D, 방향 OUTBOUND
+[게이트 제어] 닫기: GATE_B, 체크포인트: CHECKPOINT_D, 방향: OUTBOUND
+[🔒 게이트 닫기 시도] GATE_B ← by TRUCK_01
+[게이트 닫기 요청] → GATE_B
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=OPENED, operation=CLOSING
+[🚪 게이트 상태] GATE_B: OPENED (동작: CLOSING)
+[Serial Send] GATE_B_CLOSE
+[게이트 닫힘 대기 중] GATE_B - 최대 15초 대기
+[SerialInterface] 응답 대기 시작 (최대 15초)
+[SerialInterface] 응답 대기 중... (경과: 0.0초)
+127.0.0.1 - - [11/May/2025 18:15:23] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:23] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:23] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[✅ 명령 응답] GATE_B_CLOSE: SUCCESS
+[게이트 닫힘 완료] GATE_B
+[게이트 상태 업데이트] GATE_B: OPENED → CLOSED
+[DEBUG] 게이트 상태 로깅 완료: GATE_B - state=CLOSED, operation=IDLE
+[🚪 게이트 상태] GATE_B: CLOSED (동작: IDLE)
+[🔒 GATE CLOSE] GATE_B ← by TRUCK_01
+[📤 게이트 닫힘 알림] TRUCK_01에게 GATE_CLOSED 메시지 전송 (gate_id: GATE_B)
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "GATE_CLOSED", "payload": {"gate_id": "GATE_B"}}
+[🚚 명령 전송] TRUCK_01 ← GATE_CLOSED | payload={'gate_id': 'GATE_B'}
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "CHECKPOINT_D", "gate_id": "GATE_B"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: CHECKPOINT_D → CHECKPOINT_D
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:15:24] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:24] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:24] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:25] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:25] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954925.136328, "battery": {"level": 31, "is_charging": false}, "position": {"current": "CHECKPOINT_D", "run_state": "RUNNING"}, "mission": {"mission_id": "mission_250511_181410", "target": "CHECKPOINT_D"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:25] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 31% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=CHECKPOINT_D, 상태=RUNNING
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=RUNNING
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=CHECKPOINT_D, run_state=RUNNING
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "BELT"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: BELT → BELT
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.WAITING
+[위치 업데이트] TRUCK_01: BELT → BELT
+[미션 단계 업데이트] TRUCK_01: MissionPhase.TO_UNLOADING → MissionPhase.AT_UNLOADING
+[이동 경로] TRUCK_01: BELT → STANDBY (방향: OUTBOUND)
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ARRIVED
+127.0.0.1 - - [11/May/2025 18:15:26] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:26] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:26] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "START_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=START_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=START_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: START_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: START_UNLOADING, 상태: TruckState.WAITING
+[상태 전이] TRUCK_01: TruckState.WAITING → TruckState.UNLOADING (이벤트: START_UNLOADING)
+[하차 시작] TRUCK_01: 위치 BELT에서 하차 작업 시작
+[벨트 작동] TRUCK_01 → 벨트에 RUN 명령 전송
+[BeltController] 명령 전송: BELT_RUN
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=RUNNING, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: RUNNING (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: RUNNING, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_RUN
+127.0.0.1 - - [11/May/2025 18:15:27] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:27] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:27] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:28] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:28] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954928.136582, "battery": {"level": 30, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181410", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:28] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 30% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:29] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:29] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:29] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:30] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:30] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:30] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:31] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:31] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954931.1367717, "battery": {"level": 29, "is_charging": false}, "position": {"current": "BELT", "run_state": "IDLE"}, "mission": {"mission_id": "mission_250511_181410", "target": "BELT"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:31] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 29% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=BELT, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=BELT, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "FINISH_UNLOADING", "payload": {}}
+[📨 MainController] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=FINISH_UNLOADING
+[FSM] 트리거: TRUCK_01, 명령: FINISH_UNLOADING
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: FINISH_UNLOADING, 상태: TruckState.UNLOADING
+[상태 전이] TRUCK_01: TruckState.UNLOADING → TruckState.MOVING (이벤트: FINISH_UNLOADING)
+[하차 완료] TRUCK_01: 하차 작업 완료, 바로 대기장소로 복귀
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "RUN", "payload": {}}
+[🚚 명령 전송] TRUCK_01 ← RUN | payload={}
+[벨트 중지] TRUCK_01 → 벨트에 STOP 명령 전송
+[BeltController] 명령 전송: BELT_STOP
+[DEBUG] 벨트 상태 로깅 완료: BELT - state=STOPPED, operation=COMMAND_SENT, container=EMPTY
+[🧭 벨트 상태] BELT: STOPPED (동작: COMMAND_SENT, 컨테이너: EMPTY)
+[Belt] 상태 업데이트: STOPPED, 동작: COMMAND_SENT, 컨테이너: EMPTY
+[Serial Send] BELT_STOP
+[언로딩 완료 확장] TRUCK_01: 방향을 RETURN로 설정
+127.0.0.1 - - [11/May/2025 18:15:32] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:32] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:32] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:33] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:33] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:33] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ARRIVED", "payload": {"position": "STANDBY"}}
+[📨 MainController] sender=TRUCK_01, cmd=ARRIVED
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ARRIVED
+[FSM] 트리거: TRUCK_01, 명령: ARRIVED
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ARRIVED, 상태: TruckState.MOVING
+[위치 업데이트] TRUCK_01: STANDBY → STANDBY
+[상태 전이] TRUCK_01: TruckState.MOVING → TruckState.WAITING (이벤트: ARRIVED)
+[도착 처리] TRUCK_01: 위치 STANDBY, 방향 RETURN
+[방향 전환] TRUCK_01: RETURN → INBOUND
+[미션 완료] TRUCK_01: 미션 mission_250511_181410 완료 및 대기 상태로 전환
+[DB 쿼리 실행] SELECT * FROM missions WHERE mission_id = %s
+[DB 파라미터] ('mission_250511_181410',)
+[DB 조회 결과] 1개 행 반환
+[디버그] 미션 mission_250511_181410의 현재 상태: ASSIGNED
+[디버그] 미션 mission_250511_181410의 새 상태: COMPLETED
+[디버그] 완료 시간: 2025-05-11 18:15:33.687523
+[미션 저장 시작] ID: mission_250511_181410, 상태: COMPLETED, 완료 시간: 2025-05-11 18:15:33.687523
+[DB 쿼리 실행] 
+                INSERT INTO missions (
+                    mission_id, cargo_type, cargo_amount, so...
+[DB 파라미터] ('mission_250511_181410', '기본 화물', 1.0, 'LOAD_B', 'BELT', 'COMPLETED', '완료됨', 'TRUCK_01', datetime.d...
+[DB 변경 완료] 영향받은 행 수: 2
+[미션 저장 완료] ID: mission_250511_181410, 상태: COMPLETED
+[미션 업데이트] 미션 ID: mission_250511_181410, 상태: COMPLETED, 완료 시간: 2025-05-11 18:15:33.687523
+[DB 쿼리 실행] 
+                UPDATE missions
+                SET status_code = %s, 
+                    status_l...
+[DB 파라미터] ('COMPLETED', '완료됨', datetime.datetime(2025, 5, 11, 18, 15, 33, 687523), 'mission_250511_181410')
+[DB 변경 완료] 영향받은 행 수: 0
+[미션 업데이트 결과] []
+[✅ 미션 완료 처리] mission_250511_181410 (DB 저장 및 업데이트 성공)
+127.0.0.1 - - [11/May/2025 18:15:34] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:34] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:34] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[미션 할당 시도] TRUCK_01에 새 미션 할당 시도
+[이벤트 수신] 트럭: TRUCK_01, 이벤트: ASSIGN_MISSION, 상태: TruckState.WAITING
+[상태 전이 없음] TRUCK_01: TruckState.WAITING, ASSIGN_MISSION
+[미션 할당 실패] TRUCK_01에 할당할 미션이 없음 - 상태 초기화
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954934.136947, "battery": {"level": 29, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+[🔋 배터리 상태] TRUCK_01: 29% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:35] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:35] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:35] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "ASSIGN_MISSION", "payload": {"battery_level": 29}}
+[📨 MainController] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=ASSIGN_MISSION
+[FSM] 트리거: TRUCK_01, 명령: ASSIGN_MISSION
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 0개 행 반환
+[대기 미션 조회] 0개 미션 조회됨
+[미션 없음] 트럭 TRUCK_01에 할당할 미션이 없음
+[📤 송신 원문] {"sender": "SERVER", "receiver": "TRUCK_01", "cmd": "NO_MISSION", "payload": {"message": "\ubbf8\uc158\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \ub098\uc911\uc5d0 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.", "wait_time": 10}}
+[🚚 명령 전송] TRUCK_01 ← NO_MISSION | payload={'message': '미션이 없습니다. 나중에 다시 시도하세요.', 'wait_time': 10}
+[대기 상태 유지] 트럭 TRUCK_01는 이미 대기 위치에 있고 할당할 미션이 없음
+127.0.0.1 - - [11/May/2025 18:15:36] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:36] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:36] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:37] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:37] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954937.1371715, "battery": {"level": 29, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:37] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 29% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:15:38] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:38] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:38] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:39] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:39] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:39] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:15:40] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:40] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954940.1374161, "battery": {"level": 29, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:40] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 29% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+127.0.0.1 - - [11/May/2025 18:15:41] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:41] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:41] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:15:42] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:42] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:42] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:43] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:43] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "STATUS_UPDATE", "payload": {"timestamp": 1746954943.1375723, "battery": {"level": 29, "is_charging": false}, "position": {"current": "STANDBY", "run_state": "IDLE"}}}
+[📨 MainController] sender=TRUCK_01, cmd=STATUS_UPDATE
+[📨 TruckMessageHandler] sender=TRUCK_01, cmd=STATUS_UPDATE
+127.0.0.1 - - [11/May/2025 18:15:43] "GET /api/trucks/batteries HTTP/1.1" 200 -
+[🔋 배터리 상태] TRUCK_01: 29% (충전상태: False)
+[위치 업데이트] TRUCK_01: 위치=STANDBY, 상태=IDLE
+[DEBUG] 위치 상태 로깅 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[DEBUG] 위치 업데이트 완료: TRUCK_01 - position=STANDBY, run_state=IDLE
+[✅ 상태 업데이트 완료] TRUCK_01
+[📩 수신 원문] {"sender": "TRUCK_01", "receiver": "SERVER", "cmd": "HELLO", "payload": {"msg": "heartbeat"}}
+[💓 하트비트] 트럭 TRUCK_01에서 하트비트 수신
+127.0.0.1 - - [11/May/2025 18:15:44] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:44] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:44] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:45] "GET /api/trucks/TRUCK_01 HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:45] "GET /api/trucks/batteries HTTP/1.1" 200 -
+127.0.0.1 - - [11/May/2025 18:15:45] "GET /api/trucks/batteries HTTP/1.1" 200 -
+^C[🛑 서버 종료 요청됨]
+[⚠️ 실행 중인 미션 취소 중...]
+[DB 쿼리 실행] 
+            SELECT * FROM missions
+            WHERE status_code = 'WAITING'
+            ORDER BY t...
+[DB 파라미터] 없음
+[DB 조회 결과] 0개 행 반환
+[✅ 0개의 미션이 취소되었습니다.]
+[🛑 TCP 서버 안전 종료 시작]
+[🔌 클라이언트 연결 종료] ('127.0.0.1', 38706)
+[⚠️ 에러] ('127.0.0.1', 38706) → [Errno 9] Bad file descriptor
+[🔌 서버 소켓 종료됨]
+[🔌 TCP 서버 안전 종료됨 (리소스는 유지됨)]
+Traceback (most recent call last):
+[🛑 TCP 서버 완전 종료됨]
+  File "/home/jinhyuk2me/project_ws/iot_dust/backend/tcpio/tcp_server.py", line 176, in handle_client
+    data = client_sock.recv(4096).decode()
+           ^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 9] Bad file descriptor
+[🛑 TCP 서버 완전 종료됨]
+[✅ MissionDB 리소스 정리 완료]
+[DEBUG] TruckStatusDB 리소스 정리 완료
+[DEBUG] FacilityStatusDB 리소스 정리 완료
+[DEBUG] TruckStatusManager 종료
+[DEBUG] TruckStatusDB 리소스 정리 완료
+[DEBUG] TruckStatusManager 리소스 정리 완료
+[DEBUG] MissionManager 종료
+[✅ MissionDB 리소스 정리 완료]
+[DEBUG] FacilityStatusManager 종료
+[DEBUG] FacilityStatusDB 리소스 정리 완료
+[DEBUG] FacilityStatusManager 리소스 정리 완료

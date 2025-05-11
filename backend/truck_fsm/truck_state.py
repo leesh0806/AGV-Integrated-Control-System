@@ -25,6 +25,13 @@ class MissionPhase(Enum):
     COMPLETED = "COMPLETED"            # 미션 완료
 
 
+class Direction(Enum):
+    """트럭 이동 방향 정의"""
+    INBOUND = "INBOUND"                # 입고 방향 (STANDBY -> LOADING)
+    OUTBOUND = "OUTBOUND"              # 출고 방향 (LOADING -> UNLOADING)
+    RETURN = "RETURN"                  # 복귀 방향 (UNLOADING -> STANDBY)
+
+
 class TruckContext:
     """트럭 정보 문맥 클래스"""
     def __init__(self, truck_id):
@@ -33,6 +40,7 @@ class TruckContext:
         self.position = "STANDBY"      # 현재 물리적 위치
         self.mission_id = None         # 현재 미션 ID
         self.mission_phase = MissionPhase.NONE  # 미션 진행 단계
+        self.direction = Direction.INBOUND  # 현재 이동 방향
         self.target_position = None    # 이동 목표 위치
         self.battery_level = 100       # 배터리 잔량
         self.is_charging = False       # 충전 중 여부
@@ -57,4 +65,23 @@ class TruckContext:
         """배터리 정보 업데이트"""
         self.battery_level = level
         self.is_charging = is_charging
-        self.last_update_time = datetime.now() 
+        self.last_update_time = datetime.now()
+        
+    def update_direction(self, new_direction):
+        """방향 정보 업데이트"""
+        old_direction = self.direction
+        self.direction = new_direction
+        self.last_update_time = datetime.now()
+        return old_direction
+        
+    def is_inbound(self):
+        """입고 방향 여부 확인"""
+        return self.direction == Direction.INBOUND
+        
+    def is_outbound(self):
+        """출고 방향 여부 확인"""
+        return self.direction == Direction.OUTBOUND
+        
+    def is_returning(self):
+        """복귀 방향 여부 확인"""
+        return self.direction == Direction.RETURN 

@@ -6,6 +6,7 @@ import threading
 import json
 from backend.tcpio.protocol import TCPProtocol
 from backend.main_controller.main_controller import MainController
+import time
 
 
 class TCPServer:
@@ -83,7 +84,6 @@ class TCPServer:
                     # 기존 소켓 닫기
                     self.server_sock.close()
                     # 5초 대기
-                    import time
                     time.sleep(5)
                     # 새 소켓 생성 및 재시도
                     self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -136,15 +136,52 @@ class TCPServer:
             self.truck_sockets[temp_truck_id] = client_sock
             self.app.set_truck_commander(self.truck_sockets)
 
+            # 소켓 설정 개선
+            try:
+                # TCP Keepalive 설정
+                client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                
+                # 플랫폼 따라 TCP Keepalive 세부 설정 (리눅스)
+                import platform
+                if platform.system() == "Linux":
+                    client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 60)  # 60초 비활성 후 keepalive 시작
+                    client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)  # 10초마다 keepalive 패킷 전송
+                    client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)     # 5번 실패하면 연결 끊김
+            except (ImportError, AttributeError) as e:
+                print(f"[ℹ️ 정보] TCP Keepalive 세부 설정이 지원되지 않습니다: {e}")
+            
+            # 소켓 타임아웃 설정 (클라이언트 응답 타임아웃)
+            client_sock.settimeout(120.0)  # 2분 타임아웃
+
             buffer = ""
+            last_activity_time = time.time()
+            
             while True:
                 try:
+                    current_time = time.time()
+                    # 장시간 연결 유지 확인 (5분 이상 활동 없을 때)
+                    if current_time - last_activity_time > 300:  # 5분
+                        print(f"[ℹ️ 활동 확인] {addr} - 장시간 활동이 없는 연결 확인 중")
+                        # 소켓이 살아있는지 확인
+                        try:
+                            # 0바이트 데이터로 소켓 상태 확인
+                            client_sock.send(b'')
+                            last_activity_time = current_time
+                            print(f"[✅ 연결 유지] {addr} - 연결 상태 양호")
+                        except:
+                            print(f"[⚠️ 연결 끊김] {addr} - 장시간 활동이 없는 연결 종료")
+                            break
+                    
+                    # 데이터 수신
                     data = client_sock.recv(4096).decode()
                     if not data:
                         print(f"[❌ 연결 종료] {addr}")
                         break
 
+                    # 활동 시간 갱신
+                    last_activity_time = current_time
                     buffer += data
+
                     while "\n" in buffer:
                         line, buffer = buffer.split("\n", 1)
                         line = line.strip()
@@ -175,6 +212,19 @@ class TCPServer:
                             # ✅ AppController의 TruckCommandSender 업데이트
                             self.app.set_truck_commander(self.truck_sockets)
 
+                        # 하트비트 메시지 특별 처리
+                        if message.get("cmd") == "HELLO" and message.get("payload", {}).get("msg") == "heartbeat":
+                            print(f"[💓 하트비트] 트럭 {truck_id}에서 하트비트 수신")
+                            # 하트비트 응답 메시지 전송
+                            response = TCPProtocol.build_message(
+                                sender="SERVER",
+                                receiver=truck_id,
+                                cmd="HEARTBEAT_ACK",
+                                payload={"status": "alive"}
+                            )
+                            client_sock.sendall(response.encode())
+                            continue
+
                         # ✅ 메시지 처리 위임
                         self.app.handle_message(message)
 
@@ -185,10 +235,38 @@ class TCPServer:
                     print(f"[⚠️ 연결 중단] {addr}")
                     break
                 except socket.timeout:
-                    print(f"[⚠️ 소켓 타임아웃] {addr}")
-                    break
+                    # 2분간 데이터 없으면 하트비트 체크 메시지 전송
+                    print(f"[⚠️ 소켓 타임아웃] {addr} - 하트비트 체크 시도")
+                    try:
+                        # 클라이언트가 등록된 트럭인지 확인
+                        registered_truck_id = None
+                        for tid, sock in self.truck_sockets.items():
+                            if sock == client_sock and not tid.startswith("TEMP_"):
+                                registered_truck_id = tid
+                                break
+                        
+                        if registered_truck_id:
+                            # 하트비트 요청 메시지 전송
+                            heartbeat_msg = TCPProtocol.build_message(
+                                sender="SERVER",
+                                receiver=registered_truck_id,
+                                cmd="HEARTBEAT_CHECK", 
+                                payload={"check": "alive"}
+                            )
+                            client_sock.sendall(heartbeat_msg.encode())
+                            print(f"[💓 하트비트 체크] {registered_truck_id}에게 생존 확인 메시지 전송")
+                            # 활동 시간 갱신
+                            last_activity_time = time.time()
+                        else:
+                            print(f"[⚠️ 미등록 연결] {addr} - 타임아웃으로 종료")
+                            break
+                    except:
+                        print(f"[❌ 연결 종료] {addr} - 하트비트 체크 실패")
+                        break
                 except Exception as e:
                     print(f"[⚠️ 에러] {addr} → {e}")
+                    import traceback
+                    traceback.print_exc()
                     break
 
         finally:

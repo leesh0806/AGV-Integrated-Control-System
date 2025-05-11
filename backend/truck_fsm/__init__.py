@@ -7,6 +7,3 @@ from .truck_state import TruckState, MissionPhase, TruckContext
 from .state_transition_manager import StateTransitionManager
 from .truck_fsm_manager import TruckFSMManager
 from .truck_message_handler import TruckMessageHandler
-
-# 이전 상태 enum (호환성 유지용)
-from .truck_state_enum import TruckState as OldTruckState

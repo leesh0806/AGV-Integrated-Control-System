@@ -199,22 +199,31 @@ class MissionManager:
     # ------------------ 미션 조회 ----------------------------
 
     def find_mission_by_id(self, mission_id: str) -> Optional[Mission]:
+        """특정 미션 조회"""
         mission_data = self.db.find_mission_by_id(mission_id)
         return Mission.from_row(mission_data) if mission_data else None
 
     def get_assigned_missions_by_truck(self, truck_id: str) -> List[Mission]:
+        """트럭에 할당된 미션 조회"""
         mission_rows = self.db.get_missions_by_truck(truck_id)
         return [Mission.from_row(row) for row in mission_rows]
 
     def find_assigned_mission_by_truck(self, truck_id: str) -> Optional[Mission]:
+        """트럭에 할당된 미션 조회"""
         missions = self.get_assigned_missions_by_truck(truck_id)
         return missions[0] if missions else None
 
     def get_waiting_missions(self) -> List[Mission]:
+        """대기 중인 미션 조회"""
         mission_rows = self.db.get_waiting_missions()
-        return [Mission.from_row(row) for row in mission_rows]
+        waiting_missions = [Mission.from_row(row) for row in mission_rows]
+        print(f"[대기 미션 조회] {len(waiting_missions)}개 미션 조회됨")
+        for mission in waiting_missions:
+            print(f"  - 미션 ID: {mission.mission_id}, 출발지: {mission.source}")
+        return waiting_missions
 
     def get_assigned_and_waiting_missions(self) -> List[Mission]:
+        """할당 및 대기 중인 미션 조회"""
         mission_rows = self.db.get_assigned_and_waiting_missions()
         return [Mission.from_row(row) for row in mission_rows]
 
