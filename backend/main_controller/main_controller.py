@@ -67,7 +67,7 @@ class MainController:
             print("[⚠️ 경고] 사용 가능한 게이트 컨트롤러가 없습니다")
             self.gate_controller = None
         
-        # FSM 관리자
+        # FSM 관리자 - 새 버전 사용
         self.truck_fsm_manager = TruckFSMManager(
             gate_controller=self.gate_controller,
             mission_manager=self.mission_manager,
@@ -75,7 +75,7 @@ class MainController:
             truck_status_manager=self.truck_status_manager
         )
 
-        # 트럭 메시지 핸들러
+        # 트럭 메시지 핸들러 - 새 버전 사용
         self.truck_message_handler = TruckMessageHandler(self.truck_fsm_manager)
         self.truck_message_handler.set_status_manager(self.truck_status_manager)
 
