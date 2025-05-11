@@ -6,7 +6,7 @@ project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
 from backend.main_controller.main_controller import MainController
-from backend.tcpio.server import TCPServer
+from backend.tcpio.tcp_server import TCPServer
 from backend.mission.mission import Mission
 from backend.mission.mission_db import MissionDB
 from backend.mission.mission_status import MissionStatus
@@ -14,7 +14,7 @@ from backend.truck_status.truck_status_db import TruckStatusDB
 from backend.facility_status.facility_status_manager import FacilityStatusManager
 from backend.facility_status.facility_status_db import FacilityStatusDB
 import threading
-from backend.rest_api.app import app as flask_server  # app.py에서 Flask 서버 가져오기
+from backend.rest_api.app import flask_server  # app.py에서 Flask 서버 가져오기
 
 # 설정
 HOST = '0.0.0.0'

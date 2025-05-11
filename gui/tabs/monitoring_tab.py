@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGraphicsScene, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem
 from PyQt6.QtGui import QPen, QBrush, QColor, QPainterPath
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QSize
 from PyQt6 import uic
 import os
 import math
@@ -38,16 +38,24 @@ class MonitoringTab(QWidget):
         else:
             print(f"[경고] UI 파일을 찾을 수 없습니다: {ui_path}")
             
+        # 탭 위젯 크기 정책 설정
+        self.setMinimumHeight(600)  # 최소 높이 설정
+        self.setMinimumWidth(1200)  # 최소 너비 설정
+            
         # 초기화
         self.setup_map()
         self.setup_truck()
         self.setup_timer()
         
+    def sizeHint(self):
+        # 권장 크기 힌트 제공 (Qt 레이아웃 시스템에서 사용)
+        return QSize(1200, 600)
+        
     def setup_map(self):
         """맵 초기화 (이전 MainMonitoringTab의 기능)"""
         # 씬 생성
         self.scene = QGraphicsScene(self)
-        self.graphicsview_map.setScene(self.scene)
+        self.graphicsView_map.setScene(self.scene)
         self.scene.setSceneRect(0, 0, 820, 220)
         
         # 중심 좌표와 반지름 (더 넓게)
@@ -174,7 +182,8 @@ class MonitoringTab(QWidget):
             
             # 위치 정보가 있을 때만 디버그 메시지 출력
             if pos:
-                print(f"[DEBUG] 트럭 위치 데이터: {data.get('position', {})}")
+                # print(f"[DEBUG] 트럭 위치 데이터: {data.get('position', {})}")
+                pass
             
             # 위치 매핑 테이블 - 백엔드에서 보내는 위치를 맵 좌표 키로 변환
             location_mapping = {
@@ -201,27 +210,29 @@ class MonitoringTab(QWidget):
                     self.truck.update_position(*self.node_coords[node])
                     # STANDBY가 아니거나 상태가 변경되었을 때만 로그 출력
                     if (pos_upper != "STANDBY") or (status != "IDLE"):
-                        print(f"[DEBUG] 트럭 위치 업데이트: {node} (상태: {status})")
+                        # print(f"[DEBUG] 트럭 위치 업데이트: {node} (상태: {status})")
+                        pass
                 else:
-                    print(f"[DEBUG] 매핑되지 않은 위치: {pos_upper} -> {node}")
+                    # print(f"[DEBUG] 매핑되지 않은 위치: {pos_upper} -> {node}")
+                    pass
                     
         except Exception as e:
             print(f"[ERROR] 트럭 위치 업데이트 실패: {e}")
         
     def refresh_battery_status(self):
         """배터리 상태 업데이트"""
-        # 배터리 상태 위젯 참조
+        # 배터리 상태 위젯 참조 - 수정된 UI 파일의 객체 이름 사용
         widgets = [
-            self.findChild(QWidget, "progressbar_battery_truck1"),
-            self.findChild(QWidget, "progressbar_battery_truck2"),
-            self.findChild(QWidget, "progressbar_battery_truck3")
+            self.progressBar_battery_truck1,
+            self.progressBar_battery_truck2,
+            self.progressBar_battery_truck3
         ]
         
         # 참조가 없는 경우 종료
         if not all(widgets):
             return
             
-        progressbar_battery_truck1, progressbar_battery_truck2, progressbar_battery_truck3 = widgets
+        progressBar_battery_truck1, progressBar_battery_truck2, progressBar_battery_truck3 = widgets
         
         try:
             # api_client를 사용하여 모든 트럭 배터리 정보 조회
@@ -229,7 +240,8 @@ class MonitoringTab(QWidget):
             
             # 주기적으로 반복되는 로그는 TRUCK_01에 실제 데이터가 있을 때만 출력
             if "TRUCK_01" in data and data["TRUCK_01"]:
-                print(f"[DEBUG] 배터리 데이터 수신: {data}")
+                # print(f"[DEBUG] 배터리 데이터 수신: {data}")
+                pass
             
             def update_battery_bar(progress_bar, truck_data, truck_id):
                 if not truck_data:  # 데이터가 없는 경우
@@ -267,9 +279,11 @@ class MonitoringTab(QWidget):
                 # 배터리 상태가 변경되었을 때만 로그 출력
                 if hasattr(progress_bar, "last_level") and hasattr(progress_bar, "last_charging"):
                     if progress_bar.last_level != level or progress_bar.last_charging != is_charging:
-                        print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
+                        # print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
+                        pass
                 else:
-                    print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
+                    # print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
+                    pass
                 
                 # 현재 상태 저장
                 progress_bar.last_level = level
@@ -307,9 +321,9 @@ class MonitoringTab(QWidget):
                 progress_bar.setFormat("%p%")
                 
             # 각 트럭 배터리 상태 업데이트
-            update_battery_bar(progressbar_battery_truck1, data.get("TRUCK_01", {}), "TRUCK_01")
-            update_battery_bar(progressbar_battery_truck2, data.get("TRUCK_02", {}), "TRUCK_02")
-            update_battery_bar(progressbar_battery_truck3, data.get("TRUCK_03", {}), "TRUCK_03")
+            update_battery_bar(progressBar_battery_truck1, data.get("TRUCK_01", {}), "TRUCK_01")
+            update_battery_bar(progressBar_battery_truck2, data.get("TRUCK_02", {}), "TRUCK_02")
+            update_battery_bar(progressBar_battery_truck3, data.get("TRUCK_03", {}), "TRUCK_03")
                 
         except Exception as e:
             print(f"[ERROR] 배터리 상태 업데이트 실패: {e}")

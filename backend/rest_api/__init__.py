@@ -1,5 +1,5 @@
 # backend/rest_api 패키지
 
-from backend.rest_api.server import app
+from backend.rest_api.app import flask_server
 
-__all__ = ['app']
+__all__ = ['flask_server']

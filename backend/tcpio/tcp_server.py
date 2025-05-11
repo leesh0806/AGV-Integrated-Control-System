@@ -1,4 +1,4 @@
-# backend/tcpio/server.py
+# backend/tcpio/tcp_server.py
 
 import traceback
 import socket
@@ -48,7 +48,6 @@ class TCPServer:
 
     def handle_client(self, client_sock, addr):
         with client_sock:
-            # ✅ 클라이언트 연결 시점에 임시 트럭 ID로 등록
             temp_truck_id = f"TEMP_{addr[1]}"
             self.truck_sockets[temp_truck_id] = client_sock
             self.app.set_truck_commander(self.truck_sockets)
@@ -119,4 +118,4 @@ class TCPServer:
             client_socket.send((json.dumps(msg) + "\n").encode('utf-8'))
             print(f"[📤 {cmd} 전송] {client_socket.getpeername()}")
         except Exception as e:
-            print(f"[❌ 전송 오류] {e}")
+            print(f"[❌ 전송 오류] {e}") 

@@ -24,32 +24,32 @@ class MissionTab(QWidget):
     def init_ui(self):
         """UI 초기화"""
         # 미션 추가 버튼 이벤트 연결
-        add_button = self.findChild(QWidget, "pushbutton_add")
+        add_button = self.findChild(QWidget, "pushButton_add_for_add")
         if add_button:
             add_button.clicked.connect(self.add_mission)
         else:
-            print("[경고] 'pushbutton_add' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_add_for_add' 버튼을 찾을 수 없습니다")
         
         # 미션 새로고침 버튼 이벤트 연결
-        refresh_button = self.findChild(QWidget, "pushbutton_refresh")
+        refresh_button = self.findChild(QWidget, "pushButton_refresh")
         if refresh_button:
             refresh_button.clicked.connect(self.refresh_mission_table)
         else:
-            print("[경고] 'pushbutton_refresh' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_refresh' 버튼을 찾을 수 없습니다")
             
         # 미션 삭제 버튼 이벤트 연결
-        delete_button = self.findChild(QWidget, "pushbutton_delete")
+        delete_button = self.findChild(QWidget, "pushButton_delete_selected")
         if delete_button:
             delete_button.clicked.connect(self.delete_selected_mission)
         else:
-            print("[경고] 'pushbutton_delete' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_delete_selected' 버튼을 찾을 수 없습니다")
             
         # 미션 테이블 참조
-        self.tablewidget = self.findChild(QWidget, "tablewidget")
+        self.tablewidget = self.findChild(QWidget, "tableWidget_mission")
         
         # 디버깅: 테이블 위젯 존재 여부 확인
         if not self.tablewidget:
-            print("[경고] 'tablewidget' 테이블을 찾을 수 없습니다")
+            print("[경고] 'tableWidget_mission' 테이블을 찾을 수 없습니다")
             # UI에 있는 모든 위젯 이름 출력
             for child in self.findChildren(QWidget):
                 if hasattr(child, 'objectName'):
@@ -124,23 +124,23 @@ class MissionTab(QWidget):
         """새 미션 추가"""
         try:
             # 미션 입력값 가져오기 - UI 파일의 위젯 이름 사용
-            lineedit_type = self.findChild(QWidget, "lineedit_type")
+            lineedit_type = self.findChild(QWidget, "lineEdit_type_for_add")
             if not lineedit_type:
-                print("[경고] 'lineedit_type' 필드를 찾을 수 없습니다")
+                print("[경고] 'lineEdit_type_for_add' 필드를 찾을 수 없습니다")
                 cargo_type = "기본 화물"
             else:
                 cargo_type = lineedit_type.text() or "기본 화물"
                 
-            spinBox = self.findChild(QWidget, "spinBox")
+            spinBox = self.findChild(QWidget, "spinBox_amount_for_add")
             if not spinBox:
-                print("[경고] 'spinBox' 스핀박스를 찾을 수 없습니다")
+                print("[경고] 'spinBox_amount_for_add' 스핀박스를 찾을 수 없습니다")
                 cargo_amount = 1.0
             else:
                 cargo_amount = float(spinBox.value())
                 
-            source_widget = self.findChild(QWidget, "combobox_source")
+            source_widget = self.findChild(QWidget, "comboBox_source_for_add")
             if not source_widget:
-                print("[경고] 'combobox_source' 콤보박스를 찾을 수 없습니다")
+                print("[경고] 'comboBox_source_for_add' 콤보박스를 찾을 수 없습니다")
                 source = "LOAD_A"
             else:
                 source = source_widget.currentText()

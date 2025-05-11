@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, QSize
 from PyQt6 import uic
 
 from gui.tabs.monitoring_tab import MonitoringTab
@@ -15,6 +15,9 @@ class OperatorMainWindow(QMainWindow):
         ui_path = os.path.join(os.path.dirname(__file__), "ui", "main.ui")
         uic.loadUi(ui_path, self)
         self.setWindowTitle("지능형 운송관제 시스템 D.U.S.T. - 운영자 모드")
+        
+        # 메인 윈도우 크기 설정
+        self.setMinimumSize(1220, 680)
         
         # 탭 위젯 참조
         self.tabWidget = self.findChild(QTabWidget, "tabWidget")
@@ -32,6 +35,9 @@ class OperatorMainWindow(QMainWindow):
         if not self.tabWidget:
             print("[오류] 탭 위젯을 찾을 수 없습니다.")
             return
+        
+        # 탭 위젯 크기 설정
+        self.tabWidget.setMinimumSize(1200, 635)
         
         # 기존 탭 모두 제거
         while self.tabWidget.count() > 0:

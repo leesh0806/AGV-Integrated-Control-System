@@ -6,41 +6,201 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
+    <width>1200</width>
     <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Mission Management</string>
   </property>
-  <widget class="QTableWidget" name="tablewidget">
+  <widget class="QTableWidget" name="tableWidget_mission">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
      <width>821</width>
-     <height>541</height>
+     <height>581</height>
     </rect>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupbox_add_mission">
+  <widget class="QPushButton" name="pushButton_delete_selected">
+   <property name="geometry">
+    <rect>
+     <x>840</x>
+     <y>520</y>
+     <width>341</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>선택 미션 취소</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_refresh">
+   <property name="geometry">
+    <rect>
+     <x>840</x>
+     <y>560</y>
+     <width>341</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>새로고침</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_complete_all">
+   <property name="geometry">
+    <rect>
+     <x>840</x>
+     <y>480</y>
+     <width>341</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>모두 완료 처리</string>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
      <x>840</x>
      <y>10</y>
-     <width>331</width>
-     <height>231</height>
+     <width>341</width>
+     <height>146</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>미션 조회</string>
+   </property>
+   <widget class="QComboBox" name="comboBox_source_for_search">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>110</y>
+      <width>301</width>
+      <height>27</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_waiting_for_search">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>30</y>
+      <width>92</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>WAITING</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox_truck_id_for_search">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>80</y>
+      <width>301</width>
+      <height>27</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_assigned_for_search">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>30</y>
+      <width>92</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>ASSIGNED</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_error_for_search">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>55</y>
+      <width>92</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>ERROR</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_completed_for_search">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>30</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>COMPLETED</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_canceled_for_search">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>55</y>
+      <width>101</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CANCELED</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>840</x>
+     <y>160</y>
+     <width>341</width>
+     <height>161</height>
     </rect>
    </property>
    <property name="title">
     <string>미션 추가</string>
    </property>
-   <widget class="QLineEdit" name="lineedit_type">
+   <widget class="QPushButton" name="pushButton_add_for_add">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>40</y>
-      <width>291</width>
+      <y>120</y>
+      <width>301</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>추가</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinBox_amount_for_add">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>60</y>
+      <width>301</width>
+      <height>28</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_type_for_add">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>30</y>
+      <width>301</width>
       <height>27</height>
      </rect>
     </property>
@@ -51,22 +211,12 @@
      <string>화물종류</string>
     </property>
    </widget>
-   <widget class="QSpinBox" name="spinBox">
+   <widget class="QComboBox" name="comboBox_source_for_add">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>80</y>
-      <width>291</width>
-      <height>28</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="combobox_source">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>120</y>
-      <width>291</width>
+      <y>90</y>
+      <width>301</width>
       <height>27</height>
      </rect>
     </property>
@@ -81,47 +231,8 @@
      </property>
     </item>
    </widget>
-   <widget class="QPushButton" name="pushbutton_add">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>160</y>
-      <width>291</width>
-      <height>27</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>추가</string>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QPushButton" name="pushbutton_delete">
-   <property name="geometry">
-    <rect>
-     <x>840</x>
-     <y>250</y>
-     <width>331</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>선택 미션 삭제</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushbutton_refresh">
-   <property name="geometry">
-    <rect>
-     <x>840</x>
-     <y>290</y>
-     <width>331</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>새로고침</string>
-   </property>
   </widget>
  </widget>
  <resources/>
  <connections/>
-</ui> 
+</ui>
