@@ -14,7 +14,7 @@ from backend.truck_status.truck_status_db import TruckStatusDB
 from backend.facility_status.facility_status_manager import FacilityStatusManager
 from backend.facility_status.facility_status_db import FacilityStatusDB
 import threading
-from backend.rest_api.app import flask_server  # app.py에서 Flask 서버 가져오기
+from backend.rest_api.app import flask_server, init_tcp_server_reference  # app.py에서 Flask 서버와 초기화 함수 가져오기
 
 # 설정
 HOST = '0.0.0.0'
@@ -95,6 +95,9 @@ print(f"[ℹ️ 기존 미션 발견] 총 {len(waiting_missions)}개의 대기 �
 # TCP 서버 실행
 server = TCPServer(HOST, PORT, main_controller)
 
+# TCP 서버 인스턴스를 시스템 API에 전달
+init_tcp_server_reference(server)
+
 # Flask 서버 실행 함수
 def run_flask():
     flask_server.run(host="0.0.0.0", port=5001, debug=False, use_reloader=False)
@@ -124,9 +127,9 @@ print(f"[메인 서버 시작됨] TCP 서버: {HOST}:{PORT}, Flask 서버: 0.0.0
 
 
 if __name__ == "__main__":
-    # Flask 서버를 별도 데몬 스레드로 시작
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
+    # TCP 서버를 별도 데몬 스레드로 시작 (중요: 데몬 스레드로 실행하여 메인 스레드와 독립적으로 동작)
+    tcp_thread = threading.Thread(target=server.start, daemon=True)
+    tcp_thread.start()
     
-    # TCP 서버를 메인 스레드에서 시작
-    server.start() 
+    # Flask 서버를 메인 스레드에서 시작 (중요: 메인 프로세스로 실행하여 TCP 서버가 종료되어도 Flask 서버는 유지)
+    run_flask() 

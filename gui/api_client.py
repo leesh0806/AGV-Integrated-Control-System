@@ -90,9 +90,36 @@ class APIClient:
         """
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         
+        # 디버그 출력 추가
+        print(f"[DEBUG] API 요청 URL: {url}")
+        print(f"[DEBUG] API 요청 데이터: {data}")
+        
         try:
             response = requests.post(url, json=data, timeout=self.timeout)
-            response.raise_for_status()  # HTTP 에러 체크
+            # 디버그 출력 추가
+            print(f"[DEBUG] API 응답 상태 코드: {response.status_code}")
+            
+            # 응답 내용 확인 (가능한 경우)
+            try:
+                print(f"[DEBUG] API 응답 내용: {response.text[:200]}...")
+            except:
+                print("[DEBUG] API 응답 내용을 표시할 수 없습니다.")
+            
+            # HTTP 에러 처리 개선
+            if response.status_code >= 400:
+                print(f"[ERROR] API 요청 실패 (HTTP {response.status_code}): {url}")
+                error_message = f"HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict) and "message" in error_data:
+                        error_message = f"{error_message} - {error_data['message']}"
+                except:
+                    if response.text:
+                        error_message = f"{error_message} - {response.text[:100]}"
+                
+                raise ValueError(error_message)
+            
+            response.raise_for_status()  # 혹시 모를 다른 HTTP 에러 체크
             return response.json()
         except requests.exceptions.Timeout:
             print(f"[ERROR] API 요청 시간 초과: {url}")
@@ -201,6 +228,23 @@ class APIClient:
         if speed is not None:
             data["speed"] = speed
         return self.post(f"facilities/belt/{belt_id}/control", data)
+    
+    # 시스템 관련 API 메서드
+    def restart_tcp_server(self) -> Dict:
+        """TCP 서버 재시작
+        
+        Returns:
+            응답 데이터 (JSON)
+        """
+        return self.post("system/tcp/restart", {})
+        
+    def get_tcp_server_status(self) -> Dict:
+        """TCP 서버 상태 조회
+        
+        Returns:
+            TCP 서버 상태 정보 (JSON)
+        """
+        return self.get("system/tcp/status")
 
 # 싱글톤 인스턴스 사용을 위한 전역 변수
 api_client = APIClient() 

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGraphicsScene, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGraphicsScene, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem, QMessageBox
 from PyQt6.QtGui import QPen, QBrush, QColor, QPainterPath
 from PyQt6.QtCore import Qt, QTimer, QSize
 from PyQt6 import uic
@@ -45,6 +45,7 @@ class MonitoringTab(QWidget):
         # 초기화
         self.setup_map()
         self.setup_truck()
+        self.setup_controls()
         self.setup_timer()
         
     def sizeHint(self):
@@ -158,6 +159,22 @@ class MonitoringTab(QWidget):
         self.truck.update_position(*self.node_coords["STANDBY"])
         self.scene.addItem(self.truck)
         
+    def setup_controls(self):
+        """컨트롤 버튼 초기화"""
+        # TCP 서버 재시작 버튼 이벤트 연결
+        restart_tcp_button = self.findChild(QWidget, "pushButton_restart_tcp")
+        if restart_tcp_button:
+            restart_tcp_button.clicked.connect(self.restart_tcp_server)
+        else:
+            print("[경고] 'pushButton_restart_tcp' 버튼을 찾을 수 없습니다")
+        
+        # TCP 서버 상태 확인 버튼 추가 (새로운 기능)
+        check_tcp_button = self.findChild(QWidget, "pushButton_check_tcp_status")
+        if check_tcp_button:
+            check_tcp_button.clicked.connect(self.check_tcp_server_status)
+        else:
+            print("[정보] 'pushButton_check_tcp_status' 버튼이 UI에 없습니다")
+            
     def setup_timer(self):
         """타이머 설정"""
         # 트럭 위치 업데이트 타이머
@@ -248,100 +265,155 @@ class MonitoringTab(QWidget):
                     # 기본값 설정 - 등록되지 않은 트럭은 회색으로 표시
                     level = 0
                     is_charging = False
-                    color = "#999999"  # 회색
                     
-                    # 스타일시트 설정
-                    style = f"""
-                        QProgressBar {{
-                            border: 2px solid grey;
-                            border-radius: 5px;
-                            text-align: center;
-                            background-color: #f0f0f0;
-                        }}
-                        QProgressBar::chunk {{
-                            background-color: {color};
-                            width: 10px;
-                            margin: 0.5px;
-                        }}
-                    """
-                    
-                    progress_bar.setStyleSheet(style)
+                    # 미등록 트럭 표시
+                    progress_bar.setFormat(f"{truck_id}: 미등록")
                     progress_bar.setValue(0)
-                    # 트럭 미등록 표시 추가
-                    progress_bar.setFormat(f"{truck_id} (미등록)")
+                    progress_bar.setStyleSheet("QProgressBar { text-align: center; }")
                     return
-                    
-                # 배터리 레벨 (기본값 0)
-                level = float(truck_data.get("level", 0))
-                # 충전 중 여부 (기본값 False)
+                
+                # 배터리 레벨과 충전 상태 확인
+                level = truck_data.get("level", 0)
                 is_charging = truck_data.get("is_charging", False)
                 
-                # 배터리 상태가 변경되었을 때만 로그 출력
-                if hasattr(progress_bar, "last_level") and hasattr(progress_bar, "last_charging"):
-                    if progress_bar.last_level != level or progress_bar.last_charging != is_charging:
-                        # print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
-                        pass
-                else:
-                    # print(f"[DEBUG] 배터리 레벨: {level}%, 충전중: {is_charging}")
-                    pass
+                # 배터리 레벨이 100을 넘지 않도록 제한
+                level = min(100, max(0, level))
                 
-                # 현재 상태 저장
-                progress_bar.last_level = level
-                progress_bar.last_charging = is_charging
-                
-                # 배터리 상태에 따른 색상 설정
-                if is_charging:
-                    color = "#0000FF"  # 충전 중: 파란색
-                elif level <= 30:
-                    color = "#FF0000"  # 배터리 위험: 빨간색
-                elif level <= 50:
-                    color = "#FFA500"  # 배터리 경고: 주황색
-                else:
-                    color = "#00FF00"  # 배터리 충분: 초록색
-                    
-                # 스타일시트 설정
-                style = f"""
-                    QProgressBar {{
-                        border: 2px solid grey;
-                        border-radius: 5px;
-                        text-align: center;
-                        background-color: #f0f0f0;
-                    }}
-                    QProgressBar::chunk {{
-                        background-color: {color};
-                        width: 10px;
-                        margin: 0.5px;
-                    }}
-                """
-                
-                # 프로그레스바 업데이트
-                progress_bar.setStyleSheet(style)
+                # 프로그레스 바에 배터리 정보 표시
                 progress_bar.setValue(int(level))
-                # 기본 형식으로 복원
-                progress_bar.setFormat("%p%")
                 
-            # 각 트럭 배터리 상태 업데이트
-            update_battery_bar(progressBar_battery_truck1, data.get("TRUCK_01", {}), "TRUCK_01")
-            update_battery_bar(progressBar_battery_truck2, data.get("TRUCK_02", {}), "TRUCK_02")
-            update_battery_bar(progressBar_battery_truck3, data.get("TRUCK_03", {}), "TRUCK_03")
-                
+                # 충전 중일 때 녹색, 아닐 때 배터리 상태에 따라 색상 변경
+                if is_charging:
+                    progress_bar.setFormat(f"{truck_id}: {level:.0f}% (충전 중)")
+                    progress_bar.setStyleSheet("QProgressBar { text-align: center; }"
+                                             "QProgressBar::chunk { background-color: #00aa00; }")
+                else:
+                    progress_bar.setFormat(f"{truck_id}: {level:.0f}%")
+                    if level < 20:
+                        progress_bar.setStyleSheet("QProgressBar { text-align: center; }"
+                                                "QProgressBar::chunk { background-color: #ff0000; }")
+                    elif level < 50:
+                        progress_bar.setStyleSheet("QProgressBar { text-align: center; }"
+                                                "QProgressBar::chunk { background-color: #ffaa00; }")
+                    else:
+                        progress_bar.setStyleSheet("QProgressBar { text-align: center; }"
+                                                "QProgressBar::chunk { background-color: #0000ff; }")
+            
+            # 각 트럭의 배터리 상태 업데이트
+            update_battery_bar(progressBar_battery_truck1, data.get("TRUCK_01"), "TRUCK_01")
+            update_battery_bar(progressBar_battery_truck2, data.get("TRUCK_02"), "TRUCK_02")
+            update_battery_bar(progressBar_battery_truck3, data.get("TRUCK_03"), "TRUCK_03")
+            
         except Exception as e:
             print(f"[ERROR] 배터리 상태 업데이트 실패: {e}")
-            import traceback
-            traceback.print_exc()  # 상세한 오류 정보 출력
-            # 에러 발생 시 모든 배터리 표시 비활성화
-            for widget in widgets:
-                widget.setValue(0)
-                widget.setStyleSheet("""
-                    QProgressBar {
-                        border: 2px solid grey;
-                        border-radius: 5px;
-                        text-align: center;
-                        background-color: #f0f0f0;
-                    }
-                    QProgressBar::chunk {
-                        background-color: #999999;
-                        width: 10px;
-                        margin: 0.5px;
-                    }
-                """) 
+    
+    def restart_tcp_server(self):
+        """TCP 서버 재시작"""
+        try:
+            # 확인 대화상자 표시
+            reply = QMessageBox.question(
+                self,
+                "TCP 서버 재시작",
+                "TCP 서버를 재시작하시겠습니까?\n(모든 클라이언트 연결이 끊어집니다)",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                # TCP 서버 재시작 API 호출
+                print("[INFO] TCP 서버 재시작 API 호출 시도...")
+                response = api_client.restart_tcp_server()
+                print(f"[INFO] TCP 서버 재시작 API 응답: {response}")
+                
+                # 재시작 5초 후 서버 상태 확인
+                import threading
+                import time
+                
+                def check_server_status_after_restart():
+                    # 잠시 대기 (서버 재시작 시간)
+                    time.sleep(5)
+                    try:
+                        # 서버 상태 확인
+                        status_response = api_client.get_tcp_server_status()
+                        if status_response.get("success", False):
+                            status_data = status_response.get("status", {})
+                            port = status_data.get("port", "알 수 없음")
+                            self.show_alert(f"TCP 서버가 포트 {port}에서 실행 중입니다.")
+                    except Exception as e:
+                        print(f"[ERROR] 서버 상태 확인 실패: {e}")
+                
+                # 상태 확인 스레드 시작
+                threading.Thread(target=check_server_status_after_restart, daemon=True).start()
+                
+                # 응답에서 메시지 추출
+                success_message = "TCP 서버가 재시작되었습니다."
+                if isinstance(response, dict) and "message" in response:
+                    success_message = f"{success_message}\n\n서버 응답: {response['message']}"
+                
+                self.show_alert(success_message)
+                QMessageBox.information(self, "TCP 서버 재시작", success_message)
+            
+        except ConnectionError as e:
+            error_msg = f"TCP 서버에 연결할 수 없습니다: {e}"
+            self.show_alert(f"오류: {error_msg}")
+            print(f"[ERROR] {error_msg}")
+            QMessageBox.critical(self, "연결 오류", error_msg)
+        except TimeoutError as e:
+            error_msg = f"TCP 서버 응답 시간 초과: {e}"
+            self.show_alert(f"오류: {error_msg}")
+            print(f"[ERROR] {error_msg}")
+            QMessageBox.critical(self, "시간 초과", error_msg)
+        except Exception as e:
+            error_msg = f"TCP 서버 재시작 실패: {e}"
+            self.show_alert(f"오류: {error_msg}")
+            print(f"[ERROR] {error_msg}")
+            QMessageBox.critical(self, "오류", error_msg)
+    
+    def check_tcp_server_status(self):
+        """TCP 서버 상태 확인"""
+        try:
+            # TCP 서버 상태 API 호출
+            response = api_client.get_tcp_server_status()
+            if response.get("success", False):
+                status = response.get("status", {})
+                
+                # 상태 정보 메시지 구성
+                status_msg = f"TCP 서버 상태:\n"
+                status_msg += f"- 실행 중: {'예' if status.get('running', False) else '아니오'}\n"
+                status_msg += f"- 주소: {status.get('host', 'N/A')}:{status.get('port', 'N/A')}\n"
+                status_msg += f"- 연결된 클라이언트: {status.get('clients_count', 0)}개\n"
+                status_msg += f"- 등록된 트럭: {status.get('trucks_count', 0)}대\n"
+                
+                # 연결된 트럭 목록 추가
+                truck_list = status.get("connected_trucks", [])
+                if truck_list:
+                    status_msg += "\n등록된 트럭 목록:\n"
+                    for truck in truck_list:
+                        status_msg += f"- {truck}\n"
+                
+                # 알림창 표시
+                self.show_alert(f"TCP 서버 상태 확인: 정상")
+                QMessageBox.information(self, "TCP 서버 상태", status_msg)
+            else:
+                error_msg = response.get("message", "알 수 없는 오류")
+                self.show_alert(f"TCP 서버 상태 확인 실패: {error_msg}")
+                QMessageBox.warning(self, "TCP 서버 상태", f"상태 확인 실패: {error_msg}")
+                
+        except Exception as e:
+            error_msg = f"TCP 서버 상태 확인 실패: {e}"
+            self.show_alert(f"오류: {error_msg}")
+            print(f"[ERROR] {error_msg}")
+            QMessageBox.critical(self, "오류", error_msg)
+    
+    def show_alert(self, message):
+        """알림 영역에 메시지 표시"""
+        text_edit = self.findChild(QWidget, "textEdit_alert")
+        if text_edit:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            text_edit.append(f"[{timestamp}] {message}")
+            
+            # 항상 마지막 알림이 보이도록 스크롤
+            scroll_bar = text_edit.verticalScrollBar()
+            if scroll_bar:
+                scroll_bar.setValue(scroll_bar.maximum()) 

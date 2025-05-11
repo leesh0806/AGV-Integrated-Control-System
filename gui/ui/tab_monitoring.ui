@@ -180,6 +180,9 @@
     <property name="text">
      <string>일시 정지</string>
     </property>
+    <property name="checkable">
+     <bool>true</bool>
+    </property>
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_facility_control">
@@ -188,13 +191,13 @@
      <x>840</x>
      <y>260</y>
      <width>351</width>
-     <height>111</height>
+     <height>150</height>
     </rect>
    </property>
    <property name="title">
     <string>시설 수동 제어</string>
    </property>
-   <widget class="QPushButton" name="pushButton_open_gate_a">
+   <widget class="QPushButton" name="pushButton_toggle_gate_a">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -204,10 +207,13 @@
      </rect>
     </property>
     <property name="text">
-     <string>GATE_A 열림</string>
+     <string>게이트 A 열기</string>
+    </property>
+    <property name="checkable">
+     <bool>true</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_open_gate_b">
+   <widget class="QPushButton" name="pushButton_toggle_gate_b">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -217,7 +223,26 @@
      </rect>
     </property>
     <property name="text">
-     <string>GATE_B 열림</string>
+     <string>게이트 B 열기</string>
+    </property>
+    <property name="checkable">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_toggle_belt">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>110</y>
+      <width>331</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>벨트 시작</string>
+    </property>
+    <property name="checkable">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>
