@@ -332,9 +332,8 @@ class TruckFSM:
         
         # 트럭에 이동 명령 전송
         if self.command_sender:
-            # 1. MISSION_ASSIGNED 명령 먼저 전송 - 미션 정보 포함
+            # 1. MISSION_ASSIGNED 명령 먼저 전송 - source만 포함
             self.command_sender.send(context.truck_id, "MISSION_ASSIGNED", {
-                "mission_id": mission_id,
                 "source": source
             })
             
