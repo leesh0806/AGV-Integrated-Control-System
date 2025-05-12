@@ -4,49 +4,42 @@ import time
 
 
 class StateTransitionManager:
-    """FSM 상태 전이 관리 클래스"""
     def __init__(self, command_sender=None, gate_controller=None, belt_controller=None, mission_manager=None):
         self.command_sender = command_sender
         self.gate_controller = gate_controller
         self.belt_controller = belt_controller
         self.mission_manager = mission_manager
-        self.contexts = {}  # truck_id -> TruckContext
-        
-        # 상태 전이 테이블 초기화
+        self.contexts = {}
         self.transitions = self._init_transitions()
-        
-        # 배터리 관련 값
+        self._add_assigned_state_transitions()
+        self._extend_finish_unloading_action()
         self.BATTERY_THRESHOLD = 30
         self.BATTERY_FULL = 100
-        
-        # 체크포인트와 게이트 매핑 정의
         self.checkpoint_gate_mapping = {
-            Direction.INBOUND: {
+            Direction.CLOCKWISE: {
                 "CHECKPOINT_A": {"open": "GATE_A", "close": None},
                 "CHECKPOINT_B": {"open": None, "close": "GATE_A"},
-            },
-            Direction.OUTBOUND: {
-                "CHECKPOINT_B": {"open": "GATE_A", "close": None},
-                "CHECKPOINT_A": {"open": None, "close": "GATE_A"},
                 "CHECKPOINT_C": {"open": "GATE_B", "close": None},
                 "CHECKPOINT_D": {"open": None, "close": "GATE_B"},
             },
-            Direction.RETURN: {
+            Direction.COUNTERCLOCKWISE: {
                 "CHECKPOINT_D": {"open": "GATE_B", "close": None},
                 "CHECKPOINT_C": {"open": None, "close": "GATE_B"},
+                "CHECKPOINT_B": {"open": "GATE_A", "close": None},
+                "CHECKPOINT_A": {"open": None, "close": "GATE_A"},
             }
         }
-        
-        # 방향 전환점 정의
         self.direction_transition_points = {
-            "LOAD_A": Direction.OUTBOUND,  # 적재 완료 후 출고 방향으로 전환
-            "LOAD_B": Direction.OUTBOUND,  # 적재 완료 후 출고 방향으로 전환
-            "BELT": Direction.RETURN,      # 하역 완료 후 복귀 방향으로 전환
-            "STANDBY": Direction.INBOUND   # 대기 장소에 도착 후 입고 방향으로 전환
+            "STANDBY": Direction.CLOCKWISE,       # 대기 장소에 도착 후 시계방향(정상 흐름)으로 전환
+            "LOAD_A": Direction.CLOCKWISE,        # 적재 완료 후 시계방향 유지
+            "LOAD_B": Direction.CLOCKWISE,        # 적재 완료 후 시계방향 유지
+            "BELT": Direction.CLOCKWISE,          # 하역 완료 후에도 시계방향 유지
         }
         
+    # -------------------------------------------------------------------------------   
+
+    # 상태 전이 테이블 정의
     def _init_transitions(self):
-        """상태 전이 테이블 정의"""
         return {
             # (현재 상태, 이벤트) -> (다음 상태, 액션 함수, 조건 함수)
             
@@ -131,25 +124,24 @@ class StateTransitionManager:
                 "condition": None
             }
         }
-        
+    
+    # -------------------------------------------------------------------------------   
+
+    # 컨텍스트 가져오기 또는 생성
     def _get_or_create_context(self, truck_id):
-        """컨텍스트 가져오기 또는 생성"""
         if truck_id not in self.contexts:
             self.contexts[truck_id] = TruckContext(truck_id)
         return self.contexts[truck_id]
-        
+
+    # -------------------------------------------------------------------------------   
+
+    # 이벤트 처리
     def handle_event(self, truck_id, event, payload=None):
-        """이벤트 처리 및 상태 전이"""
-        if payload is None:
-            payload = {}
+        if payload is None: payload = {}
             
         context = self._get_or_create_context(truck_id)
         current_state = context.state
-        
-        # 이벤트 처리 시간 기록
         context.last_update_time = datetime.now()
-        
-        # 이벤트 로깅
         print(f"[이벤트 수신] 트럭: {truck_id}, 이벤트: {event}, 상태: {current_state}")
         
         # ARRIVED_AT_* 명령 처리
@@ -216,18 +208,20 @@ class StateTransitionManager:
             print(f"[상태 전이 없음] {truck_id}: {current_state}, {event}")
             return False
     
+    # -------------------------------------------------------------------------------   
+
+    # 위치에 따른 미션 단계 업데이트
     def _update_mission_phase_by_position(self, context):
-        """위치에 따른 미션 단계 업데이트"""
         position = context.position
         
         # 위치별 미션 단계 매핑
         position_to_phase = {
-            "CHECKPOINT_A": MissionPhase.TO_LOADING if context.is_inbound() else MissionPhase.TO_UNLOADING,
-            "CHECKPOINT_B": MissionPhase.TO_LOADING if context.is_inbound() else MissionPhase.TO_UNLOADING,
+            "CHECKPOINT_A": MissionPhase.TO_LOADING if context.is_clockwise() else MissionPhase.RETURNING,
+            "CHECKPOINT_B": MissionPhase.TO_LOADING if context.is_clockwise() else MissionPhase.RETURNING,
             "LOAD_A": MissionPhase.AT_LOADING,
             "LOAD_B": MissionPhase.AT_LOADING,
-            "CHECKPOINT_C": MissionPhase.TO_UNLOADING if context.is_outbound() else MissionPhase.RETURNING,
-            "CHECKPOINT_D": MissionPhase.TO_UNLOADING if context.is_outbound() else MissionPhase.RETURNING,
+            "CHECKPOINT_C": MissionPhase.TO_UNLOADING if context.is_clockwise() else MissionPhase.RETURNING,
+            "CHECKPOINT_D": MissionPhase.TO_UNLOADING if context.is_clockwise() else MissionPhase.RETURNING,
             "BELT": MissionPhase.AT_UNLOADING,
             "STANDBY": MissionPhase.RETURNING if context.mission_id else MissionPhase.NONE
         }
@@ -243,27 +237,35 @@ class StateTransitionManager:
                 # 다음 목표 위치 업데이트
                 self._update_target_position(context)
     
+    # -------------------------------------------------------------------------------   
+
+    # 미션 단계와 방향에 따른 다음 목표 위치 설정
     def _update_target_position(self, context):
-        """미션 단계와 방향에 따른 다음 목표 위치 설정"""
         phase = context.mission_phase
         direction = context.direction
         current_position = context.position
         
         # 방향별 이동 경로 정의
         path_by_direction = {
-            Direction.INBOUND: {
+            Direction.CLOCKWISE: {
                 "STANDBY": "CHECKPOINT_A",
-                "CHECKPOINT_A": "CHECKPOINT_B",  # GATE_A를 건너뛰고 직접 CHECKPOINT_B로
-                "CHECKPOINT_B": "LOAD_A"         # 기본적으로 LOAD_A로 설정 (미션별로 변경 가능)
-            },
-            Direction.OUTBOUND: {
+                "CHECKPOINT_A": "CHECKPOINT_B",
+                "CHECKPOINT_B": "LOAD_A",      # 기본적으로 LOAD_A로 설정 (미션별로 변경 가능)
                 "LOAD_A": "CHECKPOINT_C",
                 "LOAD_B": "CHECKPOINT_C",
-                "CHECKPOINT_C": "CHECKPOINT_D",  # GATE_B를 건너뛰고 직접 CHECKPOINT_D로
-                "CHECKPOINT_D": "BELT"
+                "CHECKPOINT_C": "CHECKPOINT_D",
+                "CHECKPOINT_D": "BELT",
+                "BELT": "STANDBY"              # 벨트에서 바로 STANDBY로 이동
             },
-            Direction.RETURN: {
-                "BELT": "STANDBY"  # 벨트에서 바로 STANDBY로 이동 (중간 체크포인트 생략)
+            Direction.COUNTERCLOCKWISE: {
+                "STANDBY": "BELT",
+                "BELT": "CHECKPOINT_D",
+                "CHECKPOINT_D": "CHECKPOINT_C",
+                "CHECKPOINT_C": "LOAD_A",      # 기본적으로 LOAD_A로 설정 (미션별로 변경 가능)
+                "LOAD_A": "CHECKPOINT_B",
+                "LOAD_B": "CHECKPOINT_B",
+                "CHECKPOINT_B": "CHECKPOINT_A",
+                "CHECKPOINT_A": "STANDBY"
             }
         }
         
@@ -299,9 +301,9 @@ class StateTransitionManager:
             print(f"[이동 경로] {context.truck_id}: {current_position} → {context.target_position} (방향: {direction.value})")
     
     # -------------------------------- 액션 메서드 --------------------------------
-            
+
+    # 미션 할당 처리
     def _assign_mission(self, context, payload):
-        """미션 할당 처리"""
         mission_id = payload.get("mission_id")
         source = payload.get("source", "LOAD_A")
         
@@ -317,7 +319,7 @@ class StateTransitionManager:
         # 새 미션 정보로 컨텍스트 업데이트
         context.mission_id = mission_id
         context.mission_phase = MissionPhase.TO_LOADING
-        context.direction = Direction.INBOUND
+        context.direction = Direction.CLOCKWISE
         context.target_position = "CHECKPOINT_A"  # 첫 목표는 CHECKPOINT_A
         
         # 소스에 따라 적재 위치 설정
@@ -345,15 +347,19 @@ class StateTransitionManager:
             
         return True
     
+    # -------------------------------------------------------------------------------   
+
+    # 이동 시작 처리
     def _start_moving(self, context, payload):
-        """이동 시작 처리"""
         if self.command_sender:
             self.command_sender.send(context.truck_id, "RUN", {
                 "target": context.target_position
             })
     
+    # -------------------------------------------------------------------------------   
+
+    # 도착 처리
     def _handle_arrival(self, context, payload):
-        """도착 처리 - 위치와 방향에 따라 다른 액션 수행"""
         position = context.position
         direction = context.direction
         
@@ -409,6 +415,9 @@ class StateTransitionManager:
                         context.mission_phase = MissionPhase.NONE
                         context.target_position = None
     
+    # -------------------------------------------------------------------------------   
+
+    # 체크포인트에서의 게이트 제어 처리
     def _process_checkpoint_gate_control(self, context, checkpoint, direction):
         """체크포인트에서의 게이트 제어 처리"""
         print(f"[체크포인트 도착] {context.truck_id}: 체크포인트 {checkpoint}, 방향 {direction.value}")
@@ -416,24 +425,20 @@ class StateTransitionManager:
         # 각 방향별 체크포인트 도착 시 게이트 처리 정의
         checkpoint_gate_actions = {
             "CHECKPOINT_A": {
-                Direction.INBOUND: {"open": "GATE_A", "close": None},        # 입고 시: GATE_A 열기
-                Direction.OUTBOUND: {"open": None, "close": "GATE_A"},       # 출고 시: GATE_A 닫기
-                Direction.RETURN: {"open": None, "close": "GATE_A"}          # 복귀 시: GATE_A 닫기 (복귀 마지막)
+                Direction.CLOCKWISE: {"open": "GATE_A", "close": None},        # 시계방향: GATE_A 열기
+                Direction.COUNTERCLOCKWISE: {"open": None, "close": "GATE_A"}  # 반시계방향: GATE_A 닫기
             },
             "CHECKPOINT_B": {
-                Direction.INBOUND: {"open": None, "close": "GATE_A"},        # 입고 시: GATE_A 닫기
-                Direction.OUTBOUND: {"open": "GATE_A", "close": None},       # 출고 시: GATE_A 열기
-                Direction.RETURN: {"open": None, "close": None}              # 복귀 시: 액션 없음
+                Direction.CLOCKWISE: {"open": None, "close": "GATE_A"},        # 시계방향: GATE_A 닫기
+                Direction.COUNTERCLOCKWISE: {"open": "GATE_A", "close": None}  # 반시계방향: GATE_A 열기
             },
             "CHECKPOINT_C": {
-                Direction.INBOUND: {"open": None, "close": None},            # 입고 시: 액션 없음
-                Direction.OUTBOUND: {"open": "GATE_B", "close": None},       # 출고 시: GATE_B 열기
-                Direction.RETURN: {"open": None, "close": "GATE_B"}          # 복귀 시: GATE_B 닫기
+                Direction.CLOCKWISE: {"open": "GATE_B", "close": None},        # 시계방향: GATE_B 열기
+                Direction.COUNTERCLOCKWISE: {"open": None, "close": "GATE_B"}  # 반시계방향: GATE_B 닫기
             },
             "CHECKPOINT_D": {
-                Direction.INBOUND: {"open": None, "close": None},            # 입고 시: 액션 없음
-                Direction.OUTBOUND: {"open": None, "close": "GATE_B"},       # 출고 시: GATE_B 닫기
-                Direction.RETURN: {"open": "GATE_B", "close": None}          # 복귀 시: GATE_B 열기
+                Direction.CLOCKWISE: {"open": None, "close": "GATE_B"},        # 시계방향: GATE_B 닫기
+                Direction.COUNTERCLOCKWISE: {"open": "GATE_B", "close": None}  # 반시계방향: GATE_B 열기
             }
         }
         
@@ -474,6 +479,9 @@ class StateTransitionManager:
                 # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
                 self.command_sender.send(context.truck_id, "RUN", {})
     
+    # -------------------------------------------------------------------------------   
+
+    # 게이트 열림 처리
     def _handle_gate_opened(self, context, payload):
         """게이트 열림 처리"""
         # 다음 위치로 이동 명령
@@ -483,17 +491,23 @@ class StateTransitionManager:
             # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
             self.command_sender.send(context.truck_id, "RUN", {})
     
+    # -------------------------------------------------------------------------------   
+
+    # 적재 작업 시작 처리
     def _start_loading(self, context, payload):
         """적재 작업 시작 처리"""
         print(f"[적재 시작] {context.truck_id}: 위치 {context.position}에서 적재 작업 시작")
         # 필요한 경우 추가 액션 수행
-    
+
+    # -------------------------------------------------------------------------------   
+
+    # 적재 완료 및 이동 처리
     def _finish_loading_and_move(self, context, payload):
         """적재 완료 및 이동 처리"""
         print(f"[적재 완료] {context.truck_id}: 적재 작업 완료, 다음 위치로 이동")
         
-        # 방향 업데이트
-        context.update_direction(Direction.OUTBOUND)
+        # 방향 유지 (시계방향 - 정상 흐름)
+        # 이미 Direction.CLOCKWISE로 설정되어 있으므로 변경 필요 없음
         
         # 다음 단계 업데이트
         context.mission_phase = MissionPhase.TO_UNLOADING
@@ -502,6 +516,9 @@ class StateTransitionManager:
         if self.command_sender:
             self.command_sender.send(context.truck_id, "RUN", {})
     
+    # -------------------------------------------------------------------------------   
+
+    # 하차 작업 시작 처리
     def _start_unloading(self, context, payload):
         """하차 작업 시작 처리"""
         print(f"[하차 시작] {context.truck_id}: 위치 {context.position}에서 하차 작업 시작")
@@ -511,12 +528,15 @@ class StateTransitionManager:
             print(f"[벨트 작동] {context.truck_id} → 벨트에 RUN 명령 전송")
             self.belt_controller.send_command("BELT", "RUN")
     
+    # -------------------------------------------------------------------------------   
+
+    # 하차 완료 및 이동 처리
     def _finish_unloading_and_move(self, context, payload):
         """하차 완료 및 이동 처리"""
         print(f"[하차 완료] {context.truck_id}: 하차 작업 완료, 바로 대기장소로 복귀")
         
-        # 방향 업데이트
-        context.update_direction(Direction.RETURN)
+        # 방향 유지 (시계방향 - 정상 흐름)
+        # 이미 Direction.CLOCKWISE로 설정되어 있으므로 변경 필요 없음
         
         # 다음 단계 업데이트
         context.mission_phase = MissionPhase.RETURNING
@@ -530,11 +550,17 @@ class StateTransitionManager:
             print(f"[벨트 중지] {context.truck_id} → 벨트에 STOP 명령 전송")
             self.belt_controller.send_command("BELT", "STOP")
     
+    # -------------------------------------------------------------------------------   
+
+    # 이동 재개 처리
     def _resume_moving(self, context, payload):
         """이동 재개 처리"""
         if self.command_sender:
             self.command_sender.send(context.truck_id, "RUN", {})
     
+    # -------------------------------------------------------------------------------   
+
+    # 충전 시작 처리
     def _start_charging(self, context, payload):
         """충전 시작 처리"""
         context.is_charging = True
@@ -543,8 +569,10 @@ class StateTransitionManager:
         if self.command_sender:
             self.command_sender.send(context.truck_id, "START_CHARGING")
     
+    # -------------------------------------------------------------------------------   
+
+    # 충전 완료 처리
     def _finish_charging(self, context, payload):
-        """충전 완료 처리"""
         context.is_charging = False
         print(f"[충전 완료] {context.truck_id}: 배터리 레벨 {context.battery_level}%")
         
@@ -554,8 +582,10 @@ class StateTransitionManager:
         # 완충 후 미션 할당 시도
         self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
     
+    # -------------------------------------------------------------------------------   
+
+    # 비상 상황 처리
     def _handle_emergency(self, context, payload):
-        """비상 상황 처리"""
         print(f"[⚠️ 비상 상황] {context.truck_id}: 비상 정지")
         
         # 트럭 정지 명령
@@ -566,8 +596,10 @@ class StateTransitionManager:
         if self.belt_controller:
             self.belt_controller.send_command("BELT", "EMRSTOP")
     
+    # -------------------------------------------------------------------------------   
+
+    # 비상 상황 해제 처리
     def _reset_from_emergency(self, context, payload):
-        """비상 상황 해제 처리"""
         print(f"[🔄 비상 해제] {context.truck_id}: 기본 상태로 복귀")
         
         # 미션 취소 처리
@@ -575,22 +607,19 @@ class StateTransitionManager:
             self.mission_manager.cancel_mission(context.mission_id)
             context.mission_id = None
             context.mission_phase = MissionPhase.NONE
-    
+
     # -------------------------------- 조건 메서드 --------------------------------
     
     def _can_accept_mission(self, context, payload):
         """미션 수락 가능 여부 확인"""
         # STANDBY 위치에 있는 경우, 이전 미션이 있어도 새 미션 할당 허용
         if context.position == "STANDBY":
-            # 충전 중이거나 배터리 부족, 비상 상태가 아닌지만 확인
+            # 충전 중이거나 비상 상태가 아닌지만 확인
             if context.is_charging:
                 print(f"[미션 거부] {context.truck_id}: 충전 중")
                 return False
                 
-            if context.battery_level <= self.BATTERY_THRESHOLD:
-                print(f"[미션 거부] {context.truck_id}: 배터리 부족 ({context.battery_level}%)")
-                return False
-                
+            # 비상 상태인 경우 수락 불가
             if context.state == TruckState.EMERGENCY:
                 print(f"[미션 거부] {context.truck_id}: 비상 상태")
                 return False
@@ -628,25 +657,20 @@ class StateTransitionManager:
         return True
     
     def _is_at_loading_area(self, context, payload):
-        """적재 위치에 있는지 확인"""
         return context.position in ["LOAD_A", "LOAD_B"]
     
     def _is_at_unloading_area(self, context, payload):
-        """하역 위치에 있는지 확인"""
         return context.position == "BELT"
     
     def _needs_charging(self, context, payload):
-        """충전 필요 여부 확인"""
         return context.battery_level <= self.BATTERY_THRESHOLD
     
     def _is_fully_charged(self, context, payload):
-        """완전 충전 여부 확인"""
         return context.battery_level >= self.BATTERY_FULL
     
     # -------------------------------- 게이트 제어 메서드 --------------------------------
     
     def _open_gate_and_log(self, gate_id, truck_id):
-        """게이트 열기"""
         success = False
         
         print(f"[🔓 게이트 열기 시도] {gate_id} ← by {truck_id}")
@@ -670,7 +694,6 @@ class StateTransitionManager:
         return success
     
     def _close_gate_and_log(self, gate_id, truck_id):
-        """게이트 닫기"""
         success = False
         
         print(f"[🔒 게이트 닫기 시도] {gate_id} ← by {truck_id}")
@@ -696,7 +719,6 @@ class StateTransitionManager:
     # -------------------------------- 위치 관리 메서드 --------------------------------
     
     def handle_position_update(self, truck_id, new_position, payload=None):
-        """위치 업데이트 처리"""
         if payload is None:
             payload = {}
             
@@ -717,7 +739,6 @@ class StateTransitionManager:
         return True
     
     def _validate_position_state_consistency(self, context):
-        """위치와 상태의 일관성 검증"""
         position = context.position
         state = context.state
         
@@ -745,3 +766,122 @@ class StateTransitionManager:
                 suggested_state = TruckState.WAITING
                 print(f"[🔄 자동 조정] {context.truck_id}: 상태를 {suggested_state}로 변경")
                 context.state = suggested_state 
+
+    # -------------------------------------------------------------------------------   
+
+    def _add_assigned_state_transitions(self):
+        # ASSIGNED 상태에서 위치 도착 시 WAITING으로 변경
+        self.transitions[(TruckState.ASSIGNED, "ARRIVED")] = {
+            "next_state": TruckState.WAITING,
+            "action": self._handle_arrival,
+            "condition": None
+        }
+        
+        # ASSIGNED 상태에서 ACK_GATE_OPENED 이벤트 시 MOVING으로 변경
+        self.transitions[(TruckState.ASSIGNED, "ACK_GATE_OPENED")] = {
+            "next_state": TruckState.MOVING, 
+            "action": self._handle_gate_opened,
+            "condition": None
+        }
+        
+        # ASSIGNED 상태에서도 로딩/언로딩 시작 가능
+        self.transitions[(TruckState.ASSIGNED, "START_LOADING")] = {
+            "next_state": TruckState.LOADING,
+            "action": self._start_loading,
+            "condition": self._is_at_loading_area
+        }
+        
+        self.transitions[(TruckState.ASSIGNED, "START_UNLOADING")] = {
+            "next_state": TruckState.UNLOADING,
+            "action": self._start_unloading,
+            "condition": self._is_at_unloading_area
+        }
+        
+        # ASSIGNED 상태에서 로딩/언로딩 완료 처리
+        self.transitions[(TruckState.ASSIGNED, "FINISH_LOADING")] = {
+            "next_state": TruckState.MOVING,
+            "action": self._finish_loading_and_move,
+            "condition": None
+        }
+        
+        self.transitions[(TruckState.ASSIGNED, "FINISH_UNLOADING")] = {
+            "next_state": TruckState.MOVING,
+            "action": self._finish_unloading_and_move,
+            "condition": None
+        }
+
+        # 미션 취소 처리 전이 추가
+        self.transitions[(TruckState.ASSIGNED, "CANCEL_MISSION")] = {
+            "next_state": TruckState.IDLE,
+            "action": self._handle_mission_cancellation,
+            "condition": None
+        }
+        
+        # WAITING 상태에서도 미션 취소 가능
+        self.transitions[(TruckState.WAITING, "CANCEL_MISSION")] = {
+            "next_state": TruckState.IDLE,
+            "action": self._handle_mission_cancellation,
+            "condition": None
+        }
+        
+        # MOVING 상태에서도 미션 취소 가능 (로딩 시작 전에만)
+        self.transitions[(TruckState.MOVING, "CANCEL_MISSION")] = {
+            "next_state": TruckState.IDLE,
+            "action": self._handle_mission_cancellation,
+            "condition": self._can_cancel_mission
+        }
+
+    def _extend_finish_unloading_action(self):
+        """하역 완료 액션 확장"""
+        # 하역 완료 액션에 미션 완료 로직 추가
+        original_action = self._finish_unloading_and_move
+        
+        def extended_action(context, payload):
+            # 원래 액션 호출
+            original_action(context, payload)
+            
+            # 방향을 시계 방향으로 유지
+            context.direction = Direction.CLOCKWISE
+            
+            # 추가 로직 (필요시)
+            print(f"[언로딩 완료 확장] {context.truck_id}: 방향을 {context.direction.value}로 설정")
+            
+        # 액션 교체
+        self.transitions[(TruckState.UNLOADING, "FINISH_UNLOADING")]["action"] = extended_action
+        
+    def _handle_mission_cancellation(self, context, payload):
+        """미션 취소 처리"""
+        if not context.mission_id:
+            print(f"[미션 취소 실패] {context.truck_id}: 취소할 미션이 없음")
+            return False
+            
+        mission_id = context.mission_id
+        print(f"[미션 취소] {context.truck_id}: 미션 {mission_id} 취소")
+        
+        # 미션 매니저에 취소 통보
+        if self.mission_manager:
+            self.mission_manager.cancel_mission(mission_id)
+        
+        # 상태 초기화
+        context.mission_id = None
+        context.mission_phase = MissionPhase.NONE
+        
+        # 트럭 정지 명령
+        if self.command_sender:
+            self.command_sender.send(context.truck_id, "STOP")
+        
+        # 대기 장소로 복귀 명령
+        context.direction = Direction.RETURN
+        context.target_position = "STANDBY"
+        
+        if self.command_sender:
+            self.command_sender.send(context.truck_id, "RUN", {
+                "target": context.target_position
+            })
+            
+        return True
+        
+    def _can_cancel_mission(self, context, payload):
+        # 로딩이 시작되기 전에만 취소 가능
+        return (context.mission_phase in [MissionPhase.TO_LOADING, MissionPhase.NONE] and
+                context.state != TruckState.LOADING) 

@@ -27,9 +27,8 @@ class MissionPhase(Enum):
 
 class Direction(Enum):
     """트럭 이동 방향 정의"""
-    INBOUND = "INBOUND"                # 입고 방향 (STANDBY -> LOADING)
-    OUTBOUND = "OUTBOUND"              # 출고 방향 (LOADING -> UNLOADING)
-    RETURN = "RETURN"                  # 복귀 방향 (UNLOADING -> STANDBY)
+    CLOCKWISE = "CLOCKWISE"              # 시계방향 (정상 흐름)
+    COUNTERCLOCKWISE = "COUNTERCLOCKWISE"  # 반시계방향 (비정상 흐름)
 
 
 class TruckContext:
@@ -40,7 +39,7 @@ class TruckContext:
         self.position = "STANDBY"      # 현재 물리적 위치
         self.mission_id = None         # 현재 미션 ID
         self.mission_phase = MissionPhase.NONE  # 미션 진행 단계
-        self.direction = Direction.INBOUND  # 현재 이동 방향
+        self.direction = Direction.CLOCKWISE  # 현재 이동 방향 (기본값: 시계방향)
         self.target_position = None    # 이동 목표 위치
         self.battery_level = 100       # 배터리 잔량
         self.is_charging = False       # 충전 중 여부
@@ -74,14 +73,22 @@ class TruckContext:
         self.last_update_time = datetime.now()
         return old_direction
         
+    def is_clockwise(self):
+        """시계방향 여부 확인"""
+        return self.direction == Direction.CLOCKWISE
+        
+    def is_counterclockwise(self):
+        """반시계방향 여부 확인"""
+        return self.direction == Direction.COUNTERCLOCKWISE
+        
     def is_inbound(self):
         """입고 방향 여부 확인"""
-        return self.direction == Direction.INBOUND
+        return self.direction == Direction.CLOCKWISE
         
     def is_outbound(self):
         """출고 방향 여부 확인"""
-        return self.direction == Direction.OUTBOUND
+        return self.direction == Direction.COUNTERCLOCKWISE
         
     def is_returning(self):
         """복귀 방향 여부 확인"""
-        return self.direction == Direction.RETURN 
+        return self.direction == Direction.COUNTERCLOCKWISE 

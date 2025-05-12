@@ -251,8 +251,20 @@ class TruckSimulator:
                 
                 if self.charging:
                     # 충전 중일 때 (서버가 START_CHARGING 명령을 보낸 경우)
+                    old_level = self.battery_level
                     self.battery_level = min(100, self.battery_level + 10)  # 10%씩 증가
-                    print(f"[DEBUG] 배터리 충전 중: {current_level}% -> {self.battery_level}%")
+                    print(f"[DEBUG] 배터리 충전 중: {old_level}% -> {self.battery_level}%")
+                    
+                    # 배터리가 100%에 도달하면 충전 완료 알림
+                    if self.battery_level == 100 and old_level < 100:
+                        print(f"[✅ 충전 완료] 배터리가 100%에 도달했습니다. 충전 완료 신호를 보냅니다.")
+                        self.charging = False
+                        self.send("FINISH_CHARGING", {"battery_level": self.battery_level}, wait=False)
+                        
+                        # 잠시 대기 후 미션 요청
+                        time.sleep(1)
+                        print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                        self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
                 elif self.current_position == "STANDBY":
                     # STANDBY에서는 배터리 유지
                     print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
@@ -531,9 +543,21 @@ class TruckSimulator:
                     # START_CHARGING 명령 처리
                     elif cmd == "START_CHARGING":
                         print("[🔌 충전 시작] 서버로부터 충전 명령을 받았습니다.")
-                        self.charging = True
-                        # 충전 시작 응답
-                        self.send("ACK_CHARGING", {"status": "started"}, wait=False)
+                        
+                        # 이미 100%이면 바로 충전 완료 알림
+                        if self.battery_level >= 100:
+                            print("[✅ 충전 불필요] 배터리가 이미 100%입니다. 바로 충전 완료 신호를 보냅니다.")
+                            self.send("FINISH_CHARGING", {"battery_level": self.battery_level}, wait=False)
+                            
+                            # 잠시 대기 후 미션 요청
+                            time.sleep(1)
+                            print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                            self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
+                        else:
+                            # 충전 시작
+                            self.charging = True
+                            # 충전 시작 응답
+                            self.send("ACK_CHARGING", {"status": "started"}, wait=False)
                     
                     # STOP_CHARGING 명령 처리
                     elif cmd == "STOP_CHARGING":

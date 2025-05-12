@@ -18,12 +18,6 @@ class TruckMessageHandler:
         print(f"[✅ 메시지 핸들러에 상태 관리자 설정됨]")
 
     def handle_message(self, msg: dict):
-        """
-        트럭에서 보낸 메시지 처리
-        
-        Args:
-            msg (dict): 트럭이 보낸 메시지 객체
-        """
         try:
             sender = msg.get("sender")
             cmd = msg.get("cmd", "").strip().upper()
@@ -53,13 +47,6 @@ class TruckMessageHandler:
             traceback.print_exc()
             
     def _handle_status_update(self, truck_id: str, payload: dict):
-        """
-        STATUS_UPDATE 명령 처리
-        
-        Args:
-            truck_id (str): 트럭 ID
-            payload (dict): 상태 정보를 담은 페이로드
-        """
         try:
             # 트럭 상태 매니저 없으면 무시
             if not self.truck_status_manager:
