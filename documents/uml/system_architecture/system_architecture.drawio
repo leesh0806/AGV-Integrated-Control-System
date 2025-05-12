@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.2 Chrome/134.0.6998.205 Electron/35.3.0 Safari/537.36" version="27.0.2">
   <diagram name="페이지-1" id="4Gkidm1pY4lRYkbbY8a2">
-    <mxGraphModel dx="-54" dy="992" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="-521" dy="703" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -53,9 +53,6 @@
               <mxPoint x="1916" y="610" />
             </Array>
           </mxGeometry>
-        </mxCell>
-        <mxCell id="hfWE_DyQTsY0p8tM8JJ9-19" value="MissionManager" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
-          <mxGeometry x="2174" y="550.75" width="100" height="29.25" as="geometry" />
         </mxCell>
         <mxCell id="hfWE_DyQTsY0p8tM8JJ9-20" value="TruckManager" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
           <mxGeometry x="1840" y="650" width="152.5" height="98.5" as="geometry" />
@@ -131,11 +128,8 @@
         </mxCell>
         <mxCell id="tZj5TpFr2gBwrsAa5-0W-22" value="HTTP" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#009900;" vertex="1" connectable="0" parent="tZj5TpFr2gBwrsAa5-0W-19">
           <mxGeometry x="0.16" relative="1" as="geometry">
-            <mxPoint as="offset" />
+            <mxPoint x="9" as="offset" />
           </mxGeometry>
-        </mxCell>
-        <mxCell id="hfWE_DyQTsY0p8tM8JJ9-36" value="AuthManager" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
-          <mxGeometry x="2284" y="550" width="110" height="30" as="geometry" />
         </mxCell>
         <mxCell id="hfWE_DyQTsY0p8tM8JJ9-37" value="TruckFSM" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
           <mxGeometry x="1851" y="683" width="130" height="25" as="geometry" />
@@ -145,6 +139,13 @@
         </mxCell>
         <mxCell id="hfWE_DyQTsY0p8tM8JJ9-39" value="Mission Management Tab" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="2004" y="335" width="156" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="tZj5TpFr2gBwrsAa5-0W-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#009900;" edge="1" parent="1" source="hfWE_DyQTsY0p8tM8JJ9-40" target="hfWE_DyQTsY0p8tM8JJ9-15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2250" y="655" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="hfWE_DyQTsY0p8tM8JJ9-40" value="Facility Control Tab" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="2164" y="335" width="120" height="34" as="geometry" />
@@ -162,7 +163,7 @@
         </mxCell>
         <mxCell id="tZj5TpFr2gBwrsAa5-0W-23" value="HTTP" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#009900;" vertex="1" connectable="0" parent="tZj5TpFr2gBwrsAa5-0W-18">
           <mxGeometry x="-0.84" y="-2" relative="1" as="geometry">
-            <mxPoint as="offset" />
+            <mxPoint x="8" as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="hfWE_DyQTsY0p8tM8JJ9-42" value="Truck Control Tab" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
@@ -250,6 +251,29 @@
         <mxCell id="tZj5TpFr2gBwrsAa5-0W-34" value="Serial" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#CC0000;" vertex="1" connectable="0" parent="tZj5TpFr2gBwrsAa5-0W-31">
           <mxGeometry x="-0.6685" y="2" relative="1" as="geometry">
             <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tZj5TpFr2gBwrsAa5-0W-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.998;entryY=0.395;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#009900;" edge="1" parent="1" source="hfWE_DyQTsY0p8tM8JJ9-42" target="hfWE_DyQTsY0p8tM8JJ9-15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2320" y="675" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hfWE_DyQTsY0p8tM8JJ9-19" value="MissionManager" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="2174" y="550.75" width="100" height="29.25" as="geometry" />
+        </mxCell>
+        <mxCell id="hfWE_DyQTsY0p8tM8JJ9-36" value="AuthManager" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="2284" y="550" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tZj5TpFr2gBwrsAa5-0W-37" value="HTTP" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#009900;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="2283.9999999999995" y="429.9996774193548" as="geometry">
+            <mxPoint x="-36" y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tZj5TpFr2gBwrsAa5-0W-38" value="HTTP" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#009900;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="2294.9999999999995" y="433.70967741935476" as="geometry">
+            <mxPoint x="24" y="-25" as="offset" />
           </mxGeometry>
         </mxCell>
       </root>
