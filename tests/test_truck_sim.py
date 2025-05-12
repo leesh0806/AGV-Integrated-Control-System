@@ -1,8 +1,8 @@
 import socket
-import json
 import time
 import sys, os
 import requests  # API 요청을 위한 모듈
+import struct
 
 # 현재 스크립트 경로를 기준으로 프로젝트 루트 경로를 추가합니다
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -10,6 +10,7 @@ project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
 from backend.serialio.device_manager import DeviceManager
+from backend.tcpio.protocol import TCPProtocol
 import threading
 import requests
 
@@ -165,20 +166,20 @@ class TruckSimulator:
                 print("[❌ 전송 실패] 서버에 연결할 수 없어 메시지를 전송할 수 없습니다.")
                 return False
                 
-        msg = {
-            "sender": "TRUCK_01",
-            "receiver": "SERVER",
-            "cmd": cmd,
-            "payload": payload
-        }
-        data = json.dumps(msg) + "\n"
+        # 바이너리 메시지 생성
+        message = TCPProtocol.build_message(
+            sender="TRUCK_01",
+            receiver="SERVER",
+            cmd=cmd,
+            payload=payload
+        )
         
         max_retries = 3
         retry_count = 0
         
         while retry_count < max_retries:
             try:
-                self.client.send(data.encode())
+                self.client.sendall(message)
                 print(f"[SEND] {cmd} → {payload}")
                 if wait:
                     time.sleep(0.5)
@@ -215,26 +216,11 @@ class TruckSimulator:
         Returns:
             bool: 전송 성공 여부
         """
-        timestamp = time.time()
-        
+        # 배터리 및 위치 정보로 STATUS_UPDATE 페이로드 구성
         status_payload = {
-            "timestamp": timestamp,
-            "battery": {
-                "level": self.battery_level,
-                "is_charging": self.charging
-            },
-            "position": {
-                "current": self.current_position,
-                "run_state": self.run_state
-            }
+            "battery_level": self.battery_level,
+            "position": self.current_position
         }
-        
-        # 미션 정보가 있으면 추가
-        if self.mission_id:
-            status_payload["mission"] = {
-                "mission_id": self.mission_id,
-                "target": self.target_position
-            }
         
         return self.send("STATUS_UPDATE", status_payload, wait=False)
     
@@ -264,7 +250,7 @@ class TruckSimulator:
                         # 잠시 대기 후 미션 요청
                         time.sleep(1)
                         print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
-                        self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
+                        self.send("ASSIGN_MISSION", {}, wait=False)
                 elif self.current_position == "STANDBY":
                     # STANDBY에서는 배터리 유지
                     print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
@@ -318,13 +304,13 @@ class TruckSimulator:
                 # 로딩 작업 완료 처리 (5초 후)
                 if self.loading_in_progress and (current_time - self.loading_start_time >= 5.0):
                     print(f"[✅ 적재 완료] 5초 경과 - FINISH_LOADING 자동 전송")
-                    self.send("FINISH_LOADING", {}, wait=False)
+                    self.send("FINISH_LOADING", {"position": self.current_position}, wait=False)
                     self.loading_in_progress = False
                 
                 # 언로딩 작업 완료 처리 (5초 후)
                 if self.unloading_in_progress and (current_time - self.unloading_start_time >= 5.0):
                     print(f"[✅ 하역 완료] 5초 경과 - FINISH_UNLOADING 자동 전송")
-                    self.send("FINISH_UNLOADING", {}, wait=False)
+                    self.send("FINISH_UNLOADING", {"position": self.current_position}, wait=False)
                     self.unloading_in_progress = False
                 
                 # 짧은 간격으로 체크
@@ -337,296 +323,268 @@ class TruckSimulator:
         """서버에서 오는 명령을 처리"""
         self.client.settimeout(timeout)
         try:
-            data = self.client.recv(4096)
-            if not data:
-                print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
+            # 헤더(4바이트) 읽기
+            header_data = self.client.recv(4)
+            if not header_data or len(header_data) < 4:
+                if not header_data:
+                    print("[❌ 연결 종료] 서버와의 연결이 끊어졌습니다.")
+                else:
+                    print(f"[⚠️ 불완전한 헤더 수신] 길이: {len(header_data)}")
                 self.connect()  # 재연결
                 time.sleep(1)  # 재연결 후 잠시 대기
                 return False
                 
-            raw = data.decode('utf-8').strip()
-            for line in raw.splitlines():
-                print(f"[📩 수신] {line}")
-                try:
-                    msg = json.loads(line)
-                    cmd = msg.get("cmd", "")
-                    payload = msg.get("payload", {})
+            # 헤더에서 페이로드 길이 추출
+            _, _, _, payload_len = header_data[0], header_data[1], header_data[2], header_data[3]
+                
+            # 페이로드 읽기
+            payload_data = b''
+            if payload_len > 0:
+                payload_data = self.client.recv(payload_len)
+                if len(payload_data) < payload_len:
+                    print(f"[⚠️ 불완전한 페이로드 수신] 예상: {payload_len}, 실제: {len(payload_data)}")
+                    return False
+            
+            # 전체 메시지 파싱
+            raw_data = header_data + payload_data
+            print(f"[📩 수신 원문] {raw_data.hex()}")
+            
+            # 메시지 파싱
+            msg = TCPProtocol.parse_message(raw_data)
+            if "type" in msg and msg["type"] == "INVALID":
+                print(f"[⚠️ 메시지 파싱 실패] {msg.get('error', '알 수 없는 오류')}")
+                return False
+                
+            cmd = msg.get("cmd", "")
+            payload = msg.get("payload", {})
+            
+            print(f"[📩 수신] {cmd} ← {payload}")
+            
+            # MISSION_ASSIGNED 처리
+            if cmd == "MISSION_ASSIGNED":
+                source = payload.get("source", "")
+                mission_id = payload.get("mission_id", "unknown")
+                
+                if not source:
+                    source = "LOAD_A"
+                    print(f"[⚠️ 경고] 빈 source 값을 수신함 - 기본값 '{source}'을 사용합니다")
+                
+                self.source = source.upper()
+                self.mission_id = mission_id
+                self.run_state = "ASSIGNED"
+                print(f"[✅ 미션 수신] → 미션 ID: {mission_id}, source = {self.source}")
+                
+                # source 값 확인 및 디버깅
+                print(f"[🔍 미션 세부정보] 배정된 source 위치: {self.source} (원본 값: {source})")
+                if self.source not in ["LOAD_A", "LOAD_B"]:
+                    print(f"[⚠️ source 값 주의] 유효한 source 값이 아닙니다: {self.source}")
+                    self.source = "LOAD_A"
+                    print(f"[🔧 source 값 수정] 기본값으로 변경: {self.source}")
+            
+            # RUN 명령 처리
+            elif cmd == "RUN":
+                # target 파라미터 무시하고 현재 위치에 따라 다음 위치 자동 결정
+                next_position = self._get_next_position()
+                
+                if next_position:
+                    print(f"[🚚 자동 이동] 현재 위치({self.current_position})에서 다음 위치({next_position})로 이동합니다.")
                     
-                    # MISSION_ASSIGNED 처리
-                    if cmd == "MISSION_ASSIGNED":
-                        source = payload.get("source", "")
-                        mission_id = payload.get("mission_id", "unknown")
+                    # 이동 전 상태 업데이트
+                    self.run_state = "RUNNING"
+                    
+                    # 이동 시뮬레이션
+                    print(f"[🚛 트럭 이동] {self.current_position} → {next_position} 이동 중...")
+                    
+                    # 실제 이동 시간 시뮬레이션 (2초)
+                    time.sleep(2)
+                    
+                    # 이동 완료 후 위치 업데이트
+                    old_position = self.current_position
+                    self.current_position = next_position
+                    self.target_position = next_position
+                    
+                    # 이동 후 상태 업데이트
+                    self.run_state = "IDLE"
+                    
+                    # 도착 알림
+                    print(f"[✅ 도착] {old_position} → {next_position} 이동 완료")
+                    self.send("ARRIVED", {"position": next_position}, wait=False)
+                    
+                    # 목적지가 CHECKPOINT인 경우 게이트 ID 추가
+                    if next_position.startswith("CHECKPOINT"):
+                        gate_id = None
+                        if next_position in ["CHECKPOINT_A", "CHECKPOINT_B"]:
+                            gate_id = "GATE_A"
+                        elif next_position in ["CHECKPOINT_C", "CHECKPOINT_D"]:
+                            gate_id = "GATE_B"
+                            
+                        if gate_id:
+                            print(f"[🚧 체크포인트] {next_position}에 도착, 게이트: {gate_id}")
+                            # 게이트 관련 추가 메시지
+                            self.send("ARRIVED", {"position": next_position, "gate_id": gate_id}, wait=False)
+                    
+                    # 목적지가 LOAD_A 또는 LOAD_B인 경우 자동으로 START_LOADING 명령 전송
+                    elif next_position in ["LOAD_A", "LOAD_B"]:
+                        time.sleep(1)  # 약간의 지연 후 로딩 시작
+                        print(f"[🔄 자동 로딩 시작] {next_position}에서 적재 작업 시작")
+                        self.send("START_LOADING", {"position": next_position}, wait=False)
                         
-                        if not source:
-                            source = "LOAD_A"
-                            print(f"[⚠️ 경고] 빈 source 값을 수신함 - 기본값 '{source}'을 사용합니다")
-                        
-                        self.source = source.upper()
-                        self.mission_id = mission_id
-                        self.run_state = "ASSIGNED"
-                        print(f"[✅ 미션 수신] → 미션 ID: {mission_id}, source = {self.source}")
-                    
-                    # RUN 명령 처리
-                    elif cmd == "RUN":
-                        # target 파라미터 무시하고 현재 위치에 따라 다음 위치 자동 결정
-                        next_position = self._get_next_position()
-                        
-                        if next_position:
-                            print(f"[🚚 자동 이동] 현재 위치({self.current_position})에서 다음 위치({next_position})로 이동합니다.")
-                            
-                            # 이동 전 상태 업데이트
-                            self.run_state = "RUNNING"
-                            
-                            # 이동 시뮬레이션
-                            print(f"[🚛 트럭 이동] {self.current_position} → {next_position} 이동 중...")
-                            
-                            # 실제 이동 시간 시뮬레이션 (2초)
-                            time.sleep(2)
-                            
-                            # 이동 완료 후 위치 업데이트
-                            old_position = self.current_position
-                            self.current_position = next_position
-                            self.target_position = next_position
-                            
-                            # 이동 후 상태 업데이트
-                            self.run_state = "IDLE"
-                            
-                            # 도착 알림
-                            print(f"[✅ 도착] {old_position} → {next_position} 이동 완료")
-                            self.send("ARRIVED", {"position": next_position}, wait=False)
-                            
-                            # 목적지가 CHECKPOINT인 경우 게이트 ID 추가
-                            if next_position.startswith("CHECKPOINT"):
-                                gate_id = None
-                                if next_position in ["CHECKPOINT_A", "CHECKPOINT_B"]:
-                                    gate_id = "GATE_A"
-                                elif next_position in ["CHECKPOINT_C", "CHECKPOINT_D"]:
-                                    gate_id = "GATE_B"
-                                    
-                                if gate_id:
-                                    print(f"[🚧 체크포인트] {next_position}에 도착, 게이트: {gate_id}")
-                                    # 게이트 관련 추가 메시지
-                                    self.send("ARRIVED", {"position": next_position, "gate_id": gate_id}, wait=False)
-                            
-                            # 목적지가 LOAD_A 또는 LOAD_B인 경우 자동으로 START_LOADING 명령 전송
-                            elif next_position in ["LOAD_A", "LOAD_B"]:
-                                time.sleep(1)  # 약간의 지연 후 로딩 시작
-                                print(f"[🔄 자동 로딩 시작] {next_position}에서 적재 작업 시작")
-                                self.send("START_LOADING", {}, wait=False)
-                                
-                                 # 로딩 상태 설정 - 5초 후 자동으로 FINISH_LOADING 전송
-                                self.loading_in_progress = True
-                                self.loading_start_time = time.time()
-                            
-                            # 목적지가 BELT인 경우 자동으로 START_UNLOADING 명령 전송
-                            elif next_position == "BELT":
-                                time.sleep(1)  # 약간의 지연 후 언로딩 시작
-                                print(f"[🔄 자동 언로딩 시작] BELT에서 하역 작업 시작")
-                                self.send("START_UNLOADING", {}, wait=False)
-                                
-                                # 언로딩 상태 설정 - 5초 후 자동으로 FINISH_UNLOADING 전송
-                                self.unloading_in_progress = True
-                                self.unloading_start_time = time.time()
-                            
-                            # 대기 위치(STANDBY)에 도착한 경우 미션 완료 및 새 미션 요청
-                            elif next_position == "STANDBY":
-                                # 현재 미션이 있으면 완료 처리
-                                if self.mission_id:
-                                    print(f"[✅ 미션 완료] 미션 ID: {self.mission_id} 완료 (STANDBY 도착)")
-                                      # 미션 정보 초기화
-                                    old_mission_id = self.mission_id
-                                    self.mission_id = None
-                                    self.target_position = None
-                                    
-                                    # 잠시 대기 후 새 미션 요청
-                                    time.sleep(2)
-                                
-                                    # 새로운 미션 요청
-                                    print(f"[🔍 새 미션 요청] STANDBY 위치에서 새로운 미션을 요청합니다.")
-                                    self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
-                        else:
-                            print(f"[⚠️ 경고] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
-                    
-                    # STOP 명령 처리
-                    elif cmd == "STOP":
-                        print(f"[🛑 정지 명령] 트럭 정지")
-                        self.run_state = "IDLE"
-                    
-                    # GATE_OPENED 명령 처리
-                    elif cmd == "GATE_OPENED":
-                        gate_id = payload.get("gate_id")
-                        print(f"[🚧 게이트 열림] {gate_id}가 열렸습니다.")
-                        # ACK 응답
-                        self.send("ACK_GATE_OPENED", {"gate_id": gate_id}, wait=False)
-                        
-                        # 게이트 열림 후 자동으로 이동하지 않음 (서버가 명시적으로 RUN 명령을 보낼 때만 이동)
-                        # 서버에서 보낸 RUN 명령만 처리하도록 대기
-                    
-                    # GATE_CLOSED 명령 처리
-                    elif cmd == "GATE_CLOSED":
-                        gate_id = payload.get("gate_id")
-                        print(f"[🚧 게이트 닫힘] {gate_id}가 닫혔습니다.")
-                        
-                        # 게이트가 닫히면 자동으로 다음 위치로 이동
-                        # 다음 목적지 결정
-                        next_target = None
-                        
-                        # 현재 위치에 따라 다음 위치 자동 결정
-                        if self.current_position == "CHECKPOINT_B" and gate_id == "GATE_A":
-                            if self.mission_id:  # 미션이 있을 때만
-                                # 로딩 위치로 이동 (source 값에 따라 LOAD_A 또는 LOAD_B로)
-                                next_target = self.source if self.source in ["LOAD_A", "LOAD_B"] else "LOAD_A"
-                                print(f"[🚚 자동 이동] {self.current_position} → {next_target} (게이트 닫힘 후)")
-                                
-                                # 서버에 RUN 명령 요청하지 않고 직접 이동 시작
-                                self.run_state = "RUNNING"
-                                print(f"[🚛 트럭 이동] {self.current_position} → {next_target} 이동 중...")
-                                
-                                # 실제 이동 시간 시뮬레이션 (2초)
-                                time.sleep(2)
-                                
-                                # 이동 완료 후 위치 업데이트
-                                old_position = self.current_position
-                                self.current_position = next_target
-                                self.target_position = next_target
-                                
-                                # 이동 후 상태 업데이트
-                                self.run_state = "IDLE"
-                                
-                                # 도착 알림
-                                print(f"[✅ 도착] {old_position} → {next_target} 이동 완료")
-                                self.send("ARRIVED", {"position": next_target}, wait=False)
-                                
-                                # LOAD_A/LOAD_B에 도착한 경우 자동 로딩 시작
-                                if next_target in ["LOAD_A", "LOAD_B"]:
-                                    time.sleep(1)  # 약간의 지연 후 로딩 시작
-                                    print(f"[🔄 자동 로딩 시작] {next_target}에서 적재 작업 시작")
-                                    self.send("START_LOADING", {}, wait=False)
-                                    
-                                    # 로딩 상태 설정 - 5초 후 자동으로 FINISH_LOADING 전송
-                                    self.loading_in_progress = True
-                                    self.loading_start_time = time.time()
-                        
-                        elif self.current_position == "CHECKPOINT_D" and gate_id == "GATE_B":
-                            # CHECKPOINT_D에서 게이트가 닫히면 BELT로 이동
-                            next_target = "BELT"
-                            print(f"[🚚 자동 이동] {self.current_position} → {next_target} (게이트 닫힘 후)")
-                            
-                            # 서버에 RUN 명령 요청하지 않고 직접 이동 시작
-                            self.run_state = "RUNNING"
-                            print(f"[🚛 트럭 이동] {self.current_position} → {next_target} 이동 중...")
-                            
-                            # 실제 이동 시간 시뮬레이션 (2초)
-                            time.sleep(2)
-                            
-                            # 이동 완료 후 위치 업데이트
-                            old_position = self.current_position
-                            self.current_position = next_target
-                            self.target_position = next_target
-                            
-                            # 이동 후 상태 업데이트
-                            self.run_state = "IDLE"
-                            
-                            # 도착 알림
-                            print(f"[✅ 도착] {old_position} → {next_target} 이동 완료")
-                            self.send("ARRIVED", {"position": next_target}, wait=False)
-                            
-                            # BELT에 도착한 경우 자동 언로딩 시작
-                            time.sleep(1)  # 약간의 지연 후 언로딩 시작
-                            print(f"[🔄 자동 언로딩 시작] BELT에서 하역 작업 시작")
-                            self.send("START_UNLOADING", {}, wait=False)
-                            
-                            # 언로딩 상태 설정 - 5초 후 자동으로 FINISH_UNLOADING 전송
-                            self.unloading_in_progress = True
-                            self.unloading_start_time = time.time()
-                    
-                    # START_CHARGING 명령 처리
-                    elif cmd == "START_CHARGING":
-                        print("[🔌 충전 시작] 서버로부터 충전 명령을 받았습니다.")
-                        
-                        # 이미 100%이면 바로 충전 완료 알림
-                        if self.battery_level >= 100:
-                            print("[✅ 충전 불필요] 배터리가 이미 100%입니다. 바로 충전 완료 신호를 보냅니다.")
-                            self.send("FINISH_CHARGING", {"battery_level": self.battery_level}, wait=False)
-                            
-                            # 잠시 대기 후 미션 요청
-                            time.sleep(1)
-                            print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
-                            self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
-                        else:
-                            # 충전 시작
-                            self.charging = True
-                            # 충전 시작 응답
-                            self.send("ACK_CHARGING", {"status": "started"}, wait=False)
-                    
-                    # STOP_CHARGING 명령 처리
-                    elif cmd == "STOP_CHARGING":
-                        print("[🔌 충전 중지] 서버로부터 충전 중지 명령을 받았습니다.")
-                        self.charging = False
-                        # 충전 중지 응답
-                        self.send("ACK_CHARGING", {"status": "stopped", "battery_level": self.battery_level}, wait=False)
-                    
-                    # CHARGING_COMPLETED 명령 처리
-                    elif cmd == "CHARGING_COMPLETED":
-                        print("[✅ 충전 완료 확인] 서버가 충전 완료를 확인했습니다.")
-                        self.charging = False
-                    
-                    # NO_MISSION 응답 처리
-                    elif cmd == "NO_MISSION":
-                        reason = payload.get("reason", "NO_MISSIONS_AVAILABLE")
-                        wait_time = payload.get("wait_time", 10)
-                        print(f"[ℹ️ 미션 없음] 이유: {reason}")
-                        print(f"[ℹ️ 대기] {wait_time}초 후 다시 미션을 요청합니다.")
-                        
-                        # 대기 시간 동안 하트비트 전송 (연결 유지)
-                        for i in range(wait_time, 0, -2):
-                            print(f"[⏱️ 대기 중...] {i}초 남음")
-                            time.sleep(2)
-                            # 하트비트 전송
-                            self.send("HELLO", {"msg": "heartbeat"}, wait=False)
-                        
-                        # 대기 후 미션 재요청
-                        print("[🔍 미션 재요청] 서버에 미션을 다시 요청합니다.")
-                        self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False)
-                    
-                    # 하트비트 응답 처리
-                    elif cmd == "HEARTBEAT_ACK" or cmd == "HEARTBEAT_CHECK":
-                        print(f"[💓 하트비트] 서버와 연결 상태 양호")
-                        # 하트비트 체크에 응답
-                        if cmd == "HEARTBEAT_CHECK":
-                            self.send("HELLO", {"msg": "heartbeat"}, wait=False)
-                    
-                    # START_LOADING 명령 처리
-                    elif cmd == "START_LOADING":
-                        print(f"[🔄 로딩 시작] 서버로부터 START_LOADING 명령 수신")
                         # 로딩 상태 설정 - 5초 후 자동으로 FINISH_LOADING 전송
                         self.loading_in_progress = True
                         self.loading_start_time = time.time()
                     
-                    # START_UNLOADING 명령 처리
-                    elif cmd == "START_UNLOADING":
-                        print(f"[🔄 언로딩 시작] 서버로부터 START_UNLOADING 명령 수신")
+                    # 목적지가 BELT인 경우 자동으로 START_UNLOADING 명령 전송
+                    elif next_position == "BELT":
+                        time.sleep(1)  # 약간의 지연 후 언로딩 시작
+                        print(f"[🔄 자동 언로딩 시작] BELT에서 하역 작업 시작")
+                        self.send("START_UNLOADING", {"position": next_position}, wait=False)
+                        
                         # 언로딩 상태 설정 - 5초 후 자동으로 FINISH_UNLOADING 전송
                         self.unloading_in_progress = True
                         self.unloading_start_time = time.time()
                     
-                    # FINISH_LOADING 명령 처리
-                    elif cmd == "FINISH_LOADING":
-                        print(f"[✅ 로딩 완료] 서버로부터 FINISH_LOADING 명령 수신")
-                        self.loading_in_progress = False
-                    
-                    # FINISH_UNLOADING 명령 처리
-                    elif cmd == "FINISH_UNLOADING":
-                        print(f"[✅ 언로딩 완료] 서버로부터 FINISH_UNLOADING 명령 수신")
-                        self.unloading_in_progress = False
-                    
-                    # 기타 메시지
-                    else:
-                        print(f"[ℹ️ 기타 메시지] {msg}")
+                    # 대기 위치(STANDBY)에 도착한 경우 미션 완료 및 새 미션 요청
+                    elif next_position == "STANDBY":
+                        # 현재 미션이 있으면 완료 처리
+                        if self.mission_id:
+                            print(f"[✅ 미션 완료] 미션 ID: {self.mission_id} 완료 (STANDBY 도착)")
+                            # 미션 정보 초기화
+                            old_mission_id = self.mission_id
+                            self.mission_id = None
+                            self.target_position = None
+                            
+                            # 잠시 대기 후 새 미션 요청
+                            time.sleep(2)
+                        
+                            # 새로운 미션 요청
+                            print(f"[🔍 새 미션 요청] STANDBY 위치에서 새로운 미션을 요청합니다.")
+                            self.send("ASSIGN_MISSION", {}, wait=False)
+                else:
+                    print(f"[⚠️ 경고] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
+            
+            # STOP 명령 처리
+            elif cmd == "STOP":
+                print(f"[🛑 정지 명령] 트럭 정지")
+                self.run_state = "IDLE"
+            
+            # GATE_OPENED 명령 처리
+            elif cmd == "GATE_OPENED":
+                gate = payload.get("gate", "")
+                print(f"[🚧 게이트 열림] {gate}가 열렸습니다.")
                 
-                except json.JSONDecodeError:
-                    print("[ℹ️ 비JSON 메시지 무시]")
-                    continue
+                # ACK 응답
+                self.send("ACK_GATE_OPENED", {"gate_id": gate, "position": self.current_position}, wait=False)
+                
+                # 게이트 열림 후 자동으로 이동하지 않음 (서버가 명시적으로 RUN 명령을 보낼 때만 이동)
+            
+            # GATE_CLOSED 명령 처리
+            elif cmd == "GATE_CLOSED":
+                gate = payload.get("gate_id", "")
+                print(f"[🚧 게이트 닫힘] {gate}가 닫혔습니다.")
+                
+                # 현재 위치와 게이트에 따라 자동 이동 처리
+                if self.current_position == "CHECKPOINT_B" and gate == "GATE_A" and self.mission_id and self.source:
+                    print(f"[🔄 자동 이동] 게이트 A 닫힘 이후 자동으로 {self.source}로 이동합니다")
+                    # 잠시 대기 후 자동으로 RUN 명령
+                    time.sleep(1)
+                    next_position = self._get_next_position()
+                    if next_position:
+                        print(f"[🚚 자동 이동] CHECKPOINT_B에서 {next_position}로 이동합니다.")
+                        self.run_state = "RUNNING"
+                        print(f"[🚛 트럭 이동] {self.current_position} → {next_position} 이동 중...")
+                        time.sleep(2)
+                        
+                        # 이동 완료 후 위치 업데이트
+                        old_position = self.current_position
+                        self.current_position = next_position
+                        self.target_position = next_position
+                        self.run_state = "IDLE"
+                        
+                        # 도착 알림
+                        print(f"[✅ 도착] {old_position} → {next_position} 이동 완료")
+                        self.send("ARRIVED", {"position": next_position}, wait=False)
+                        
+                        # LOAD_A 또는 LOAD_B인 경우 자동으로 START_LOADING 명령 전송
+                        if next_position in ["LOAD_A", "LOAD_B"]:
+                            time.sleep(1)  # 약간의 지연 후 로딩 시작
+                            print(f"[🔄 자동 로딩 시작] {next_position}에서 적재 작업 시작")
+                            self.send("START_LOADING", {"position": next_position}, wait=False)
+                            
+                            # 로딩 상태 설정 - 5초 후 자동으로 FINISH_LOADING 전송
+                            self.loading_in_progress = True
+                            self.loading_start_time = time.time()
+                
+                # CHECKPOINT_D에서 BELT로 이동하는 경우
+                elif self.current_position == "CHECKPOINT_D" and gate == "GATE_B" and self.mission_id:
+                    print(f"[🔄 자동 이동] 게이트 B 닫힘 이후 자동으로 BELT로 이동합니다")
+                    # 잠시 대기 후 자동으로 RUN 명령
+                    time.sleep(1)
+                    next_position = "BELT"  # 다음 위치는 BELT로 고정
+                    print(f"[🚚 자동 이동] CHECKPOINT_D에서 {next_position}로 이동합니다.")
+                    self.run_state = "RUNNING"
+                    print(f"[🚛 트럭 이동] {self.current_position} → {next_position} 이동 중...")
+                    time.sleep(2)
+                    
+                    # 이동 완료 후 위치 업데이트
+                    old_position = self.current_position
+                    self.current_position = next_position
+                    self.target_position = next_position
+                    self.run_state = "IDLE"
+                    
+                    # 도착 알림
+                    print(f"[✅ 도착] {old_position} → {next_position} 이동 완료")
+                    self.send("ARRIVED", {"position": next_position}, wait=False)
+                    
+                    # BELT에 도착하면 자동으로 START_UNLOADING 명령 전송
+                    time.sleep(1)  # 약간의 지연 후 언로딩 시작
+                    print(f"[🔄 자동 언로딩 시작] BELT에서 하역 작업 시작")
+                    self.send("START_UNLOADING", {"position": next_position}, wait=False)
+                    
+                    # 언로딩 상태 설정 - 5초 후 자동으로 FINISH_UNLOADING 전송
+                    self.unloading_in_progress = True
+                    self.unloading_start_time = time.time()
+            
+            # START_CHARGING 명령 처리
+            elif cmd == "START_CHARGING":
+                print("[🔌 충전 시작] 서버로부터 충전 명령을 받았습니다.")
+                
+                # 이미 100%이면 바로 충전 완료 알림
+                if self.battery_level >= 100:
+                    print("[✅ 충전 불필요] 배터리가 이미 100%입니다. 바로 충전 완료 신호를 보냅니다.")
+                    self.send("FINISH_CHARGING", {"battery_level": self.battery_level}, wait=False)
+                    
+                    # 잠시 대기 후 미션 요청
+                    time.sleep(1)
+                    print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                    self.send("ASSIGN_MISSION", {}, wait=False)
+                else:
+                    # 충전 시작
+                    self.charging = True
+            
+            # NO_MISSION 응답 처리
+            elif cmd == "NO_MISSION":
+                reason = payload.get("reason", "NO_MISSIONS_AVAILABLE")
+                wait_time = payload.get("wait_time", 10)
+                print(f"[ℹ️ 미션 없음] 이유: {reason}")
+                print(f"[ℹ️ 대기] {wait_time}초 후 다시 미션을 요청합니다.")
+                
+                # 대기 시간 동안 하트비트 전송 (연결 유지)
+                for i in range(wait_time, 0, -2):
+                    print(f"[⏱️ 대기 중...] {i}초 남음")
+                    time.sleep(2)
+                    # 하트비트 전송
+                    self.send("HELLO", {}, wait=False)
+                
+                # 대기 후 미션 재요청
+                print("[🔍 미션 재요청] 서버에 미션을 다시 요청합니다.")
+                self.send("ASSIGN_MISSION", {}, wait=False)
+            
+            # 하트비트 응답 처리
+            elif cmd == "HEARTBEAT_ACK" or cmd == "HEARTBEAT_CHECK":
+                print(f"[💓 하트비트] 서버와 연결 상태 양호")
+                # 하트비트 체크에 응답
+                if cmd == "HEARTBEAT_CHECK":
+                    self.send("HELLO", {}, wait=False)
             
             return True
             
@@ -647,7 +605,7 @@ class TruckSimulator:
     def assign_mission_request(self):
         """미션 할당 요청"""
         print("[🔍 미션 요청] 서버에 새로운 미션을 요청합니다...")
-        if self.send("ASSIGN_MISSION", {"battery_level": self.battery_level}, wait=False):
+        if self.send("ASSIGN_MISSION", {}, wait=False):
             return True
         else:
             print("[❌ 미션 요청 실패] 서버에 미션을 요청할 수 없습니다.")
@@ -664,7 +622,7 @@ class TruckSimulator:
                     return False
             
             # 등록 메시지 전송
-            if not self.send("HELLO", {"msg": "register"}, wait=True):
+            if not self.send("HELLO", {}, wait=True):
                 print("[❌ 초기화 실패] 서버에 등록할 수 없습니다.")
                 return False
             
@@ -716,8 +674,17 @@ class TruckSimulator:
         
         # 특수 조건 처리
         if self.current_position in position_map:
-            next_pos = position_map[self.current_position]
-            print(f"[🔀 경로 결정] 현재 위치 {self.current_position}에서 다음 목적지 → {next_pos}")
+            # CHECKPOINT_B에서 LOAD_A 또는 LOAD_B로 가는 경우 특별 처리
+            if self.current_position == "CHECKPOINT_B":
+                if self.source in ["LOAD_A", "LOAD_B"]:
+                    next_pos = self.source
+                    print(f"[🔀 경로 결정] 현재 위치 {self.current_position}에서 다음 목적지 → {next_pos} (source: {self.source})")
+                else:
+                    next_pos = "LOAD_A"  # 기본값
+                    print(f"[🔀 경로 결정] 현재 위치 {self.current_position}에서 다음 목적지 → {next_pos} (source 없음, 기본값 사용)")
+            else:
+                next_pos = position_map[self.current_position]
+                print(f"[🔀 경로 결정] 현재 위치 {self.current_position}에서 다음 목적지 → {next_pos}")
             
             # 미션이 없으면 대기장소로 이동
             if not self.mission_id and self.current_position != "STANDBY":

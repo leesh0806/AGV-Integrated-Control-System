@@ -10,7 +10,7 @@ from backend.truck_status.truck_status_manager import TruckStatusManager
 
 from backend.tcpio.truck_command_sender import TruckCommandSender
 from backend.truck_fsm.truck_fsm_manager import TruckFSMManager
-from backend.truck_fsm.truck_message_handler import TruckMessageHandler
+from backend.truck_fsm.truck_controller import TruckController
 
 
 class MainController:
@@ -75,9 +75,9 @@ class MainController:
             truck_status_manager=self.truck_status_manager
         )
 
-        # 트럭 메시지 핸들러 - 새 버전 사용
-        self.truck_message_handler = TruckMessageHandler(self.truck_fsm_manager)
-        self.truck_message_handler.set_status_manager(self.truck_status_manager)
+        # 트럭 컨트롤러 - 새 버전 사용
+        self.truck_controller = TruckController(self.truck_fsm_manager)
+        self.truck_controller.set_status_manager(self.truck_status_manager)
 
         # 초기 TruckCommandSender 설정
         self.set_truck_commander({})
@@ -111,7 +111,7 @@ class MainController:
 
         # 트럭 메시지 처리
         if sender:
-            self.truck_message_handler.handle_message(msg)
+            self.truck_controller.handle_message(msg)
         else:
             print("[⚠️ 경고] sender가 없는 메시지")
 
