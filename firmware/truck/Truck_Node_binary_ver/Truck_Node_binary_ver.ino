@@ -106,6 +106,7 @@ String current_position = "UNKNOWN";
 uint8_t current_position_id = 0xFF;  // UNKNOWN
 String last_cmd = "";
 uint8_t mission_target = 0xFF;  // 0xFF = 미할당 상태
+bool mission_requested = false;
 unsigned long last_mission_check = 0;    // 마지막 미션 체크 시간
 const unsigned long MISSION_CHECK_INTERVAL = 5000;  // 5초마다 체크
 
@@ -115,8 +116,8 @@ uint8_t get_position_id(const String& desc)
   if (desc == "CHECKPOINT_B") return CHECKPOINT_B;
   if (desc == "CHECKPOINT_C") return CHECKPOINT_C;
   if (desc == "CHECKPOINT_D") return CHECKPOINT_D;
-  if (desc == "load_A" || desc == "LOAD_A") return LOAD_A;
-  if (desc == "load_B" || desc == "LOAD_B") return LOAD_B;
+  if (desc == "LOAD_A") return LOAD_A;
+  if (desc == "LOAD_B") return LOAD_B;
   if (desc == "BELT") return BELT;
   if (desc == "STANDBY") return STANDBY;
   return 0xFF;
@@ -288,10 +289,11 @@ void loop()
   if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
   {
     last_mission_check = current_time;
-    if (current_position_id == 0xFF || current_position_id == STANDBY) 
+    if (!mission_requested && (current_position_id == 0xFF || current_position_id == STANDBY)) 
     {
       Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
       send_assign_mission();
+      mission_requested = true;  // ✅ 중복 요청 방지
     }
   }
 
@@ -300,6 +302,7 @@ void loop()
   if (run_command && !obstacle_block && !battery_empty)
   {
     line_trace();
+    Serial.println("hello");
     send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
   }
   else if (obstacle_block) 
@@ -334,23 +337,30 @@ void loop()
     wait_start_unloading = false;
   }
 
-  // ✅ 언로딩 FSM 처리
-  handle_unloading(current_time);
-    
-  // ✅ RFID 체크
-  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) 
+  // ✅ 언로딩 FSM 처리 (위치 검사 추가)
+  if (current_position_id == BELT) 
   {
-    checkAndPrintUID(rfid.uid.uidByte);
-    rfid.PICC_HaltA();
-    rfid.PCD_StopCrypto1();
+    handle_unloading(current_time);
+  }
+    
+  // ✅RFID 체크
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
+  {
+    return;
   }
 
-  // ✅ 배터리 감소 처리
+  // UID 확인 및 서버 전송
+  checkAndPrintUID(rfid.uid.uidByte);
+
+
+
+  // ✅ 배터리 감소 처리 (STANDBY에서는 감소 안 함)
   if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) 
   {
     last_battery_drop = current_time;
 
-    if (battery_level > 0) 
+    // STANDBY일 때는 배터리 유지
+    if (current_position_id != STANDBY && battery_level > 0) 
     {
       battery_level -= 5;
       if (battery_level <= 0) 
@@ -374,6 +384,9 @@ void loop()
     last_battery_report = current_time;
     send_status_update(battery_level, current_position_id);
   }
+
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
 }
 
 
@@ -398,11 +411,13 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
   switch (cmd_id) {
     case MISSION_ASSIGNED:
       if (payload_len >= 1) {
-        mission_target = payload[0];  // ex: LOAD_A
+        mission_target = payload[0];  // 예: LOAD_A
         run_command = true;
+        mission_requested = false;  // ✅ 다음 미션 요청 허용
         Serial.printf("📝 [미션 할당] 목표 위치 ID: %02X\n", mission_target);
       }
       break;
+
 
     case NO_MISSION:
       mission_target = 0;
