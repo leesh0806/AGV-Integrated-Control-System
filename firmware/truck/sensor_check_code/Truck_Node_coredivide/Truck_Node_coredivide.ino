@@ -373,12 +373,11 @@ void receive_json(const String& msg)
   } 
   else if (strcmp(cmd, "GATE_OPENED") == 0) 
   {
-    const char* gate_id = doc["payload"]["gate_id"];
-    Serial.print("[🚪 게이트 열림 감지] : ");
-    Serial.println(gate_id);
+  const char* gate_id = doc["payload"]["gate_id"];
+  Serial.print("[🚪 게이트 열림 감지] : ");
+  Serial.println(gate_id);
 
-    send_gateopen_message(gate_id);  // 응답 전송
-    run_command = true;  // 게이트가 열렸을 때 트럭이 움직이도록 설정
+  send_gateopen_message(gate_id);  // 응답 전송
   }
   else if (strcmp(cmd, "MISSION_ASSIGNED") == 0) 
   {
