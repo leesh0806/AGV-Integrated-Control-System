@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.truck_fsm.truck_state import TruckState, MissionPhase, TruckContext, Direction
-from backend.truck_fsm.state_transition_manager import StateTransitionManager
+from backend.truck_fsm.truck_fsm import TruckFSM
 from backend.truck_fsm.truck_fsm_manager import TruckFSMManager
 
 
@@ -33,7 +33,7 @@ class TestFSM(unittest.TestCase):
         self.fsm_manager.set_commander(self.command_sender)
         
         # 테스트 코드에서 사용할 TransitionManager 설정 - FSM 매니저의 것을 사용
-        self.transition_manager = self.fsm_manager.transition_manager
+        self.fsm = self.fsm_manager.fsm
     
     def test_mission_assignment(self):
         """미션 할당 테스트"""
@@ -54,8 +54,8 @@ class TestFSM(unittest.TestCase):
         result = self.fsm_manager.handle_trigger("TRUCK1", "ASSIGN_MISSION", {"mission_id": "M123"})
         
         # 검증
-        self.assertIsNotNone(self.fsm_manager.transition_manager.contexts.get("TRUCK1"))
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        self.assertIsNotNone(self.fsm_manager.fsm.contexts.get("TRUCK1"))
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         self.assertEqual(context.state, TruckState.ASSIGNED)
         self.assertIsNotNone(context.mission_id)
         self.assertEqual(context.mission_phase, MissionPhase.TO_LOADING)
@@ -80,7 +80,7 @@ class TestFSM(unittest.TestCase):
         self.fsm_manager.handle_trigger("TRUCK1", "ARRIVED_AT_CHECKPOINT_A", {})
         
         # 컨텍스트 검증
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         self.assertEqual(context.position, "CHECKPOINT_A")
         self.assertEqual(context.state, TruckState.WAITING)
         self.assertEqual(context.direction, Direction.INBOUND)  # 방향 검증
@@ -116,7 +116,7 @@ class TestFSM(unittest.TestCase):
         self.fsm_manager.handle_trigger("TRUCK1", "FINISH_LOADING", {})
         
         # 컨텍스트 검증
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         self.assertEqual(context.state, TruckState.MOVING)
         self.assertEqual(context.mission_phase, MissionPhase.TO_UNLOADING)
         self.assertEqual(context.direction, Direction.OUTBOUND)  # 방향 검증
@@ -135,7 +135,7 @@ class TestFSM(unittest.TestCase):
         self.truck_status_manager.get_fsm_state.return_value = "MOVE_TO_GATE_FOR_UNLOAD"
         
         # 컨텍스트 초기화 - 이전 단계에서 이미 로딩까지 완료한 상태로 가정
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         context.state = TruckState.MOVING
         context.mission_id = "M123"
         context.mission_phase = MissionPhase.TO_UNLOADING
@@ -188,7 +188,7 @@ class TestFSM(unittest.TestCase):
         self.fsm_manager.handle_trigger("TRUCK1", "ACK_GATE_OPENED", {})
         
         # 컨텍스트 상태 초기화를 위해 직접 설정
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         context.state = TruckState.MOVING
         context.direction = Direction.OUTBOUND  # OUTBOUND 방향으로 직접 설정
         
@@ -220,7 +220,7 @@ class TestFSM(unittest.TestCase):
         self.fsm_manager.handle_trigger("TRUCK1", "CANCEL_MISSION", {})
         
         # 컨텍스트 검증
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         self.assertEqual(context.state, TruckState.IDLE)
         self.assertIsNone(context.mission_id)
         self.assertEqual(context.mission_phase, MissionPhase.NONE)
@@ -236,7 +236,7 @@ class TestFSM(unittest.TestCase):
         """방향에 따른 게이트 제어 테스트"""
         # 미션 할당 (INBOUND 방향)
         self.fsm_manager.handle_trigger("TRUCK1", "ASSIGN_MISSION", {"mission_id": "M123"})
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         
         # INBOUND 방향에서 CHECKPOINT_A에 도착 - GATE_A 열림
         self.gate_controller.reset_mock()
@@ -284,7 +284,7 @@ class TestFSM(unittest.TestCase):
         """양방향 게이트 제어 테스트"""
         # 미션 할당
         self.fsm_manager.handle_trigger("TRUCK1", "ASSIGN_MISSION", {"mission_id": "M123"})
-        context = self.fsm_manager.transition_manager._get_or_create_context("TRUCK1")
+        context = self.fsm_manager.fsm._get_or_create_context("TRUCK1")
         
         # INBOUND 방향에서는 CP_A에서 열리고 CP_B에서 닫힘
         self.gate_controller.reset_mock()
@@ -295,7 +295,7 @@ class TestFSM(unittest.TestCase):
         self.gate_controller.reset_mock()
         
         # CP_B에서의 게이트 제어 확인 - INBOUND 방향일 때 GATE_A 닫힘 처리 검증
-        self.fsm_manager.transition_manager._process_checkpoint_gate_control(
+        self.fsm_manager.fsm._process_checkpoint_gate_control(
             context, "CHECKPOINT_B", Direction.INBOUND
         )
         self.gate_controller.close_gate.assert_called_with("GATE_A")
@@ -308,14 +308,14 @@ class TestFSM(unittest.TestCase):
         self.gate_controller.reset_mock()
         
         # CP_B에서의 게이트 제어 확인 - OUTBOUND 방향일 때 GATE_A 열림 처리 검증
-        self.fsm_manager.transition_manager._process_checkpoint_gate_control(
+        self.fsm_manager.fsm._process_checkpoint_gate_control(
             context, "CHECKPOINT_B", Direction.OUTBOUND
         )
         self.gate_controller.open_gate.assert_called_with("GATE_A")
         
         # CP_A에서의 게이트 제어 확인 - OUTBOUND 방향일 때 GATE_A 닫힘 처리 검증
         self.gate_controller.reset_mock()
-        self.fsm_manager.transition_manager._process_checkpoint_gate_control(
+        self.fsm_manager.fsm._process_checkpoint_gate_control(
             context, "CHECKPOINT_A", Direction.OUTBOUND
         )
         self.gate_controller.close_gate.assert_called_with("GATE_A")

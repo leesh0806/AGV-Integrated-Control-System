@@ -3,7 +3,7 @@ from datetime import datetime
 import time
 
 
-class StateTransitionManager:
+class TruckFSM:
     def __init__(self, command_sender=None, gate_controller=None, belt_controller=None, mission_manager=None):
         self.command_sender = command_sender
         self.gate_controller = gate_controller

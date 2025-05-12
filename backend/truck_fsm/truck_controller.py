@@ -7,15 +7,15 @@ if TYPE_CHECKING:
     from ..truck_status.truck_status_manager import TruckStatusManager
 
 
-class TruckMessageHandler:
+class TruckController:
     def __init__(self, truck_fsm_manager: 'TruckFSMManager'):
         self.truck_fsm_manager = truck_fsm_manager
         self.truck_status_manager = None
-        print("[✅ 새 메시지 핸들러 초기화 완료]")
+        print("[✅ 트럭 컨트롤러 초기화 완료]")
 
     def set_status_manager(self, truck_status_manager: 'TruckStatusManager'):
         self.truck_status_manager = truck_status_manager
-        print(f"[✅ 메시지 핸들러에 상태 관리자 설정됨]")
+        print(f"[✅ 트럭 컨트롤러에 상태 관리자 설정됨]")
 
     def handle_message(self, msg: dict):
         try:
@@ -23,10 +23,10 @@ class TruckMessageHandler:
             cmd = msg.get("cmd", "").strip().upper()
             payload = msg.get("payload", {})
 
-            print(f"[📨 TruckMessageHandler] sender={sender}, cmd={cmd}")
+            print(f"[📨 TruckController] sender={sender}, cmd={cmd}")
 
             if not sender:
-                print("[MessageHandler] sender가 없음")
+                print("[TruckController] sender가 없음")
                 return
 
             # 상태 업데이트 메시지 처리
@@ -36,7 +36,7 @@ class TruckMessageHandler:
             
             # HELLO 명령은 트럭 등록을 위한 초기 명령이므로 무시
             if cmd == "HELLO":
-                print(f"[MessageHandler] 트럭 등록 확인: {sender}")
+                print(f"[TruckController] 트럭 등록 확인: {sender}")
                 return
                 
             # 기본 명령 처리 - FSM 매니저의 handle_trigger를 통해 이벤트 전달
@@ -50,7 +50,7 @@ class TruckMessageHandler:
         try:
             # 트럭 상태 매니저 없으면 무시
             if not self.truck_status_manager:
-                print("[MessageHandler] 트럭 상태 매니저가 설정되지 않음")
+                print("[TruckController] 트럭 상태 매니저가 설정되지 않음")
                 return
                 
             # 타임스탬프 확인
@@ -64,9 +64,8 @@ class TruckMessageHandler:
                 self.truck_status_manager.update_battery(truck_id, level, is_charging)
                 
                 # FSM 매니저의 컨텍스트에도 배터리 정보 업데이트
-                # (트랜지션 매니저는 FSM 매니저를 통해 접근)
-                if hasattr(self.truck_fsm_manager, 'transition_manager'):
-                    context = self.truck_fsm_manager.transition_manager._get_or_create_context(truck_id)
+                if hasattr(self.truck_fsm_manager, 'fsm'):
+                    context = self.truck_fsm_manager.fsm._get_or_create_context(truck_id)
                     context.battery_level = level
                     context.is_charging = is_charging
                 
@@ -74,7 +73,7 @@ class TruckMessageHandler:
                 if level >= 100 and is_charging:
                     print(f"[🔋 자동 충전 완료] {truck_id}의 배터리가 100%에 도달했습니다. 충전 상태를 해제합니다.")
                     self.truck_status_manager.update_battery(truck_id, level, False)
-                    if hasattr(self.truck_fsm_manager, 'transition_manager'):
+                    if hasattr(self.truck_fsm_manager, 'fsm'):
                         context.is_charging = False
                     
                     # 현재 FSM 상태가 CHARGING이면 FINISH_CHARGING 트리거 발생
@@ -97,15 +96,15 @@ class TruckMessageHandler:
                 self.truck_status_manager.update_position(truck_id, location, run_state)
                 
                 # FSM 매니저의 컨텍스트에도 위치 정보 업데이트
-                if hasattr(self.truck_fsm_manager, 'transition_manager') and location != "UNKNOWN":
-                    context = self.truck_fsm_manager.transition_manager._get_or_create_context(truck_id)
+                if hasattr(self.truck_fsm_manager, 'fsm') and location != "UNKNOWN":
+                    context = self.truck_fsm_manager.fsm._get_or_create_context(truck_id)
                     old_position = context.position
                     if old_position != location:
                         context.position = location
                         print(f"[위치 변경 감지] {truck_id}: {old_position} → {location}")
                         
                         # 위치 변경에 따른 이벤트 발생
-                        self.truck_fsm_manager.transition_manager.handle_position_update(
+                        self.truck_fsm_manager.fsm.handle_position_update(
                             truck_id, location, {"run_state": run_state}
                         )
                 

@@ -1,5 +1,5 @@
 from .truck_state import TruckState, MissionPhase, TruckContext, Direction
-from .state_transition_manager import StateTransitionManager
+from .truck_fsm import TruckFSM
 
 
 class TruckFSMManager:
@@ -9,7 +9,7 @@ class TruckFSMManager:
         self.belt_controller = belt_controller
         self.truck_status_manager = truck_status_manager
         self.command_sender = None
-        self.transition_manager = StateTransitionManager(
+        self.fsm = TruckFSM(
             gate_controller=gate_controller,
             belt_controller=belt_controller,
             mission_manager=mission_manager
@@ -19,13 +19,12 @@ class TruckFSMManager:
         
         print("[✅ FSM 매니저 초기화 완료]")
     
-
     # -------------------------------------------------------------------------------
 
     # command_sender 설정
     def set_commander(self, command_sender):
         self.command_sender = command_sender
-        self.transition_manager.command_sender = command_sender
+        self.fsm.command_sender = command_sender
         if self.mission_manager:
             self.mission_manager.set_command_sender(command_sender)
 
@@ -33,7 +32,7 @@ class TruckFSMManager:
 
     # 이벤트 처리
     def handle_event(self, truck_id, event, payload=None):
-        return self.transition_manager.handle_event(truck_id, event, payload)
+        return self.fsm.handle_event(truck_id, event, payload)
 
     # 트리거 처리
     def handle_trigger(self, truck_id, cmd, payload=None):
@@ -61,14 +60,14 @@ class TruckFSMManager:
             
             # 위치 정보 추출 및 업데이트
             if "position" in payload:
-                context = self.transition_manager._get_or_create_context(truck_id)
+                context = self.fsm._get_or_create_context(truck_id)
                 context.position = payload["position"]
                 
             # ARRIVED 명령 처리
             if cmd == "ARRIVED" and "position" in payload:
                 position = payload["position"]
                 # 위치 정보 처리
-                context = self.transition_manager._get_or_create_context(truck_id)
+                context = self.fsm._get_or_create_context(truck_id)
                 old_position = context.position
                 context.position = position
                 
@@ -104,7 +103,7 @@ class TruckFSMManager:
                     
                     if self.command_sender:
                         # 트럭이 이미 대기 위치에 있는 경우 충전 시작
-                        context = self.transition_manager._get_or_create_context(truck_id)
+                        context = self.fsm._get_or_create_context(truck_id)
                         if context.position == "STANDBY":
                             print(f"[자동 충전 시작] 트럭 {truck_id}는 대기 위치에 있고 미션이 없어 충전을 시작합니다.")
                             
@@ -114,7 +113,7 @@ class TruckFSMManager:
                             context.target_position = None
                             
                             # 충전 이벤트 트리거
-                            self.transition_manager.handle_event(truck_id, "START_CHARGING")
+                            self.fsm.handle_event(truck_id, "START_CHARGING")
                             
                             # 충전 명령 전송
                             self.command_sender.send(truck_id, "START_CHARGING", {
@@ -143,7 +142,7 @@ class TruckFSMManager:
             
             # 상태 전이 관리자로 이벤트 전달
             event = event_mapping.get(cmd, cmd)
-            return self.transition_manager.handle_event(truck_id, event, payload)
+            return self.fsm.handle_event(truck_id, event, payload)
             
         except Exception as e:
             import traceback
@@ -168,13 +167,13 @@ class TruckFSMManager:
     # 트럭 상태 업데이트
     def update_truck_status(self, truck_id, position, battery_level, is_charging=False):
         # 컨텍스트 가져오기
-        context = self.transition_manager._get_or_create_context(truck_id)
+        context = self.fsm._get_or_create_context(truck_id)
         
         # 위치 변경 감지
         if position and context.position != position:
             old_position = context.position
             # 위치 업데이트 및 이벤트 처리
-            self.transition_manager.handle_position_update(truck_id, position)
+            self.fsm.handle_position_update(truck_id, position)
             
         # 배터리 상태 업데이트
         if battery_level is not None:
@@ -186,7 +185,7 @@ class TruckFSMManager:
     # 모든 트럭 상태 가져오기
     def get_all_truck_statuses(self):
         result = {}
-        for truck_id, context in self.transition_manager.contexts.items():
+        for truck_id, context in self.fsm.contexts.items():
             result[truck_id] = {
                 "state": context.state.value,
                 "position": context.position,
@@ -202,15 +201,15 @@ class TruckFSMManager:
     
     # 트럭 컨텍스트 가져오기
     def get_truck_context(self, truck_id):
-        return self.transition_manager._get_or_create_context(truck_id)
+        return self.fsm._get_or_create_context(truck_id)
 
     # 모든 트럭 컨텍스트 가져오기
     def get_all_truck_contexts(self):
-        return self.transition_manager.contexts
+        return self.fsm.contexts
 
     # 트럭 상태 조회
     def get_state(self, truck_id):
-        context = self.transition_manager._get_or_create_context(truck_id)
+        context = self.fsm._get_or_create_context(truck_id)
         return context.state 
 
     def _handle_mission_cancellation(self, context, payload):
