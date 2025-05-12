@@ -26,7 +26,7 @@ class APIClient:
         self.server_address = "localhost"
         self.api_port = 5001
         self.base_url = f"http://{self.server_address}:{self.api_port}/api"
-        self.timeout = 1.0  # 요청 타임아웃 (초)
+        self.timeout = 5.0  # 요청 타임아웃 (초)
         self._initialized = True
         
     def update_config(self, server_address=None, api_port=None):

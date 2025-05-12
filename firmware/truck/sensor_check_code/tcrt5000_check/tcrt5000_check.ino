@@ -1,5 +1,5 @@
-const int sensorPin1 = 34;   // TCRT5000 센서 1번 핀 (D34)
-const int sensorPin2 = 35;   // TCRT5000 센서 2번 핀 (D35)
+const int sensorPin1 = 34;   // TCRT5000 센서 1번 핀 (D34)  왼쪽
+const int sensorPin2 = 35;   // TCRT5000 센서 2번 핀 (D35)  오른쪽
 const int ledPin = 2;        // 상태 확인용 LED (내장 LED는 보통 GPIO 2)
 
 void setup() {
