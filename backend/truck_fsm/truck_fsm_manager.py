@@ -105,20 +105,27 @@ class TruckFSMManager:
                         # 트럭이 이미 대기 위치에 있는 경우 충전 시작
                         context = self.fsm._get_or_create_context(truck_id)
                         if context.position == "STANDBY":
-                            print(f"[자동 충전 시작] 트럭 {truck_id}는 대기 위치에 있고 미션이 없어 충전을 시작합니다.")
-                            
-                            # 명시적으로 IDLE 상태로 변경
-                            context.state = TruckState.IDLE
-                            context.mission_phase = MissionPhase.NONE
-                            context.target_position = None
-                            
-                            # 충전 이벤트 트리거
-                            self.fsm.handle_event(truck_id, "START_CHARGING")
-                            
-                            # 충전 명령 전송
-                            self.command_sender.send(truck_id, "START_CHARGING", {
-                                "message": "미션이 없어 충전을 시작합니다."
-                            })
+                            # 배터리가 95% 미만일 때만 충전 명령 전송
+                            if context.battery_level < 95:
+                                print(f"[자동 충전 시작] 트럭 {truck_id}는 대기 위치에 있고 미션이 없어 충전을 시작합니다. 현재 배터리: {context.battery_level}%")
+                                
+                                # 명시적으로 CHARGING 상태로 변경
+                                context.state = TruckState.CHARGING
+                                context.mission_phase = MissionPhase.NONE
+                                context.target_position = None
+                                context.is_charging = True
+                                
+                                # 충전 명령 전송
+                                self.command_sender.send(truck_id, "START_CHARGING", {
+                                    "message": "미션이 없어 충전을 시작합니다."
+                                })
+                            else:
+                                print(f"[충전 불필요] 트럭 {truck_id}의 배터리가 이미 {context.battery_level}%로 충분하므로 충전 명령을 보내지 않습니다.")
+                                # 미션 없음 메시지만 전송
+                                self.command_sender.send(truck_id, "NO_MISSION", {
+                                    "message": "미션이 없습니다. 나중에 다시 시도하세요.",
+                                    "wait_time": 10
+                                })
                             return True
                         else:
                             # 트럭이 대기 위치에 있지 않다면, 대기 위치로 이동하도록 명령

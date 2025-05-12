@@ -31,10 +31,10 @@ port_map = {
 print("[초기화] 포트 맵:", port_map)
 
 # 하드웨어 사용 여부 설정
-USE_FAKE_HARDWARE = True  # 전체 가상 모드 여부 (True로 설정)
+USE_FAKE_HARDWARE = False  # 기본적으로 실제 하드웨어 모드로 설정
 
-# 특정 장치만 가상 모드로 설정 (모든 장치 실제 연결)
-FAKE_DEVICES = []  # 가상 모드로 실행할 장치 목록(비워둠)
+# 특정 장치만 가상 모드로 설정 (시리얼 장치만 가상으로 설정, 트럭은 실제 연결)
+FAKE_DEVICES = ["GATE_A", "GATE_B", "BELT"]  # 가상 모드로 실행할 장치 목록
 
 # 디버그 모드 설정
 DEBUG_MODE = False  # 디버그 로그를 출력하지 않음 (필요시 True로 변경)

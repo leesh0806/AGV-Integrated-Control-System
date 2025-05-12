@@ -10,12 +10,35 @@ class TruckStatusManager:
     
     # -------------------------------- 트럭 상태 초기화 --------------------------------
     def reset_all_trucks(self):
-        """모든 트럭 상태를 초기화"""
-        self.truck_status = {}  # 메모리 상의 상태 초기화
-        self.fsm_states = {}    # FSM 상태 초기화
-        # DB 상태도 초기화
+        """모든 트럭 상태 초기화"""
+        if not self.truck_status_db:
+            print("[DEBUG] 트럭 상태 DB가 설정되지 않음")
+            return False
+        
+        # DB에서 상태 초기화
         self.truck_status_db.reset_all_statuses()
+        print("[✅ 트럭 상태 초기화 완료] 모든 트럭 상태 기록이 삭제되었습니다")
+        
+        # 메모리 상태 초기화
+        self.truck_status = {
+            "TRUCK_01": {
+                "battery": {"level": 100.0, "is_charging": False},
+                "position": {"location": "STANDBY", "status": "IDLE"},
+                "fsm_state": "IDLE"
+            },
+            "TRUCK_02": {
+                "battery": {"level": 100.0, "is_charging": False},
+                "position": {"location": "UNKNOWN", "status": "IDLE"},
+                "fsm_state": "IDLE"
+            },
+            "TRUCK_03": {
+                "battery": {"level": 100.0, "is_charging": False},
+                "position": {"location": "UNKNOWN", "status": "IDLE"},
+                "fsm_state": "IDLE"
+            }
+        }
         print("[✅ 메모리 상태 초기화 완료] 모든 트럭 상태가 초기화되었습니다")
+        return True
     
     # -------------------------------- 트럭 상태 조회 --------------------------------
     def get_truck_status(self, truck_id: str) -> dict:
@@ -65,6 +88,11 @@ class TruckStatusManager:
 
     def update_battery(self, truck_id: str, level: float, is_charging: bool):
         """배터리 상태 업데이트"""
+        # 이전 배터리 상태 확인
+        prev_level = 100.0  # 기본값
+        if truck_id in self.truck_status:
+            prev_level = self.truck_status[truck_id]["battery"]["level"]
+        
         # DB에 로깅
         self.truck_status_db.log_battery_status(
             truck_id=truck_id,
@@ -84,7 +112,7 @@ class TruckStatusManager:
             self.truck_status[truck_id]["battery"]["is_charging"] = is_charging
         
         # 상태 변화 로깅
-        print(f"[🔋 배터리 상태] {truck_id}: {level}% (충전상태: {is_charging})")
+        print(f"[🔋 배터리 상태] {truck_id}: {level}% (충전상태: {is_charging}, 이전: {prev_level}%)")
     
     # -------------------------------- 위치 상태 업데이트 --------------------------------
 
