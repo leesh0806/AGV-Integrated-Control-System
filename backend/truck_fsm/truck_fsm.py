@@ -182,6 +182,13 @@ class TruckFSM:
             
             return True
         
+        # ARRIVED 이벤트에서 BELT 도착 특별 처리
+        if event == "ARRIVED" and "position" in payload and payload["position"] == "BELT":
+            print(f"[특별 처리] {truck_id}: BELT 도착 이벤트 수신, 상태와 무관하게 STOP 명령 전송")
+            # STOP 명령 전송
+            if self.command_sender:
+                self.command_sender.send(truck_id, "STOP")
+        
         # ARRIVED_AT_* 명령 처리
         if event.startswith("ARRIVED_AT_"):
             position = event[11:]  # "ARRIVED_AT_" 접두사 제거
@@ -865,12 +872,20 @@ class TruckFSM:
             print(f"[🔒 GATE CLOSE 시뮬레이션] {gate_id} ← by {truck_id} (게이트 컨트롤러 없음)")
             success = True
                 
-        # 트럭에 게이트 닫힘 알림 전송 (성공 여부와 상관없이 알림)
-        if self.command_sender:
-            print(f"[📤 게이트 닫힘 알림] {truck_id}에게 GATE_CLOSED 메시지 전송 (gate_id: {gate_id})")
-            self.command_sender.send(truck_id, "GATE_CLOSED", {"gate_id": gate_id})
-        else:
-            print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
+        # 트럭에 게이트 닫힘 알림 전송 비활성화 (일시적 조치)
+        print(f"[⚠️ 알림 비활성화] {truck_id}에게 GATE_CLOSED 메시지 전송이 비활성화되었습니다")
+        # if self.command_sender:
+        #     print(f"[📤 게이트 닫힘 알림] {truck_id}에게 GATE_CLOSED 메시지 전송 (gate_id: {gate_id})")
+        #     self.command_sender.send(truck_id, "GATE_CLOSED", {"gate_id": gate_id})
+        # else:
+        #     print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
+            
+        # 게이트 닫힘 후 자동으로 트럭에게 RUN 명령 전송
+        if success and self.command_sender:
+            print(f"[🔄 게이트 닫힘 후 자동 이동] {truck_id}: 게이트가 닫혔으므로 자동으로 이동 명령 전송")
+            # 짧은 대기 후 실행 (게이트가 완전히 닫힌 후)
+            time.sleep(1.0)
+            self.command_sender.send(truck_id, "RUN", {})
             
         return success
     
@@ -886,6 +901,12 @@ class TruckFSM:
         # 위치 업데이트
         context.position = new_position
         print(f"[위치 변경] {truck_id}: {old_position} → {new_position}")
+        
+        # BELT 위치에 도착한 경우 항상 STOP 명령 전송
+        if new_position == "BELT":
+            print(f"[특별 처리] {truck_id}: BELT 위치 도착 감지, 항상 STOP 명령 전송")
+            if self.command_sender:
+                self.command_sender.send(truck_id, "STOP")
         
         # 위치 기반 이벤트 생성
         payload["position"] = new_position
