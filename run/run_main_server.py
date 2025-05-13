@@ -23,18 +23,18 @@ PORT = 8001
 # 포트 맵: 시리얼 장치 연결에 사용됨
 port_map = {
     # 실제 장치 연결 설정
-    "GATE_A": "/dev/ttyACM1",  # 게이트 A, B가 같은 아두이노에 연결됨
-    "GATE_B": "/dev/ttyACM1",  # 게이트 A, B에 동일한 포트 지정
-    "BELT": "/dev/ttyACM0"     # 벨트는 실제 장치로 연결
+    "GATE_A": "/dev/ttyACM0",  # 게이트 A, B가 같은 아두이노에 연결됨
+    "GATE_B": "/dev/ttyACM0",  # 게이트 A, B에 동일한 포트 지정
+    "BELT": "/dev/ttyACM1"     # 벨트는 실제 장치로 연결
 }
 
 print("[초기화] 포트 맵:", port_map)
 
 # 하드웨어 사용 여부 설정
-USE_FAKE_HARDWARE = False  # 기본적으로 실제 하드웨어 모드로 설정
+USE_FAKE_HARDWARE = False  # 실제 하드웨어 사용 모드로 변경 (False로 설정)
 
-# 특정 장치만 가상 모드로 설정 (시리얼 장치만 가상으로 설정, 트럭은 실제 연결)
-FAKE_DEVICES = ["GATE_A", "GATE_B", "BELT"]  # 가상 모드로 실행할 장치 목록
+# 특정 장치만 가상 모드로 설정
+FAKE_DEVICES = []  # 모든 장치를 실제 하드웨어로 사용
 
 # 디버그 모드 설정
 DEBUG_MODE = False  # 디버그 로그를 출력하지 않음 (필요시 True로 변경)

@@ -49,6 +49,11 @@ class TruckFSM:
                 "action": self._assign_mission,
                 "condition": self._can_accept_mission
             },
+            (TruckState.IDLE, "FINISH_LOADING"): {  # IDLE 상태에서 FINISH_LOADING 이벤트 처리 추가
+                "next_state": TruckState.MOVING,
+                "action": self._finish_loading_and_move,
+                "condition": None
+            },
             
             # ASSIGNED 상태 전이
             (TruckState.ASSIGNED, "START_MOVING"): {
@@ -144,6 +149,46 @@ class TruckFSM:
         context.last_update_time = datetime.now()
         print(f"[이벤트 수신] 트럭: {truck_id}, 이벤트: {event}, 상태: {current_state}")
         
+        # FINISH_LOADING 특별 처리 - 상태와 상관없이 RUN 명령 보내기
+        if event == "FINISH_LOADING":
+            print(f"[특별 처리] {truck_id}: FINISH_LOADING 이벤트 수신, 상태와 무관하게 처리")
+            
+            # 상태 전이 시도 (성공 여부 확인)
+            key = (current_state, event)
+            transition = self.transitions.get(key)
+            
+            if transition:
+                # 상태 전이 실행
+                next_state = transition["next_state"]
+                action_fn = transition.get("action")
+                
+                # 상태 변경 전 로깅
+                print(f"[상태 전이] {truck_id}: {current_state} → {next_state} (이벤트: {event})")
+                
+                # 상태 업데이트
+                context.state = next_state
+                
+                # 액션 실행
+                if action_fn:
+                    action_fn(context, payload)
+            else:
+                # 상태 전이가 없더라도 미션 단계 업데이트 및 RUN 명령 전송
+                print(f"[강제 처리] {truck_id}: FINISH_LOADING 이벤트이지만 상태 전이 없음, 강제 RUN 명령 전송")
+                context.mission_phase = MissionPhase.TO_UNLOADING
+                
+                # RUN 명령 전송
+                if self.command_sender:
+                    self.command_sender.send(truck_id, "RUN", {})
+            
+            return True
+        
+        # ARRIVED 이벤트에서 BELT 도착 특별 처리
+        if event == "ARRIVED" and "position" in payload and payload["position"] == "BELT":
+            print(f"[특별 처리] {truck_id}: BELT 도착 이벤트 수신, 상태와 무관하게 STOP 명령 전송")
+            # STOP 명령 전송
+            if self.command_sender:
+                self.command_sender.send(truck_id, "STOP")
+        
         # ARRIVED_AT_* 명령 처리
         if event.startswith("ARRIVED_AT_"):
             position = event[11:]  # "ARRIVED_AT_" 접두사 제거
@@ -167,6 +212,10 @@ class TruckFSM:
             
             # 위치에 따른 미션 단계 업데이트
             self._update_mission_phase_by_position(context)
+            
+            # 체크포인트에 도착한 경우 게이트 제어가 필요
+            if new_position.startswith("CHECKPOINT_"):
+                print(f"[중요] {truck_id}: 체크포인트 {new_position}에 도착했습니다. 게이트 제어 필요!")
 
         # ASSIGN_MISSION 이벤트의 경우 상태에 관계없이 처리 가능하도록 함
         if event == "ASSIGN_MISSION" and current_state == TruckState.ASSIGNED:
@@ -206,6 +255,12 @@ class TruckFSM:
             return True
         else:
             print(f"[상태 전이 없음] {truck_id}: {current_state}, {event}")
+            
+            # 상태 전이가 없더라도 체크포인트 도착 이벤트는 게이트 제어 실행
+            if event == "ARRIVED" and context.position.startswith("CHECKPOINT_"):
+                print(f"[특수 처리] {truck_id}: 상태 전이 없지만 체크포인트 {context.position}에 도착하여 게이트 제어 실행")
+                self._process_checkpoint_gate_control(context, context.position, context.direction)
+                
             return False
     
     # -------------------------------------------------------------------------------   
@@ -250,7 +305,7 @@ class TruckFSM:
             Direction.CLOCKWISE: {
                 "STANDBY": "CHECKPOINT_A",
                 "CHECKPOINT_A": "CHECKPOINT_B",
-                "CHECKPOINT_B": "LOAD_A",      # 기본적으로 LOAD_A로 설정 (미션별로 변경 가능)
+                "CHECKPOINT_B": None,  # LOAD_A나 LOAD_B로 가야 하므로 미션별로 결정되어야 함
                 "LOAD_A": "CHECKPOINT_C",
                 "LOAD_B": "CHECKPOINT_C",
                 "CHECKPOINT_C": "CHECKPOINT_D",
@@ -261,7 +316,7 @@ class TruckFSM:
                 "STANDBY": "BELT",
                 "BELT": "CHECKPOINT_D",
                 "CHECKPOINT_D": "CHECKPOINT_C",
-                "CHECKPOINT_C": "LOAD_A",      # 기본적으로 LOAD_A로 설정 (미션별로 변경 가능)
+                "CHECKPOINT_C": None,  # LOAD_A나 LOAD_B로 가야 하므로 미션별로 결정되어야 함
                 "LOAD_A": "CHECKPOINT_B",
                 "LOAD_B": "CHECKPOINT_B",
                 "CHECKPOINT_B": "CHECKPOINT_A",
@@ -272,17 +327,38 @@ class TruckFSM:
         # 현재 방향과 위치에 따른 다음 목표 위치 결정
         if direction in path_by_direction and current_position in path_by_direction[direction]:
             next_position = path_by_direction[direction][current_position]
-            context.target_position = next_position
-            print(f"[목표 위치 업데이트] {context.truck_id}: 현재 {current_position}, 다음 목표 → {next_position}")
+            
+            # CHECKPOINT_B나 CHECKPOINT_C에서는 특별히 처리 (미션별 적재 위치 결정)
+            if next_position is None:
+                if current_position == "CHECKPOINT_B" and direction == Direction.CLOCKWISE:
+                    # 미션 정보에 따라 적재 위치 결정
+                    loading_target = getattr(context, 'loading_target', "LOAD_A")
+                    next_position = loading_target
+                    print(f"[중요] {context.truck_id}: CHECKPOINT_B에서 미션별 적재 위치 → {loading_target} 설정")
+                elif current_position == "CHECKPOINT_C" and direction == Direction.COUNTERCLOCKWISE:
+                    # 반시계 방향일 때의 적재 위치 결정
+                    loading_target = getattr(context, 'loading_target', "LOAD_A")
+                    next_position = loading_target
+                    print(f"[중요] {context.truck_id}: CHECKPOINT_C에서 미션별 적재 위치 → {loading_target} 설정")
+            
+            if next_position:  # None이 아닌 경우만 설정
+                context.target_position = next_position
+                print(f"[목표 위치 업데이트] {context.truck_id}: 현재 {current_position}, 다음 목표 → {next_position}")
+                
         elif phase == MissionPhase.TO_LOADING:
             # 기본 목표 설정
             if context.position == "CHECKPOINT_A":
                 context.target_position = "CHECKPOINT_B"  # GATE_A를 건너뛰고 직접 CHECKPOINT_B로
             elif context.position == "CHECKPOINT_B":
-                # 미션 정보에 따라 적재 위치 결정
+                # 미션 정보에 따라 적재 위치 결정 - 명시적으로 로딩 타겟 사용
                 loading_target = getattr(context, 'loading_target', "LOAD_A")
                 context.target_position = loading_target
-                print(f"[적재 위치 설정] {context.truck_id}: 미션별 적재 위치 → {loading_target}")
+                print(f"[적재 위치 설정] {context.truck_id}: 미션별 적재 위치 → {loading_target} (loading_target: {loading_target})")
+                
+                # 로딩 타겟과 현재 위치가 일치하지 않으면 경고
+                if context.position in ["LOAD_A", "LOAD_B"] and context.position != loading_target:
+                    print(f"[⚠️ 경고] {context.truck_id}: 현재 위치({context.position})와 설정된 적재 위치({loading_target})가 일치하지 않음")
+                
         elif phase == MissionPhase.AT_LOADING:
             context.target_position = "CHECKPOINT_C"
         elif phase == MissionPhase.TO_UNLOADING:
@@ -298,7 +374,13 @@ class TruckFSM:
             context.target_position = None
         
         if context.target_position:
-            print(f"[이동 경로] {context.truck_id}: {current_position} → {context.target_position} (방향: {direction.value})")
+            print(f"[이동 경로] {context.truck_id}: {current_position} → {context.target_position} (방향: {direction.value}, 미션 단계: {phase})")
+        
+        # 디버그 정보: 현재 트럭의 컨텍스트 요약 출력
+        if hasattr(context, 'loading_target'):
+            print(f"[컨텍스트 요약] {context.truck_id}: 미션={context.mission_id}, 적재위치={context.loading_target}, 현재위치={context.position}, 목표={context.target_position}, 단계={context.mission_phase}")
+        else:
+            print(f"[컨텍스트 요약] {context.truck_id}: 미션={context.mission_id}, 적재위치=미설정, 현재위치={context.position}, 목표={context.target_position}, 단계={context.mission_phase}")
     
     # -------------------------------- 액션 메서드 --------------------------------
 
@@ -377,8 +459,32 @@ class TruckFSM:
             # 게이트 제어 로직 실행
             self._process_checkpoint_gate_control(context, position, direction)
                 
-        # 작업 위치에 도착한 경우 트럭 정지
-        elif position in ["LOAD_A", "LOAD_B", "BELT"]:
+        # 작업 위치에 도착한 경우 처리
+        elif position in ["LOAD_A", "LOAD_B"]:
+            # 미션에 설정된 loading_target과 현재 위치 비교
+            loading_target = getattr(context, 'loading_target', None)
+            
+            if loading_target and position != loading_target:
+                # 미션에 설정된 적재 위치와 실제 도착한 위치가 다른 경우
+                print(f"[⚠️ 경고] {context.truck_id}: 잘못된 적재 위치에 도착! 현재={position}, 설정된 적재위치={loading_target}")
+                
+                # 올바른 위치로 이동 명령
+                if self.command_sender:
+                    print(f"[🔄 자동 이동] {context.truck_id}: 잘못된 위치({position})에서 올바른 적재 위치({loading_target})로 이동")
+                    # 이동 명령 전송
+                    self.command_sender.send(context.truck_id, "RUN", {
+                        "target": loading_target
+                    })
+                    return  # 이 위치에서의 다른 처리는 중단
+            
+            # 정상적인 경우 - 올바른 적재 위치에 도착했거나 loading_target이 설정되지 않은 경우
+            print(f"[✅ 적재 위치 도착] {context.truck_id}: {position}에 도착")
+            if self.command_sender:
+                self.command_sender.send(context.truck_id, "STOP")
+        
+        # 하차 위치(BELT)에 도착한 경우
+        elif position == "BELT":
+            print(f"[✅ 하차 위치 도착] {context.truck_id}: {position}에 도착")
             if self.command_sender:
                 self.command_sender.send(context.truck_id, "STOP")
                 
@@ -407,12 +513,19 @@ class TruckFSM:
                     print(f"[미션 할당 시도] {context.truck_id}에 새 미션 할당 시도")
                     mission_assigned = self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
                     
-                    # 미션 할당 실패 시 명시적으로 상태 초기화
+                    # 미션 할당 실패 시 상태 초기화 및 배터리 확인
                     if not mission_assigned:
                         print(f"[미션 할당 실패] {context.truck_id}에 할당할 미션이 없음 - 상태 초기화")
                         context.state = TruckState.IDLE
                         context.mission_phase = MissionPhase.NONE
                         context.target_position = None
+                        
+                        # 배터리 상태 확인 후 필요시 충전 시작
+                        if self._needs_charging(context, {}):
+                            print(f"[배터리 확인] {context.truck_id}: 배터리 부족 ({context.battery_level}%) - 충전 시작")
+                            self._start_charging(context, {})
+                        else:
+                            print(f"[배터리 확인] {context.truck_id}: 배터리 상태 양호 ({context.battery_level}%) - 대기 상태 유지")
     
     # -------------------------------------------------------------------------------   
 
@@ -444,22 +557,73 @@ class TruckFSM:
         # 게이트 액션이 필요한지 확인
         has_gate_action = False
         
+        # 특수 처리: CHECKPOINT_B에서 직접 GATE_A 닫기
+        if checkpoint == "CHECKPOINT_B" and direction == Direction.CLOCKWISE:
+            print(f"[🔒 중요 게이트 제어] CHECKPOINT_B에서 GATE_A 닫기 명령 강제 실행")
+            close_result = self._close_gate_and_log("GATE_A", context.truck_id)
+            print(f"[게이트 닫기 결과] GATE_A: {'성공' if close_result else '실패'}")
+            has_gate_action = True
+            
+            # 2초 대기하여 게이트 닫힘 동작 완료 확인
+            time.sleep(2)
+            
+            # 게이트 닫힌 후에 이동 명령 전송
+            if self.command_sender:
+                print(f"[🔄 게이트 제어 후 이동] {context.truck_id}: GATE_A 닫은 후 이동")
+                self.command_sender.send(context.truck_id, "RUN", {})
+                
+            return
+            
+        # 특수 처리: CHECKPOINT_C에서 직접 GATE_B 열기
+        elif checkpoint == "CHECKPOINT_C" and direction == Direction.CLOCKWISE:
+            print(f"[🔓 중요 게이트 제어] CHECKPOINT_C에서 GATE_B 열기 명령 강제 실행")
+            open_result = self._open_gate_and_log("GATE_B", context.truck_id)
+            print(f"[게이트 열기 결과] GATE_B: {'성공' if open_result else '실패'}")
+            has_gate_action = True
+            
+            # 2초 대기하여 게이트 열림 동작 완료 확인
+            time.sleep(2)
+            
+            # 게이트 열림 후에 이동 명령 전송 안 함 (게이트 열림 이벤트 처리에서 자동으로 이동)
+            # 트럭은 이후 GATE_OPENED 메시지를 수신하면 자동으로 이동
+                
+            return
+        
         # 해당 체크포인트에 대한 액션 가져오기
         if checkpoint in checkpoint_gate_actions:
+            # 디버그 로그 추가
+            print(f"[체크포인트 액션 결정] {checkpoint}, 방향: {direction.value}, 액션 정의: {checkpoint_gate_actions[checkpoint].get(direction, {})}")
+            
             actions = checkpoint_gate_actions[checkpoint].get(direction, {})
             
             # 게이트 열기 액션
             if "open" in actions and actions["open"]:
                 gate_id = actions["open"]
                 print(f"[게이트 제어] 열기: {gate_id}, 체크포인트: {checkpoint}, 방향: {direction.value}")
-                self._open_gate_and_log(gate_id, context.truck_id)
+                
+                # CHECKPOINT_C에서 GATE_B 열기 특별 처리 추가
+                if checkpoint == "CHECKPOINT_C" and gate_id == "GATE_B" and direction == Direction.CLOCKWISE:
+                    print(f"[중요 게이트 제어] CHECKPOINT_C에서 GATE_B 열기 명령 실행")
+                
+                open_result = self._open_gate_and_log(gate_id, context.truck_id)
+                print(f"[게이트 열기 결과] {gate_id}: {'성공' if open_result else '실패'}")
                 has_gate_action = True
             
             # 게이트 닫기 액션
             if "close" in actions and actions["close"]:
                 gate_id = actions["close"]
                 print(f"[게이트 제어] 닫기: {gate_id}, 체크포인트: {checkpoint}, 방향: {direction.value}")
-                self._close_gate_and_log(gate_id, context.truck_id)
+                
+                # CHECKPOINT_B에서 GATE_A 닫기 특별 처리
+                if checkpoint == "CHECKPOINT_B" and gate_id == "GATE_A" and direction == Direction.CLOCKWISE:
+                    print(f"[중요 게이트 제어] CHECKPOINT_B에서 GATE_A 닫기 명령 실행")
+                
+                # CHECKPOINT_D에서 GATE_B 닫기 특별 처리 추가
+                if checkpoint == "CHECKPOINT_D" and gate_id == "GATE_B" and direction == Direction.CLOCKWISE:
+                    print(f"[중요 게이트 제어] CHECKPOINT_D에서 GATE_B 닫기 명령 실행")
+                
+                close_result = self._close_gate_and_log(gate_id, context.truck_id)
+                print(f"[게이트 닫기 결과] {gate_id}: {'성공' if close_result else '실패'}")
                 has_gate_action = True
             
             # 게이트 액션이 없는 경우 바로 다음 위치로 이동 명령
@@ -469,9 +633,11 @@ class TruckFSM:
                 if self.command_sender:
                     print(f"[자동 이동] {context.truck_id}: 게이트 제어 없이 바로 다음 위치로 이동")
                     self.command_sender.send(context.truck_id, "RUN", {})
+        else:
+            print(f"[알 수 없는 체크포인트] {checkpoint}에 대한 게이트 제어 정의가 없습니다.")
         
         # 위치에 따른 자동 명령 (체크포인트지만 자동 RUN 명령을 보내지 않는 특수 경우)
-        if not has_gate_action and checkpoint not in ["CHECKPOINT_A"]:  # CHECKPOINT_A는 게이트 열기 후 이동
+        if not has_gate_action and checkpoint not in ["CHECKPOINT_A", "CHECKPOINT_C"]:  # CHECKPOINT_A, CHECKPOINT_C는 게이트 열기 후 이동
             # 다음 목표로 자동 이동 (체크포인트에서 경로 계속)
             if self.command_sender:
                 print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
@@ -732,12 +898,20 @@ class TruckFSM:
             print(f"[🔒 GATE CLOSE 시뮬레이션] {gate_id} ← by {truck_id} (게이트 컨트롤러 없음)")
             success = True
                 
-        # 트럭에 게이트 닫힘 알림 전송 (성공 여부와 상관없이 알림)
-        if self.command_sender:
-            print(f"[📤 게이트 닫힘 알림] {truck_id}에게 GATE_CLOSED 메시지 전송 (gate_id: {gate_id})")
-            self.command_sender.send(truck_id, "GATE_CLOSED", {"gate_id": gate_id})
-        else:
-            print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
+        # 트럭에 게이트 닫힘 알림 전송 비활성화 (일시적 조치)
+        print(f"[⚠️ 알림 비활성화] {truck_id}에게 GATE_CLOSED 메시지 전송이 비활성화되었습니다")
+        # if self.command_sender:
+        #     print(f"[📤 게이트 닫힘 알림] {truck_id}에게 GATE_CLOSED 메시지 전송 (gate_id: {gate_id})")
+        #     self.command_sender.send(truck_id, "GATE_CLOSED", {"gate_id": gate_id})
+        # else:
+        #     print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
+            
+        # 게이트 닫힘 후 자동으로 트럭에게 RUN 명령 전송
+        if success and self.command_sender:
+            print(f"[🔄 게이트 닫힘 후 자동 이동] {truck_id}: 게이트가 닫혔으므로 자동으로 이동 명령 전송")
+            # 짧은 대기 후 실행 (게이트가 완전히 닫힌 후)
+            time.sleep(1.0)
+            self.command_sender.send(truck_id, "RUN", {})
             
         return success
     
@@ -753,6 +927,12 @@ class TruckFSM:
         # 위치 업데이트
         context.position = new_position
         print(f"[위치 변경] {truck_id}: {old_position} → {new_position}")
+        
+        # BELT 위치에 도착한 경우 항상 STOP 명령 전송
+        if new_position == "BELT":
+            print(f"[특별 처리] {truck_id}: BELT 위치 도착 감지, 항상 STOP 명령 전송")
+            if self.command_sender:
+                self.command_sender.send(truck_id, "STOP")
         
         # 위치 기반 이벤트 생성
         payload["position"] = new_position
@@ -824,6 +1004,13 @@ class TruckFSM:
         
         # ASSIGNED 상태에서 로딩/언로딩 완료 처리
         self.transitions[(TruckState.ASSIGNED, "FINISH_LOADING")] = {
+            "next_state": TruckState.MOVING,
+            "action": self._finish_loading_and_move,
+            "condition": None
+        }
+        
+        # WAITING 상태에서도 FINISH_LOADING 이벤트 처리
+        self.transitions[(TruckState.WAITING, "FINISH_LOADING")] = {
             "next_state": TruckState.MOVING,
             "action": self._finish_loading_and_move,
             "condition": None

@@ -503,6 +503,7 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
         }
       }
       break;
+<<<<<<< HEAD
 
 
 
@@ -550,6 +551,20 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
       mission_requested = false;
       break;
 
+=======
+      
+    case CMD_START_CHARGING:
+      Serial.println("[🔋 충전 시작] 서버에서 충전 명령 수신");
+      
+      // 충전 상태로 변경 및 주행 정지
+      run_command = false;
+      stop_motors();
+      
+      // 필요한 경우 추가 충전 관련 처리
+      
+      break;
+      
+>>>>>>> fb86452f385005ec06d06ac0f35954d1784bef8f
     default:
       // Serial.printf("⚠️ [알 수 없는 명령] cmd_id: %02X\n", cmd_id);
       break;
