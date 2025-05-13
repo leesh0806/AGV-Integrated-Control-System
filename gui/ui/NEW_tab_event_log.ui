@@ -76,6 +76,16 @@
       <height>25</height>
      </rect>
     </property>
+    <property name="dateTime">
+     <datetime>
+      <hour>3</hour>
+      <minute>0</minute>
+      <second>0</second>
+      <year>2026</year>
+      <month>1</month>
+      <day>2</day>
+     </datetime>
+    </property>
     <property name="displayFormat">
      <string>yyyy-MM-dd</string>
     </property>
@@ -230,7 +240,7 @@
      <x>10</x>
      <y>140</y>
      <width>1180</width>
-     <height>350</height>
+     <height>321</height>
     </rect>
    </property>
    <property name="editTriggers">
@@ -270,7 +280,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>500</y>
+     <y>460</y>
      <width>200</width>
      <height>20</height>
     </rect>
@@ -283,7 +293,7 @@
    <property name="geometry">
     <rect>
      <x>900</x>
-     <y>500</y>
+     <y>470</y>
      <width>140</width>
      <height>30</height>
     </rect>
@@ -296,7 +306,7 @@
    <property name="geometry">
     <rect>
      <x>1050</x>
-     <y>500</y>
+     <y>470</y>
      <width>140</width>
      <height>30</height>
     </rect>
@@ -309,9 +319,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>530</y>
+     <y>489</y>
      <width>1180</width>
-     <height>60</height>
+     <height>101</height>
     </rect>
    </property>
    <property name="title">
@@ -321,9 +331,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>20</y>
+      <y>29</y>
       <width>1160</width>
-      <height>30</height>
+      <height>61</height>
      </rect>
     </property>
     <property name="readOnly">
@@ -334,4 +344,4 @@
  </widget>
  <resources/>
  <connections/>
-</ui> 
+</ui>
