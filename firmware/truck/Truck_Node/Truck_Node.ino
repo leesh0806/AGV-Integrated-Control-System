@@ -59,62 +59,6 @@ const int serverPort = 8001;
 WiFiClient client;
 
 
-/*--------------------------------프로토콜 정의--------------------------------*/
-
-// 트럭 → PC 명령어
-#define CMD_ARRIVED 0x01
-#define CMD_OBSTACLE 0x02
-#define CMD_STATUS_UPDATE 0x03
-#define CMD_START_LOADING 0x04
-#define CMD_FINISH_LOADING 0x05
-#define CMD_START_UNLOADING 0x06
-#define CMD_FINISH_UNLOADING 0x07
-#define CMD_ASSIGN_MISSION 0x08
-#define CMD_ACK_GATE_OPENED 0x09
-#define CMD_FINISH_CHARGING 0x0A
-#define CMD_BATTERY 0x0B  // 추가: 배터리 상태 전용 명령어
-
-// PC → 트럭 명령어
-#define CMD_MISSION_ASSIGNED 0x10
-#define CMD_NO_MISSION 0x11
-#define CMD_RUN 0x12
-#define CMD_STOP 0x13
-#define CMD_GATE_OPENED 0x14
-#define CMD_START_CHARGING 0x15
-#define CMD_CANCEL_MISSION 0x16  // 추가: 미션 취소 명령어
-
-// 시스템 명령어
-#define CMD_HELLO 0xF0
-#define CMD_HEARTBEAT_ACK 0xF1
-#define CMD_HEARTBEAT_CHECK 0xF2
-
-// sender/receiver IDs
-#define ID_SERVER 0x10
-#define ID_TRUCK_01 0x01
-#define ID_TRUCK_02 0x02
-#define ID_TRUCK_03 0x03
-#define ID_GUI 0x04
-
-// position 코드
-#define POS_CHECKPOINT_A 0x01
-#define POS_CHECKPOINT_B 0x02
-#define POS_CHECKPOINT_C 0x03
-#define POS_CHECKPOINT_D 0x04
-#define POS_LOAD_A 0x05
-#define POS_LOAD_B 0x06
-#define POS_BELT 0x07
-#define POS_STANDBY 0x08
-#define POS_GATE_A 0xA1
-#define POS_GATE_B 0xA2
-#define POS_UNKNOWN 0x00
-
-// 상태 코드
-#define STATE_NORMAL 0x00
-#define STATE_EMERGENCY 0x01
-#define STATE_LOW_BATTERY 0x02
-#define STATE_CHARGING 0x03
-#define STATE_FULLY_CHARGED 0x04
-
 /*--------------------------------등록된 UID 목록--------------------------------*/
 
 struct UIDEntry 
@@ -143,7 +87,6 @@ const unsigned long RFID_CHECK_INTERVAL = 300;  // 0.3초마다 RFID 체크
 /*--------------------------------트럭 ID 설정--------------------------------*/
 
 char* truck_id = "TRUCK_01";
-byte truck_id_byte = ID_TRUCK_01;  // 바이트 형식 ID
 
 uint8_t get_sender_id_from_truck_id(const char* id) {
   if (strcmp(id, "TRUCK_01") == 0) return 0x01;
@@ -208,12 +151,9 @@ const int SERVO_PIN = 17;
 const int SERVO_INIT_ANGLE = 170;
 const int SERVO_DROP_ANGLE = 90;
 
-<<<<<<< HEAD
 unsigned long belt_arrival_time = 0;
 bool belt_waiting_to_unload = false;
 
-=======
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
 /*--------------------------------가상 배터리 잔량 체크--------------------------------*/
 
 int battery_level = 100;
@@ -225,8 +165,6 @@ unsigned long last_battery_report = 0;
 const unsigned long STATUS_REPORT_INTERVAL = 10000; // 10초마다 배터리 상태 서버에 전송
 bool battery_empty = false;  // 배터리 0% 상태 플래그
 
-unsigned long last_heartbeat = 0;
-const unsigned long HEARTBEAT_INTERVAL = 30000;  // 30초마다 하트비트 전송
 
 /*--------------------------------모터 제어 핀 및 PWM--------------------------------*/
 
@@ -280,20 +218,10 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 
 /*--------------------------------함수 선언--------------------------------*/
 
-<<<<<<< HEAD
 void send_obstacle(uint8_t position_id, bool detected, uint16_t distance_cm); 
 void send_arrived(uint8_t position_id, uint8_t gate_id);
 bool isSameUID(byte* uid1, byte* uid2);
 bool checkAndPrintUID(byte* uid);
-=======
-void receive_binary(const uint8_t* data, size_t len);
-void send_binary(uint8_t cmd_id, const char* position = nullptr, const char* gate_id = nullptr);
-uint8_t get_position_code(const char* position);
-const char* get_position_str(uint8_t code);
-uint8_t get_cmd_code(const char* cmd);
-const char* get_cmd_str(uint8_t code);
-uint8_t get_truck_state();
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
 
 /*--------------------------------------------------------------------------------*/
 
@@ -360,7 +288,6 @@ void loop()
 
   reconnectToServer();
 
-<<<<<<< HEAD
   // ✅ 서버로부터 수신 메시지 처리
   if (client && client.available() >= 4) 
   {
@@ -369,43 +296,6 @@ void loop()
     if (len >= 4) 
     {
       receive_binary(buffer, len);
-=======
-  // ✅ 수신 메시지 처리
-  if (client && client.available()) {
-    // 헤더 4바이트 읽기
-    uint8_t header[4];
-    int read_size = client.read(header, 4);
-    
-    if (read_size == 4) {
-      uint8_t sender_id = header[0];
-      uint8_t receiver_id = header[1];
-      uint8_t cmd_id = header[2];
-      uint8_t payload_len = header[3];
-      
-      // 페이로드 읽기
-      uint8_t payload[32] = {0}; // 최대 32바이트 페이로드 가정
-      if (payload_len > 0) {
-        read_size = client.read(payload, payload_len);
-        if (read_size != payload_len) {
-          Serial.println("[⚠️ 오류] 페이로드 데이터 불완전");
-          return;
-        }
-      }
-      
-      // 전체 메시지
-      uint8_t full_msg[36]; // 헤더 4바이트 + 최대 32바이트 페이로드
-      memcpy(full_msg, header, 4);
-      if (payload_len > 0) {
-        memcpy(full_msg + 4, payload, payload_len);
-      }
-      
-      Serial.println("========== 📩 [서버 메시지 수신] ==========");
-      Serial.print("명령 코드: 0x");
-      Serial.println(cmd_id, HEX);
-      Serial.println("===========================================");
-      
-      receive_binary(full_msg, 4 + payload_len);
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
     }
   }
 
@@ -458,7 +348,6 @@ void loop()
     send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
     //integral = 0;
   }
-<<<<<<< HEAD
   
 
   // ✅ 적재 시작 지연 처리
@@ -466,13 +355,6 @@ void loop()
   {
     // Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
     send_start_loading(current_position_id);
-=======
-  //적재 시작 지연 처리
-  if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
-  {
-    Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
-    send_start_loading();
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
     loading_in_progress = true;
     loading_start_time = current_time;
     wait_start_loading = false;
@@ -489,7 +371,6 @@ void loop()
       mission_target = 0;
     }
     loading_in_progress = false;
-<<<<<<< HEAD
     run_command = true;
   }
 
@@ -505,54 +386,6 @@ void loop()
       unloading_in_progress = true;
       unloading_start_time = current_time;
       wait_start_unloading = false;
-=======
-  }
-
-  // 언로딩 시작 지연 처리
-  if (wait_start_unloading && (current_time - wait_start_unloading_time >= 2000)) 
-  {
-    start_unloading();
-    wait_start_unloading = false;
-  }
-
-  // 언로딩 FSM 처리
-  handle_unloading(current_time);
-    
-  // RFID 체크
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
-  {
-    return;
-  }
-
-  // Serial.print("UID: ");
-  // for (byte i = 0; i < rfid.uid.size; i++) {
-  //   if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-  //   Serial.print(rfid.uid.uidByte[i], HEX);
-  //   if (i < rfid.uid.size - 1) Serial.print("-");
-  // }
-  // Serial.println();
-
-  // UID 확인 및 서버 전송
-  checkAndPrintUID(rfid.uid.uidByte);
-
-  // 🪫 10초마다 배터리 감소
-  if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
-    last_battery_drop = current_time;
-
-    if (battery_level > 0) {
-      battery_level -= 5;
-      if (battery_level <= 0) {
-        battery_level = 0;
-        battery_empty = true;
-        run_command = false;
-        stop_motors();
-        Serial.println("❌ 배터리 소진 → 트럭 정지");
-      }
-
-      Serial.print("🪫 배터리 감소됨: ");
-      Serial.print(battery_level);
-      Serial.println("%");
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
     }
   }
 
@@ -590,17 +423,6 @@ void loop()
     }
   }
 
-<<<<<<< HEAD
-=======
-  // ✅ 주기적인 하트비트 전송
-  if (current_time - last_heartbeat >= HEARTBEAT_INTERVAL) {
-    last_heartbeat = current_time;
-    send_heartbeat();
-  }
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
 
 
 
@@ -644,7 +466,6 @@ void loop()
 
 /*------------------------------- 수신 처리--------------------------------*/
 
-<<<<<<< HEAD
 void receive_binary(const uint8_t* buffer, uint8_t len) {
   if (len < 4) return;  // 최소한의 헤더 길이 확인
 
@@ -682,9 +503,6 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
         }
       }
       break;
-<<<<<<< HEAD
-
-
 
     case NO_MISSION:
       mission_target = 0;
@@ -730,144 +548,13 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
       mission_requested = false;
       break;
 
-=======
-=======
-void receive_binary(const uint8_t* data, size_t len) {
-  if (len < 4) {
-    Serial.println("[⚠️ 오류] 메시지 길이 불충분");
-    return;
-  }
-  
-  uint8_t sender_id = data[0];
-  uint8_t receiver_id = data[1];
-  uint8_t cmd_id = data[2];
-  uint8_t payload_len = data[3];
-  
-  // 페이로드 길이 검증
-  if (len != 4 + payload_len) {
-    Serial.println("[⚠️ 오류] 페이로드 길이 불일치");
-    return;
-  }
-  
-  Serial.println("📩 [디버깅] 바이너리 메시지 수신됨");
-  Serial.print("  - 송신자: 0x");
-  Serial.println(sender_id, HEX);
-  Serial.print("  - 수신자: 0x");
-  Serial.println(receiver_id, HEX);
-  Serial.print("  - 명령어: 0x");
-  Serial.println(cmd_id, HEX);
-  Serial.print("  - 페이로드 길이: ");
-  Serial.println(payload_len);
-  
-  // 중복 명령 확인
-  if (last_cmd == String(cmd_id)) {
-    Serial.print("[⏭️ 중복 명령 무시] 이미 처리한 명령: 0x");
-    Serial.println(cmd_id, HEX);
-    return;
-  }
-  
-  last_cmd = String(cmd_id);
-  
-  // 명령 처리
-  switch (cmd_id) {
-    case CMD_RUN:
-      Serial.println("[✅ 디버깅] RUN 명령 수신됨!");
-      run_command = true;
-      break;
-      
-    case CMD_STOP:
-      Serial.println("[⛔ 디버깅] STOP 명령 수신됨!");
-      run_command = false;
-      stop_motors();
-      break;
-      
-    case CMD_GATE_OPENED:
-      if (payload_len >= 1) {
-        uint8_t gate_code = data[4]; // 첫 번째 페이로드 바이트
-        const char* gate_id = get_position_str(gate_code);
-        Serial.print("[🚪 게이트 열림 감지] : ");
-        Serial.println(gate_id);
-        send_gateopen_message(gate_id);  // 응답 전송
-        run_command = true;
-      }
-      break;
-      
-    case CMD_MISSION_ASSIGNED:
-      if (payload_len >= 1) {
-        // 단순화된 형식: source 코드만 포함
-        uint8_t source_code = data[4]; // 첫 번째 페이로드 바이트
-        const char* source = get_position_str(source_code);
-        mission_target = String(source);
-        Serial.print("[📦 미션 할당됨] 목표 위치: ");
-        Serial.println(mission_target);
-        run_command = true;
-      }
-      break;
-      
-    case CMD_NO_MISSION:
-      Serial.println("📭 [서버 응답] 미션 없음 → 대기 상태 유지");
-      run_command = false;
-      mission_target = "";
-      break;
-      
-    case CMD_HEARTBEAT_ACK:
-      Serial.println("[💓 하트비트 응답] 서버로부터 하트비트 응답 수신");
-      break;
-      
-    case CMD_HEARTBEAT_CHECK:
-      Serial.println("[💓 하트비트 요청] 서버에서 생존 확인 요청");
-      send_heartbeat();
-      break;
-      
-    case CMD_CANCEL_MISSION:
-      // 미션 취소 처리
-      if (payload_len >= 1) {
-        uint8_t reason_len = data[4];
-        String reason = "UNKNOWN";
-        
-        if (payload_len >= 1 + reason_len) {
-          char reason_buf[33] = {0}; // 최대 32바이트 + NULL 종료
-          memcpy(reason_buf, &data[5], min(reason_len, 32));
-          reason = String(reason_buf);
-        }
-        
-        Serial.print("[❌ 미션 취소] 사유: ");
-        Serial.println(reason);
-        
-        // 주행 정지 및 미션 초기화
-        run_command = false;
-        mission_target = "";
-        stop_motors();
-      }
-      break;
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
-      
-    case CMD_START_CHARGING:
-      Serial.println("[🔋 충전 시작] 서버에서 충전 명령 수신");
-      
-      // 충전 상태로 변경 및 주행 정지
-      run_command = false;
-      stop_motors();
-      
-      // 필요한 경우 추가 충전 관련 처리
-      
-      break;
-      
-<<<<<<< HEAD
->>>>>>> fb86452f385005ec06d06ac0f35954d1784bef8f
     default:
       // Serial.printf("⚠️ [알 수 없는 명령] cmd_id: %02X\n", cmd_id);
       break;
-=======
-    default:
-      Serial.print("[ℹ️ 디버깅] 알 수 없는 명령: 0x");
-      Serial.println(cmd_id, HEX);
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
   }
 }
 
 /*-------------------------------- 송신 처리 --------------------------------*/
-<<<<<<< HEAD
 //공통 바이너리 송신 함수
 void send_binary(uint8_t cmd_id, const uint8_t* payload, uint8_t payload_len) 
 {
@@ -924,214 +611,11 @@ void send_status_update(uint8_t battery_level, uint8_t position_id)
 {
   uint8_t payload[2] = { battery_level, position_id };
   send_binary(STATUS_UPDATE, payload, 2);
-=======
-
-// 바이너리 송신 함수
-void send_binary(uint8_t cmd_id, const char* position = nullptr, const char* gate_id = nullptr) {
-  uint8_t payload[32] = {0};  // 최대 32바이트 페이로드
-  uint8_t payload_len = 0;
-  
-  // 페이로드 구성 (명령어별로 다름)
-  if (cmd_id == CMD_ARRIVED && position != nullptr) {
-    // ARRIVED 명령의 경우 위치 정보 포함
-    payload[0] = get_position_code(position);
-    if (gate_id != nullptr) {
-      payload[1] = get_position_code(gate_id);
-      payload_len = 2;
-    } else {
-      payload_len = 1;
-    }
-  }
-  else if (cmd_id == CMD_OBSTACLE) {
-    // 장애물 감지 명령의 경우 위치와 감지 여부 및 거리 포함
-    if (position != nullptr) {
-      payload[0] = get_position_code(position);
-      payload[1] = prev_obstacle_state ? 0x01 : 0x00;  // 장애물 감지 여부
-      
-      // 거리 정보 (2바이트 빅 엔디안 부호 없는 정수)
-      uint16_t distance = (uint16_t)last_distance_cm;
-      payload[2] = (distance >> 8) & 0xFF;  // 상위 바이트
-      payload[3] = distance & 0xFF;         // 하위 바이트
-      
-      payload_len = 4;
-    }
-  }
-  else if (cmd_id == CMD_ACK_GATE_OPENED && gate_id != nullptr) {
-    // 게이트 열림 응답의 경우 게이트 ID 포함
-    payload[0] = get_position_code(gate_id);
-    if (position != nullptr) {
-      payload[1] = get_position_code(position);
-      payload_len = 2;
-    } else {
-      payload_len = 1;
-    }
-  }
-  else if (cmd_id == CMD_STATUS_UPDATE) {
-    // 단순화: battery_level(1) + position_code(1)만 포함
-    uint8_t battery_level_byte = (uint8_t)battery_level;
-    uint8_t position_code = position != nullptr ? get_position_code(position) : get_position_code(current_position.c_str());
-    
-    // 바이너리 구성: battery_level(1) + position_code(1)
-    payload[0] = battery_level_byte;
-    payload[1] = position_code;
-    payload_len = 2;
-  }
-  else if (cmd_id == CMD_BATTERY) {
-    // 배터리 상태만 전용으로 전송
-    uint8_t battery_level_byte = (uint8_t)battery_level;
-    uint8_t is_charging = 0;  // 현재는 충전 상태 추적 안함
-    uint8_t battery_state = battery_level <= 20 ? STATE_LOW_BATTERY : STATE_NORMAL;
-    
-    payload[0] = battery_level_byte;
-    payload[1] = is_charging;
-    payload[2] = battery_state;
-    payload_len = 3;
-  }
-  else if (cmd_id == CMD_START_LOADING || 
-           cmd_id == CMD_FINISH_LOADING || 
-           cmd_id == CMD_START_UNLOADING || 
-           cmd_id == CMD_FINISH_UNLOADING) {
-    // 위치 정보 포함하는 기타 명령
-    if (position != nullptr) {
-      payload[0] = get_position_code(position);
-      payload_len = 1;
-    }
-  }
-  
-  // 헤더 구성 (4바이트)
-  uint8_t header[4] = {
-    truck_id_byte,         // sender_id
-    ID_SERVER,             // receiver_id
-    cmd_id,                // cmd_id
-    payload_len            // payload_len
-  };
-  
-  // 서버 연결 확인 후 메시지 전송
-  if (client && client.connected()) {
-    // 헤더 전송
-    client.write(header, 4);
-    
-    // 페이로드가 있으면 전송
-    if (payload_len > 0) {
-      client.write(payload, payload_len);
-    }
-    
-    Serial.println("[📤 송신] 바이너리 메시지 전송:");
-    Serial.print("  - 명령어: 0x");
-    Serial.println(cmd_id, HEX);
-    Serial.print("  - 페이로드 길이: ");
-    Serial.println(payload_len);
-  }
-  else {
-    Serial.println("[❌ 오류] 서버와 연결되지 않음 (메시지 전송 실패)");
-  }
-}
-
-// 위치 코드 변환 함수
-uint8_t get_position_code(const char* position) {
-  if (strcmp(position, "CHECKPOINT_A") == 0) return POS_CHECKPOINT_A;
-  if (strcmp(position, "CHECKPOINT_B") == 0) return POS_CHECKPOINT_B;
-  if (strcmp(position, "CHECKPOINT_C") == 0) return POS_CHECKPOINT_C;
-  if (strcmp(position, "CHECKPOINT_D") == 0) return POS_CHECKPOINT_D;
-  if (strcmp(position, "LOAD_A") == 0) return POS_LOAD_A;
-  if (strcmp(position, "load_A") == 0) return POS_LOAD_A;  // 호환성
-  if (strcmp(position, "LOAD_B") == 0) return POS_LOAD_B;
-  if (strcmp(position, "load_B") == 0) return POS_LOAD_B;  // 호환성
-  if (strcmp(position, "BELT") == 0) return POS_BELT;
-  if (strcmp(position, "STANDBY") == 0) return POS_STANDBY;
-  if (strcmp(position, "GATE_A") == 0) return POS_GATE_A;
-  if (strcmp(position, "GATE_B") == 0) return POS_GATE_B;
-  return POS_UNKNOWN;  // 알 수 없는 위치
-}
-
-// 위치 문자열 변환 함수
-const char* get_position_str(uint8_t code) {
-  switch (code) {
-    case POS_CHECKPOINT_A: return "CHECKPOINT_A";
-    case POS_CHECKPOINT_B: return "CHECKPOINT_B";
-    case POS_CHECKPOINT_C: return "CHECKPOINT_C";
-    case POS_CHECKPOINT_D: return "CHECKPOINT_D";
-    case POS_LOAD_A: return "LOAD_A";
-    case POS_LOAD_B: return "LOAD_B";
-    case POS_BELT: return "BELT";
-    case POS_STANDBY: return "STANDBY";
-    case POS_GATE_A: return "GATE_A";
-    case POS_GATE_B: return "GATE_B";
-    default: return "UNKNOWN";
-  }
-}
-
-// 명령 코드 변환 함수
-uint8_t get_cmd_code(const char* cmd) {
-  if (strcmp(cmd, "ARRIVED") == 0) return CMD_ARRIVED;
-  if (strcmp(cmd, "OBSTACLE") == 0) return CMD_OBSTACLE;
-  if (strcmp(cmd, "STATUS_UPDATE") == 0) return CMD_STATUS_UPDATE;
-  if (strcmp(cmd, "START_LOADING") == 0) return CMD_START_LOADING;
-  if (strcmp(cmd, "FINISH_LOADING") == 0) return CMD_FINISH_LOADING;
-  if (strcmp(cmd, "START_UNLOADING") == 0) return CMD_START_UNLOADING;
-  if (strcmp(cmd, "FINISH_UNLOADING") == 0) return CMD_FINISH_UNLOADING;
-  if (strcmp(cmd, "ASSIGN_MISSION") == 0) return CMD_ASSIGN_MISSION;
-  if (strcmp(cmd, "ACK_GATE_OPENED") == 0) return CMD_ACK_GATE_OPENED;
-  if (strcmp(cmd, "FINISH_CHARGING") == 0) return CMD_FINISH_CHARGING;
-  return 0;  // 알 수 없는 명령
-}
-
-// 명령 문자열 변환 함수
-const char* get_cmd_str(uint8_t code) {
-  switch (code) {
-    case CMD_ARRIVED: return "ARRIVED";
-    case CMD_OBSTACLE: return "OBSTACLE";
-    case CMD_STATUS_UPDATE: return "STATUS_UPDATE";
-    case CMD_START_LOADING: return "START_LOADING";
-    case CMD_FINISH_LOADING: return "FINISH_LOADING";
-    case CMD_START_UNLOADING: return "START_UNLOADING";
-    case CMD_FINISH_UNLOADING: return "FINISH_UNLOADING";
-    case CMD_ASSIGN_MISSION: return "ASSIGN_MISSION";
-    case CMD_ACK_GATE_OPENED: return "ACK_GATE_OPENED";
-    case CMD_FINISH_CHARGING: return "FINISH_CHARGING";
-    case CMD_MISSION_ASSIGNED: return "MISSION_ASSIGNED";
-    case CMD_NO_MISSION: return "NO_MISSION";
-    case CMD_RUN: return "RUN";
-    case CMD_STOP: return "STOP";
-    case CMD_GATE_OPENED: return "GATE_OPENED";
-    case CMD_START_CHARGING: return "START_CHARGING";
-    case CMD_CANCEL_MISSION: return "CANCEL_MISSION";
-    default: return "UNKNOWN";
-  }
-}
-
-// 미션 요청 메시지 (ASSIGN_MISSION)
-void send_assign_mission() {
-  send_binary(CMD_ASSIGN_MISSION);
-}
-
-// 게이트 열림 확인 메시지
-void send_gateopen_message(const char* gate_id) {
-  send_binary(CMD_ACK_GATE_OPENED, current_position.c_str(), gate_id);
-}
-
-// 도착 메시지 (ARRIVED)
-void send_arrived(const char* position, const char* gate_id) {
-  send_binary(CMD_ARRIVED, position, gate_id);
-}
-
-// 장애물 감지 메시지 (OBSTACLE)
-void send_obstacle(float distance_cm, bool detected, const char* position) {
-  if (detected == prev_obstacle_state) return;
-  prev_obstacle_state = detected;
-  send_binary(CMD_OBSTACLE, position);
-}
-
-// 로딩 시작 메세지
-void send_start_loading() {
-  send_binary(CMD_START_LOADING, current_position.c_str());
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
 }
 
 //로딩 메시지
 void send_start_loading(uint8_t position_id) 
 {
-<<<<<<< HEAD
   uint8_t payload[1] = { position_id };
   send_binary(START_LOADING, payload, 1);
 }
@@ -1175,29 +659,6 @@ void send_finish_charging(uint8_t battery_level)
   send_binary(FINISH_CHARGING, payload, 1);
 }
 
-=======
-  send_binary(CMD_FINISH_LOADING, current_position.c_str());
-}
-
-// 언로딩 시작 메세지
-void send_start_unloading() {
-  send_binary(CMD_START_UNLOADING, current_position.c_str());
-  unloading_in_progress = true;
-  unloading_stage = 1;
-  unloading_stage_time = millis();
-}
-
-void send_finish_unloading() {
-  send_binary(CMD_FINISH_UNLOADING, current_position.c_str());
-  unloading_in_progress = false;
-  unloading_stage = 0;
-}
-
-void send_battery_status() {
-  send_binary(CMD_BATTERY);
-}
-
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
 /*--------------------------------라인트레이서 제어--------------------------------*/
 
 void line_trace() {
@@ -1209,11 +670,13 @@ void line_trace() {
 
   error = l_sensor_val - r_sensor_val;
 
+
   // ⬇ PID 제어 계산
   //integral += error;
   //integral = constrain(integral, -integral_max, integral_max);
   derivative = error - last_error;
   PID_control = Kp * error + Kd * derivative;
+
 
   last_error = error;
 
@@ -1307,39 +770,6 @@ void handle_unloading(unsigned long current_time) {
 }
 
 
-/*--------------------------------언로딩 처리 함수--------------------------------*/
-
-void start_unloading() {
-  Serial.println("🕒 언로딩 시작 메시지 전송 (2초 지연 후)");
-  send_start_unloading();
-  unloading_in_progress = true;
-  unloading_stage = 1;
-  unloading_stage_time = millis();
-}
-
-void handle_unloading(unsigned long current_time) {
-  if (!unloading_in_progress) return;
-
-  if (unloading_stage == 1 && current_time - unloading_stage_time >= 0) {
-    Serial.println("✅ 언로딩 서보모터 → 90도 (내리기)");
-    unloading_servo.write(SERVO_DROP_ANGLE);
-    unloading_stage_time = current_time;
-    unloading_stage = 2;
-  }
-  else if (unloading_stage == 2 && current_time - unloading_stage_time >= 2000) {
-    Serial.println("✅ 언로딩 서보모터 → 170도 (올리기)");
-    unloading_servo.write(SERVO_INIT_ANGLE);
-    unloading_stage_time = current_time;
-    unloading_stage = 3;
-  }
-  else if (unloading_stage == 3 && current_time - unloading_stage_time >= 1000) {
-    Serial.println("✅ 언로딩 완료 메시지 전송");
-    send_finish_unloading();
-    unloading_in_progress = false;
-    unloading_stage = 0;
-  }
-}
-
 /*--------------------------------UID 관련 함수--------------------------------*/
 
 bool isSameUID(byte *uid1, byte *uid2) 
@@ -1400,7 +830,6 @@ bool checkAndPrintUID(byte* uid) {
         send_arrived(STANDBY, 0x00);
         run_command = false;
         stop_motors();
-<<<<<<< HEAD
         if (mission_target == 0 || mission_target == 0xFF) {
           // Serial.println("📨 [STANDBY] 미션 없음 → 요청");
           send_assign_mission();
@@ -1409,14 +838,6 @@ bool checkAndPrintUID(byte* uid) {
 
       if (mission_target == pos_id) {
         // Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 정지");
-=======
-        send_assign_mission(); 
-      } 
-
-      // 🎯 목적지에 도달한 경우 멈춤
-      if (mission_target != "" && mission_target == String(desc)) {
-        Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 중지");
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
         run_command = false;
         stop_motors();
       }
@@ -1446,29 +867,3 @@ void reconnectToServer()
     }
   }
 }
-<<<<<<< HEAD
-=======
-
-// 하트비트 메시지 전송
-void send_heartbeat() {
-  if (client && client.connected()) {
-    uint8_t header[4] = {
-      truck_id_byte,   // sender_id
-      ID_SERVER,       // receiver_id
-      CMD_HELLO,       // cmd_id
-      0                // payload_len (페이로드 없음)
-    };
-    
-    client.write(header, 4);
-    Serial.println("[💓 하트비트] 서버에 하트비트 메시지 전송");
-  }
-}
-
-// 트럭 상태 가져오기
-uint8_t get_truck_state() {
-  if (battery_empty)
-    return STATE_LOW_BATTERY;
-  else
-    return STATE_NORMAL;
-}
->>>>>>> 7c52759fa2c79cedb55b2f3a5ed108930d6ba5b8
