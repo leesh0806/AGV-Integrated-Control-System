@@ -536,6 +536,17 @@ void receive_binary(const uint8_t* data, size_t len) {
       }
       break;
       
+    case CMD_START_CHARGING:
+      Serial.println("[🔋 충전 시작] 서버에서 충전 명령 수신");
+      
+      // 충전 상태로 변경 및 주행 정지
+      run_command = false;
+      stop_motors();
+      
+      // 필요한 경우 추가 충전 관련 처리
+      
+      break;
+      
     default:
       Serial.print("[ℹ️ 디버깅] 알 수 없는 명령: 0x");
       Serial.println(cmd_id, HEX);
