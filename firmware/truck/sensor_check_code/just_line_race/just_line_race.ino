@@ -75,11 +75,17 @@ void line_trace() {
   // ⬇ PID 제어 계산
   integral += error;
   derivative = error - last_error;
+  Serial.print("derivative: ");
+  Serial.println(derivative);
   PID_control = Kp * error + Ki * integral + Kd * derivative;
+  Serial.print("PID_control: ");
+  Serial.println(PID_control);
 
 
   last_error = error;
 
+  Serial.print("L_PWM: "); Serial.println(L_PWM);
+  Serial.print("R_PWM: "); Serial.println(R_PWM); 
   R_PWM = speed_limit(avg_PWM - PID_control, 0, max_pwm);
   L_PWM = speed_limit(avg_PWM + PID_control, 0, max_pwm);
 

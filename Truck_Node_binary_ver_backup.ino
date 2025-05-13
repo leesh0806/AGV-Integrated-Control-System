@@ -200,8 +200,8 @@ int L_PWM, R_PWM;
 int error;
 int l_sensor_val;
 int r_sensor_val;
-int avg_PWM = 230;
-int max_pwm = 255;
+int avg_PWM = 150;
+int max_pwm = 75;
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
 
@@ -225,6 +225,7 @@ void setup()
   pinMode(MOTOR1_IN2, OUTPUT);
   pinMode(MOTOR2_IN3, OUTPUT);
   pinMode(MOTOR2_IN4, OUTPUT);
+
   ledcSetup(PWM_CHANNEL_LEFT, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(MOTOR12_EN, PWM_CHANNEL_LEFT);
   ledcSetup(PWM_CHANNEL_RIGHT, PWM_FREQ, PWM_RESOLUTION);
@@ -235,9 +236,8 @@ void setup()
   pinMode(ECHO_PIN, INPUT);
 
   //서보모터 초기 설정
-  // unloading_servo.attach(SERVO_PIN);
+  unloading_servo.attach(SERVO_PIN);
   //unloading_servo.write(SERVO_INIT_ANGLE);  // 초기 위치
-  /*
   int temp_angle = 90;
   while (temp_angle < 180)
   {
@@ -246,7 +246,7 @@ void setup()
     temp_angle = temp_angle + 10;
     delay(1000);
   }
-  */
+
   
 
   // WiFi 연결
@@ -279,22 +279,6 @@ void setup()
 
 void loop() 
 {
-
-  /*
-  static unsigned long prev_temp_time;
-  if (millis() - prev_temp_time >= 1000)
-  {
-    Serial.print("mission_target: ");
-    Serial.println(mission_target);
-    Serial.print("mission_requested: ");
-    Serial.println(mission_requested);
-    prev_temp_time = millis();
-  }
-
-  */
-
-  
-  
   reconnectToServer();
 
   // ✅ 서버로부터 수신 메시지 처리
@@ -315,36 +299,27 @@ void loop()
   if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
   {
     last_mission_check = current_time;
-    if (!mission_requested && (mission_target == 0xFF || mission_target == 0x00) && (current_position_id == 0xFF || current_position_id == STANDBY)) 
+    if (!mission_requested && mission_target == 0xFF && (current_position_id == 0xFF || current_position_id == STANDBY)) 
     {
       Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
       send_assign_mission();
-      mission_requested = true;
+      mission_requested = true;  // ✅ 중복 요청 방지
     }
   }
 
   // ✅ 주행 제어
-  // obstacle_block = obstacle_detected();
-  // if (run_command && !obstacle_block && !battery_empty)
-  // {
-  //   line_trace();
-  //   // Serial.println("hello");
-  //   send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
-  // }
-  // else if (obstacle_block) 
-  // {
-  //   Serial.println("🛑 장애물 감지로 정지");
-  //   stop_motors();
-  //   send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
-  // }
-
-  if (run_command)
+  obstacle_block = obstacle_detected();
+  if (run_command && !obstacle_block && !battery_empty)
   {
     line_trace();
+    Serial.println("hello");
+    send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
   }
-  else
+  else if (obstacle_block) 
   {
+    Serial.println("🛑 장애물 감지로 정지");
     stop_motors();
+    send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
   }
 
   // ✅ 적재 시작 지연 처리
@@ -377,8 +352,7 @@ void loop()
   {
     handle_unloading(current_time);
   }
-  
-  /*
+    
   // ✅RFID 체크
   if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
   {
@@ -387,7 +361,7 @@ void loop()
 
   // UID 확인 및 서버 전송
   checkAndPrintUID(rfid.uid.uidByte);
-  */
+
 
 
   // ✅ 배터리 감소 처리 (STANDBY에서는 감소 안 함)
@@ -414,7 +388,6 @@ void loop()
     }
   }
 
-  /*
   // ✅ 상태 전송 (STATUS_UPDATE)
   if (current_time - last_battery_report >= BATTERY_REPORT_INTERVAL) 
   {
@@ -424,7 +397,6 @@ void loop()
 
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
-  */
 }
 
 
@@ -451,7 +423,6 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
       if (payload_len >= 1) {
         mission_target = payload[0];  // 예: LOAD_A
         run_command = true;
-        Serial.println("[DEBUG] run_command = true");
         mission_requested = false;  // ✅ 다음 미션 요청 허용
         Serial.printf("📝 [미션 할당] 목표 위치 ID: %02X\n", mission_target);
       }
@@ -461,20 +432,17 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
     case NO_MISSION:
       mission_target = 0;
       run_command = false;
-      Serial.println("[DEBUG] run_command = false");
       mission_requested = false;  // ✅ 추가: 미션 요청 플래그 초기화
       Serial.println("📭 [미션 없음] 대기 상태 유지");
       break;
 
     case RUN:
       run_command = true;
-      Serial.println("[DEBUG] run_command =true");
       Serial.println("🏃‍♂️ [명령] 주행 시작");
       break;
 
     case STOP:
       run_command = false;
-      Serial.println("[DEBUG] run_command = false");
       stop_motors();
       Serial.println("🛑 [명령] 주행 정지");
       break;
@@ -484,7 +452,6 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
         uint8_t gate_id = payload[0];
         Serial.printf("🚪 [게이트 열림 감지] gate_id: %02X\n", gate_id);
         run_command = true;
-        Serial.println("[DEBUG] run_command = true");
       }
       break;
 
@@ -613,28 +580,18 @@ void line_trace() {
   Serial.print(" R: "); Serial.println(r_sensor_val);
 
   error = l_sensor_val - r_sensor_val;
-  Serial.print("error: ");
-  Serial.println(error);
 
 
   // ⬇ PID 제어 계산
-  //integral += error;
-  integral = 0;
+  integral += error;
   derivative = error - last_error;
-  Serial.print("derivative: ");
-  Serial.println(derivative);
   PID_control = Kp * error + Ki * integral + Kd * derivative;
-  Serial.print("PID_control: ");
-  Serial.println(PID_control);
 
 
   last_error = error;
 
-  R_PWM = speed_limit(avg_PWM + PID_control, 0, max_pwm);
-  L_PWM = speed_limit(avg_PWM - PID_control, 0, max_pwm);
-
-  Serial.print("L_PWM: "); Serial.println(L_PWM);
-  Serial.print("R_PWM: "); Serial.println(R_PWM);  
+  R_PWM = speed_limit(avg_PWM - PID_control, 0, max_pwm);
+  L_PWM = speed_limit(avg_PWM + PID_control, 0, max_pwm);
 
   left_motor_f(L_PWM);
   right_motor_f(R_PWM);
@@ -649,14 +606,12 @@ void left_motor_f(int pwm_val) {
   digitalWrite(MOTOR1_IN1, LOW);
   digitalWrite(MOTOR1_IN2, HIGH);
   ledcWrite(PWM_CHANNEL_LEFT, pwm_val);
-  //ledcWrite(PWM_CHANNEL_LEFT, 255);
 }
 
 void right_motor_f(int pwm_val) {
   digitalWrite(MOTOR2_IN3, LOW);
   digitalWrite(MOTOR2_IN4, HIGH);
   ledcWrite(PWM_CHANNEL_RIGHT, pwm_val);
-  //ledcWrite(PWM_CHANNEL_RIGHT, 255);
 }
 
 int speed_limit(int val, int minVal, int maxVal) {
@@ -669,7 +624,6 @@ int speed_limit(int val, int minVal, int maxVal) {
 
 // 장애물 감지 여부
 bool obstacle_detected() {
-  /*
   long duration;
   float distance_cm;
 
@@ -690,8 +644,6 @@ bool obstacle_detected() {
   last_distance_cm = distance_cm;  // 전역 변수 업데이트
 
   return distance_cm < 12.0;  // 10cm 이내면 true
-  */
-  return false;
 }
 /*--------------------------------언로딩 처리 함수--------------------------------*/
 
@@ -756,7 +708,6 @@ bool checkAndPrintUID(byte* uid) {
       if (pos_id == CHECKPOINT_A) {
         send_arrived(CHECKPOINT_A, GATE_A);
         run_command = false;
-        Serial.println("[DEBUG] run_command = false");
       }
       else if (pos_id == CHECKPOINT_B) {
         send_arrived(CHECKPOINT_B, GATE_A);
@@ -764,7 +715,6 @@ bool checkAndPrintUID(byte* uid) {
       else if (pos_id == CHECKPOINT_C) {
         send_arrived(CHECKPOINT_C, GATE_B);
         run_command = false;
-        Serial.println("[DEBUG] run_command = false");
       }
       else if (pos_id == CHECKPOINT_D) {
         send_arrived(CHECKPOINT_D, GATE_B);
@@ -793,7 +743,6 @@ bool checkAndPrintUID(byte* uid) {
       else if (pos_id == STANDBY) {
         send_arrived(STANDBY, 0x00);
         run_command = false;
-        Serial.println("[DEBUG] run_command = false");
         stop_motors();
         send_assign_mission();
       }
@@ -803,7 +752,6 @@ bool checkAndPrintUID(byte* uid) {
       {
         Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 정지");
         run_command = false;
-        Serial.println("[DEBUG] run_command = false");
         stop_motors();
       }
 

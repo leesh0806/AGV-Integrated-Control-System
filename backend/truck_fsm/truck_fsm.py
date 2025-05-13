@@ -573,10 +573,14 @@ class TruckFSM:
     # 충전 완료 처리
     def _finish_charging(self, context, payload):
         """충전 완료 처리"""
-        # 상태가 CHARGING이 아닌 경우 무시
+        # 이미 IDLE 상태인 경우에도 미션 할당 시도
         if context.state != TruckState.CHARGING:
-            print(f"[충전 완료 무시] {context.truck_id}: 현재 충전 중이 아님 (상태: {context.state.name})")
-            return False
+            print(f"[충전 완료 처리] {context.truck_id}: 이미 충전 중이 아님 (상태: {context.state.name}), 미션 할당 시도")
+            # 충전 중이 아니더라도 미션 할당 시도
+            context.is_charging = False
+            # 미션 할당 시도
+            self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
+            return True
         
         context.is_charging = False
         context.state = TruckState.IDLE  # 명시적으로 IDLE 상태로 변경
@@ -586,7 +590,21 @@ class TruckFSM:
             self.command_sender.send(context.truck_id, "CHARGING_COMPLETED")
             
         # 완충 후 미션 할당 시도
-        self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
+        print(f"[미션 시도] {context.truck_id}: 충전 완료 후 미션 할당 시도")
+        is_assigned = self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
+        
+        # 미션 할당 상태 확인 및 처리
+        if is_assigned and context.mission_id and self.command_sender:
+            print(f"[미션 할당 확인] {context.truck_id}: 미션 {context.mission_id} 할당 완료. 명령 전송")
+            # 미션이 할당되었지만 이전 상태 때문에 명령이 전송되지 않았을 수 있으므로 명시적 전송
+            if hasattr(context, 'loading_target'):
+                self.command_sender.send(context.truck_id, "MISSION_ASSIGNED", {
+                    "source": context.loading_target
+                })
+                # 이동 명령 추가 전송
+                time.sleep(1.0)  # 트럭이 미션 정보를 처리할 시간 제공
+                self.command_sender.send(context.truck_id, "RUN", {})
+        
         return True
     
     # -------------------------------------------------------------------------------   

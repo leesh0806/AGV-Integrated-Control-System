@@ -49,7 +49,7 @@ char* truck_id = "TRUCK_01";
 
 /*-------------------------상태 로직 변환 및 기타 변수들--------------------------------*/
 
-bool run_command = false;
+bool run_command = true; //임시
 bool obstacle_block = false;   //지금 멈춰야 하나?(실시간 결정용)
 bool prev_obstacle_state = false;
 float last_distance_cm = 0;
