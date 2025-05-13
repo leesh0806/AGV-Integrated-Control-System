@@ -20,6 +20,7 @@ bool c = false;
 bool open = false;
 int btnServo = 0;
 char move = 'S'; // 회전 방향을 결정함
+char lastmove= 'S';
 
 int direction = 0; // 스텝모터 내부 로직의 왼쪽 = -1 | 정지 = 0 | 오른쪽 = 1 
 
@@ -41,7 +42,7 @@ void setup()
 void loop()
 { 
   receiveIR();
-  moveMotor();
+  moveLeftRight();
 
   checkServButton();
   dispense();

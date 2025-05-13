@@ -4,7 +4,7 @@ int steps = 0;
 unsigned long lastMoved = 0;  
 int interval = 3;  
 
-void moveMotor() // 모터를 실제로 움직임
+void moveLeftRight() // 모터를 실제로 움직임
 {
   unsigned long time = millis();
   
@@ -21,6 +21,39 @@ void moveMotor() // 모터를 실제로 움직임
     direction = 1;   // 오른쪽 방향
     stepper(1);         // 한 스텝 이동
     lastMoved = time;  // 시간 업데이트
+  }
+
+  if (move == 'A') 
+  {
+    if (lastmove != 'A')
+    {
+      for(int i = 0; i < 1200; i++) 
+      {
+        direction = -1;     // 오른쪽 방향
+        stepper(1);         // 한 스텝 이동
+        lastMoved = time;   // 시간 업데이트
+        delay(3);
+      }
+
+      lastmove = 'A';
+    }
+  }
+
+  if (move == 'B') 
+  {
+    if (lastmove != 'B')
+    {
+      for(int i = 0; i < 1200; i++) 
+      {
+        int tick = 0;
+        direction = 1;      // 오른쪽 방향
+        stepper(1);         // 한 스텝 이동
+        lastMoved = time;   // 시간 업데이트
+        delay(3);
+      }
+
+      lastmove = 'B';
+    }
   }
 }
 

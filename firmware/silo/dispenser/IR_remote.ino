@@ -84,10 +84,12 @@ void handleButton(unsigned long code)
       Serial.println("현재 채널");
       break;
     case BTN_VOLD:
-      Serial.println("속도 감속");
+      move = 'A';
+      Serial.println("A");
       break;
     case BTN_VOLU:
-      Serial.println("속도 가속");
+      move = 'B';
+      Serial.println("B");
       break;
     default:
       Serial.print("알 수 없는 버튼: 0x");
