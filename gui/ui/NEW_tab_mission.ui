@@ -18,8 +18,8 @@
     <rect>
      <x>10</x>
      <y>150</y>
-     <width>791</width>
-     <height>431</height>
+     <width>1181</width>
+     <height>441</height>
     </rect>
    </property>
    <property name="editTriggers">
@@ -40,7 +40,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>791</width>
+     <width>1181</width>
      <height>131</height>
     </rect>
    </property>
@@ -211,8 +211,8 @@
    <widget class="QPushButton" name="pushButton_add_mission_2">
     <property name="geometry">
      <rect>
-      <x>660</x>
-      <y>90</y>
+      <x>1050</x>
+      <y>30</y>
       <width>121</width>
       <height>30</height>
      </rect>
@@ -221,189 +221,32 @@
      <string>새 미션 추가</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_2">
-   <property name="geometry">
-    <rect>
-     <x>820</x>
-     <y>300</y>
-     <width>370</width>
-     <height>201</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>미션 추가</string>
-   </property>
-   <widget class="QLabel" name="label_type">
+   <widget class="QPushButton" name="pushButton_cancel_mission">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>화물 종류:</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_type_for_add">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>30</y>
-      <width>240</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="placeholderText">
-     <string>화물 종류 입력</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_amount">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>65</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>화물 양:</string>
-    </property>
-   </widget>
-   <widget class="QSpinBox" name="spinBox_amount_for_add">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>65</y>
-      <width>240</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="minimum">
-     <number>1</number>
-    </property>
-    <property name="maximum">
-     <number>1000</number>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_source_add">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>100</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>출발지:</string>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="comboBox_source_for_add">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>100</y>
-      <width>240</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <item>
-     <property name="text">
-      <string>LOAD_A</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>LOAD_B</string>
-     </property>
-    </item>
-   </widget>
-   <widget class="QLabel" name="label_truck_add">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>130</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>트럭 ID:</string>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="comboBox_truck_id_for_add">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>130</y>
-      <width>240</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <item>
-     <property name="text">
-      <string>자동 선택</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>트럭 1</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>트럭 2</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>트럭 3</string>
-     </property>
-    </item>
-   </widget>
-   <widget class="QPushButton" name="pushButton_add_mission">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>160</y>
-      <width>351</width>
+      <x>1050</x>
+      <y>90</y>
+      <width>121</width>
       <height>30</height>
      </rect>
     </property>
     <property name="text">
-     <string>미션 추가</string>
+     <string>선택한 미션 취소</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QPushButton" name="pushButton_cancel_mission">
-   <property name="geometry">
-    <rect>
-     <x>830</x>
-     <y>510</y>
-     <width>350</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>선택한 미션 취소</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushButton_refresh_table">
-   <property name="geometry">
-    <rect>
-     <x>830</x>
-     <y>550</y>
-     <width>351</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>미션 목록 새로고침</string>
-   </property>
+   <widget class="QPushButton" name="pushButton_refresh_table">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>90</y>
+      <width>141</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>미션 목록 새로고침</string>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
