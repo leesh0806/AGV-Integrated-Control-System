@@ -7,8 +7,8 @@ const int SERVO_PIN = 9;
 const int SENSOR_PIN_A = A0;
 const int SENSOR_PIN_B = A1;
 
-const int CDS_THRESHOLD_LOW = 90;
-const int CDS_THRESHOLD_HIGH = 110;
+const int CDS_THRESHOLD_LOW = 40;
+const int CDS_THRESHOLD_HIGH = 100;
 const int MOTOR_SPEED =254;
 
 #define ROUTE_A 0
