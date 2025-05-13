@@ -47,14 +47,14 @@
 
 /*--------------------------------WiFi 설정--------------------------------*/
 
-// const char* ssid = "addinedu_class_2 (2.4G)";
-const char* ssid = "base";
-// const char* password = "addinedu1";
-const char* password = "base6666";
+const char* ssid = "addinedu_class_2 (2.4G)";
+//const char* ssid = "base";
+const char* password = "addinedu1";
+//const char* password = "base6666";
 
 /*--------------------------------PC 서버 주소 및 포트--------------------------------*/
 
-IPAddress serverIP(192, 168, 146, 129);  // ← PC IP로 바꾸세요
+IPAddress serverIP(192, 168, 0, 166);  // ← PC IP로 바꾸세요
 const int serverPort = 8001;  
 WiFiClient client;
 
@@ -108,7 +108,11 @@ String last_cmd = "";
 uint8_t mission_target = 0xFF;  // 0xFF = 미할당 상태
 bool mission_requested = false;
 unsigned long last_mission_check = 0;    // 마지막 미션 체크 시간
-const unsigned long MISSION_CHECK_INTERVAL = 5000;  // 5초마다 체크
+const unsigned long MISSION_CHECK_INTERVAL = 2000;  // 5초마다 체크
+
+
+bool initial_delay_done = false;  //초기 출발
+unsigned long system_start_time = 0; //초기 출발
 
 uint8_t get_position_id(const String& desc) 
 {
@@ -147,6 +151,9 @@ const int SERVO_PIN = 17;
 const int SERVO_INIT_ANGLE = 170;
 const int SERVO_DROP_ANGLE = 90;
 
+unsigned long belt_arrival_time = 0;
+bool belt_waiting_to_unload = false;
+
 /*--------------------------------가상 배터리 잔량 체크--------------------------------*/
 
 int battery_level = 100;
@@ -155,7 +162,7 @@ unsigned long last_battery_drop = 0;
 const unsigned long BATTERY_DROP_INTERVAL = 5000; //5초 마다 배터리 감소 
 
 unsigned long last_battery_report = 0;
-const unsigned long BATTERY_REPORT_INTERVAL = 5000; // 5초마다 배터리 상태 서버에 전송
+const unsigned long STATUS_REPORT_INTERVAL = 10000; // 10초마다 배터리 상태 서버에 전송
 bool battery_empty = false;  // 배터리 0% 상태 플래그
 
 
@@ -189,10 +196,11 @@ bool battery_empty = false;  // 배터리 0% 상태 플래그
 
 /*--------------------------------PID 제어 변수--------------------------------*/
 
-double Kp = 0.1020;
-double Kd = 0.2;
-double Ki = 0.0001;       
-double integral = 0.0;  // 누적 적분값
+double Kp = 0.1025;
+double Kd = 0.17;
+//double Ki = 0.00005;       
+//double integral = 0.0;  // 누적 적분값
+//const double integral_max = 500.0;
 double PID_control;
 int last_error = 0;
 int derivative;
@@ -200,8 +208,8 @@ int L_PWM, R_PWM;
 int error;
 int l_sensor_val;
 int r_sensor_val;
-int avg_PWM = 150;
-int max_pwm = 75;
+int avg_PWM = 190;
+int max_pwm = 250;
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
 
@@ -264,6 +272,7 @@ void setup()
   current_position = "STANDBY";
   current_position_id = STANDBY;
   Serial.println("🟢 초기 위치 상태: STANDBY");
+  system_start_time = millis();  // 시스템 부팅 기준 시각 저장
 
 }
 
@@ -285,32 +294,45 @@ void loop()
   // ✅ 현재 시간 갱신
   unsigned long current_time = millis();
 
+
+
   // ✅ 주기적인 미션 체크
-  if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
+  if (current_time - last_mission_check >= 2000) 
   {
     last_mission_check = current_time;
-    if (!mission_requested && (current_position_id == 0xFF || current_position_id == STANDBY)) 
+    if (!mission_requested && (mission_target == 0x00 || mission_target == 0xFF) && (current_position_id == 0x00 || current_position_id == STANDBY) )  
     {
       Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
       send_assign_mission();
-      mission_requested = true;  // ✅ 중복 요청 방지
+      mission_requested = false;  // ✅ 중복 요청 방지
     }
   }
+
+  // ✅ 최초 1회 지연 처리 (1초)
+  if (!initial_delay_done && (current_time - system_start_time < 1500)) 
+  {
+    Serial.printf("⏳ 시스템 부팅 후 대기 중... %.0fms 남음\n", 
+                  1000.0 - (current_time - system_start_time));
+    return;  // 아직 1초 안 지났으므로 아무 작업도 하지 않음
+  }
+  initial_delay_done = true;  // 이후부터는 바로 동작
 
   // ✅ 주행 제어
   obstacle_block = obstacle_detected();
   if (run_command && !obstacle_block && !battery_empty)
   {
     line_trace();
-    Serial.println("hello");
-    send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
+    //Serial.println("hello");
+    //send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
   }
   else if (obstacle_block) 
   {
     Serial.println("🛑 장애물 감지로 정지");
     stop_motors();
     send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
+    //integral = 0;
   }
+  
 
   // ✅ 적재 시작 지연 처리
   if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
@@ -327,30 +349,68 @@ void loop()
   {
     Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
     send_finish_loading(current_position_id);
+    if (mission_target == current_position_id) 
+    {
+      Serial.println("✅ [미션 완료] mission_target 초기화");
+      mission_target = 0;
+    }
     loading_in_progress = false;
+    run_command = true;
   }
 
-  // ✅ 언로딩 시작 지연 처리
-  if (wait_start_unloading && (current_time - wait_start_unloading_time >= 2000)) 
-  {
-    start_unloading();
-    wait_start_unloading = false;
+  // ✅ 언로딩 시작 지연 처리 (BELT 도착 후 2초 후)
+  if (wait_start_unloading) {
+    Serial.printf("[⏳ 대기 중] 언로딩 시작까지 %.1f초 남음\n", 
+                  (2000 - (current_time - wait_start_unloading_time)) / 1000.0);
+    
+    if (current_time - wait_start_unloading_time >= 2000) {
+      Serial.println("🕒 [START] 언로딩 시작 메시지 전송 (2초 지연 후)");
+      Serial.printf("👉 current_position_id = 0x%02X (%s)\n", 
+                    current_position_id, current_position.c_str());
+
+      send_start_unloading(current_position_id);
+      unloading_in_progress = true;
+      unloading_start_time = current_time;
+      wait_start_unloading = false;
+    }
   }
 
-  // ✅ 언로딩 FSM 처리 (위치 검사 추가)
-  if (current_position_id == BELT) 
-  {
-    handle_unloading(current_time);
+  // ✅ 언로딩 완료 로직 (시작 후 5초 뒤)
+  if (unloading_in_progress) {
+    Serial.printf("[📦 언로딩 중] 완료까지 %.1f초 남음\n", 
+                  (5000 - (current_time - unloading_start_time)) / 1000.0);
+    
+    if (current_time - unloading_start_time >= 5000) {
+      Serial.println("✅ [FINISH] 언로딩 완료 메시지 전송 (5초 경과)");
+      Serial.printf("👉 current_position_id = 0x%02X (%s)\n", 
+                    current_position_id, current_position.c_str());
+
+      send_finish_unloading(current_position_id);
+      unloading_in_progress = false;
+    }
   }
     
-  // ✅RFID 체크
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
+  // // ✅RFID 체크
+  // if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
+  // {
+  //   return;
+  // }
+
+  // // UID 확인 및 서버 전송
+  // checkAndPrintUID(rfid.uid.uidByte);
+    // ✅RFID 체크 (쿨타임 1초 적용)
+  if (current_time - last_rfid_check >= 1000)  // 1초 쿨타임
   {
-    return;
+    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) 
+    {
+      if (checkAndPrintUID(rfid.uid.uidByte)) {
+        last_rfid_check = current_time;  // 인식 성공 시만 갱신
+      }
+      rfid.PICC_HaltA();
+      rfid.PCD_StopCrypto1();
+    }
   }
 
-  // UID 확인 및 서버 전송
-  checkAndPrintUID(rfid.uid.uidByte);
 
 
 
@@ -379,14 +439,14 @@ void loop()
   }
 
   // ✅ 상태 전송 (STATUS_UPDATE)
-  if (current_time - last_battery_report >= BATTERY_REPORT_INTERVAL) 
+  if (current_time - last_battery_report >= STATUS_REPORT_INTERVAL) 
   {
     last_battery_report = current_time;
     send_status_update(battery_level, current_position_id);
   }
 
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
+  // rfid.PICC_HaltA();
+  // rfid.PCD_StopCrypto1();
 }
 
 
@@ -406,17 +466,28 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
     return;
   }
 
-  Serial.printf("[📩 수신] cmd: %02X, payload_len: %d\n", cmd_id, payload_len);
+  //Serial.printf("[📩 수신] cmd: %02X, payload_len: %d\n", cmd_id, payload_len);
 
   switch (cmd_id) {
     case MISSION_ASSIGNED:
       if (payload_len >= 1) {
-        mission_target = payload[0];  // 예: LOAD_A
-        run_command = true;
-        mission_requested = false;  // ✅ 다음 미션 요청 허용
-        Serial.printf("📝 [미션 할당] 목표 위치 ID: %02X\n", mission_target);
+        uint8_t new_mission = payload[0];
+
+        if (battery_level <= 30) 
+        {
+          Serial.printf("⚡ [배터리 부족: %d%%] 미션 거절하고 충전 시작\n", battery_level);
+          mission_target = 0;
+          run_command = false;
+        } else 
+        {
+          mission_target = new_mission;
+          run_command = true;
+          mission_requested = true;
+          Serial.printf("📝 [미션 수락] 목표 위치 ID: 0x%02X\n", mission_target);
+        }
       }
       break;
+
 
 
     case NO_MISSION:
@@ -439,7 +510,7 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
     case GATE_OPENED:
       if (payload_len >= 1) {
         uint8_t gate_id = payload[0];
-        Serial.printf("🚪 [게이트 열림 감지] gate_id: %02X\n", gate_id);
+        //Serial.printf("🚪 [게이트 열림 감지] gate_id: %02X\n", gate_id);
         run_command = true;
       }
       break;
@@ -447,8 +518,16 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
     case START_CHARGING:
       battery_level = 100;
       battery_empty = false;
+
+      Serial.println("🔋 [충전 완료] 배터리 100% 복구");
       send_finish_charging(battery_level);
-      Serial.println("🔌 [충전 시작] 배터리 100% 충전됨");
+
+      delay(500); // 약간의 간격 후 미션 요청
+      Serial.println("📨 [충전 완료 후] 미션 재요청");
+      //send_assign_mission();
+
+      mission_target = 0;
+      mission_requested = false;
       break;
 
     default:
@@ -572,9 +651,10 @@ void line_trace() {
 
 
   // ⬇ PID 제어 계산
-  integral += error;
+  //integral += error;
+  //integral = constrain(integral, -integral_max, integral_max);
   derivative = error - last_error;
-  PID_control = Kp * error + Ki * integral + Kd * derivative;
+  PID_control = Kp * error + Kd * derivative;
 
 
   last_error = error;
@@ -726,14 +806,19 @@ bool checkAndPrintUID(byte* uid) {
       }
       else if (pos_id == BELT) {
         send_arrived(BELT, 0x00);  // 게이트 ID 생략 또는 지정
+        belt_arrival_time = millis();   // 현재 시간 저장
+        
         wait_start_unloading = true;
-        wait_start_unloading_time = millis();
       }
       else if (pos_id == STANDBY) {
         send_arrived(STANDBY, 0x00);
         run_command = false;
         stop_motors();
-        send_assign_mission();
+        // ✅ 미션 없으면 → 미션 요청
+        if (mission_target == 0 || mission_target == 0xFF) {
+          Serial.println("📨 [STANDBY] 미션 없음 → 요청");
+          send_assign_mission();
+        }
       }
 
       // 도착 위치가 목표 위치인 경우 정지
@@ -769,4 +854,3 @@ void reconnectToServer()
     }
   }
 }
-
