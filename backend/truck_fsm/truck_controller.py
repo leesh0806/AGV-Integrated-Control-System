@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 import time
 import traceback
+from .truck_state import TruckState
 
 if TYPE_CHECKING:
     from .truck_fsm_manager import TruckFSMManager
@@ -58,9 +59,24 @@ class TruckController:
             
             # 배터리 상태 업데이트
             battery_level = payload.get("battery_level", 0)
+            
+            # FSM 상태 확인
             is_charging = False  # 기본 값
+            if hasattr(self.truck_fsm_manager, 'fsm'):
+                context = self.truck_fsm_manager.fsm._get_or_create_context(truck_id)
+                current_state = context.state
+                if current_state == TruckState.CHARGING:
+                    is_charging = True
+                    print(f"[상태 확인] {truck_id}는 현재 충전 상태입니다. FSM 상태: {current_state.name}")
             
             if isinstance(battery_level, (int, float)):
+                # 배터리 상태 업데이트 전 이전 상태 확인
+                prev_battery_level = 100.0  # 기본값
+                if hasattr(self.truck_fsm_manager, 'fsm'):
+                    context = self.truck_fsm_manager.fsm._get_or_create_context(truck_id)
+                    prev_battery_level = context.battery_level
+                
+                # 배터리 상태 업데이트
                 self.truck_status_manager.update_battery(truck_id, battery_level, is_charging)
                 
                 # FSM 매니저의 컨텍스트에도 배터리 정보 업데이트
@@ -69,18 +85,16 @@ class TruckController:
                     context.battery_level = battery_level
                     context.is_charging = is_charging
                 
-                # 배터리가 100%이고 충전 중이면 자동으로 충전 완료 처리
-                if battery_level >= 100 and is_charging:
-                    print(f"[🔋 자동 충전 완료] {truck_id}의 배터리가 100%에 도달했습니다. 충전 상태를 해제합니다.")
+                # 배터리가 95% 이상이고 충전 중이면 자동으로 충전 완료 처리
+                if battery_level >= 95 and is_charging:
+                    print(f"[🔋 자동 충전 완료] {truck_id}의 배터리가 95% 이상에 도달했습니다. 충전 상태를 해제합니다.")
                     self.truck_status_manager.update_battery(truck_id, battery_level, False)
                     if hasattr(self.truck_fsm_manager, 'fsm'):
                         context.is_charging = False
+                        context.state = TruckState.IDLE  # 명시적으로 IDLE 상태로 전환
                     
-                    # 현재 FSM 상태가 CHARGING이면 FINISH_CHARGING 트리거 발생
-                    current_fsm_state = self.truck_fsm_manager.get_state(truck_id)
-                    state_name = getattr(current_fsm_state, 'name', str(current_fsm_state))
-                    if "CHARGING" in state_name:
-                        self.truck_fsm_manager.handle_trigger(truck_id, "FINISH_CHARGING", {})
+                    # 충전 완료 이벤트 전송
+                    self.truck_fsm_manager.handle_trigger(truck_id, "FINISH_CHARGING", {})
             
             # 위치 정보 업데이트
             position = payload.get("position", "UNKNOWN")
@@ -89,6 +103,17 @@ class TruckController:
             if isinstance(position, str):
                 location = position
                 run_state = "IDLE"  # 기본 값
+                
+                # 위치가 UNKNOWN이면 이전 위치 유지 또는 STANDBY로 설정
+                if location == "UNKNOWN" and hasattr(self.truck_fsm_manager, 'fsm'):
+                    context = self.truck_fsm_manager.fsm._get_or_create_context(truck_id)
+                    if context.position and context.position != "UNKNOWN":
+                        location = context.position
+                        print(f"[위치 유지] {truck_id}: 위치=UNKNOWN 수신됨, 이전 위치({location}) 유지")
+                    else:
+                        # 완전히 초기 상태인 경우 STANDBY로 가정
+                        location = "STANDBY"
+                        print(f"[위치 초기화] {truck_id}: 위치=UNKNOWN 수신됨, 기본 위치(STANDBY)로 설정")
                 
                 print(f"[위치 업데이트] {truck_id}: 위치={location}, 상태={run_state}")
                 

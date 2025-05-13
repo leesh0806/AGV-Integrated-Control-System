@@ -738,14 +738,22 @@ class TruckFSM:
 
     # 충전 완료 처리
     def _finish_charging(self, context, payload):
+        """충전 완료 처리"""
+        # 상태가 CHARGING이 아닌 경우 무시
+        if context.state != TruckState.CHARGING:
+            print(f"[충전 완료 무시] {context.truck_id}: 현재 충전 중이 아님 (상태: {context.state.name})")
+            return False
+        
         context.is_charging = False
-        print(f"[충전 완료] {context.truck_id}: 배터리 레벨 {context.battery_level}%")
+        context.state = TruckState.IDLE  # 명시적으로 IDLE 상태로 변경
+        print(f"[충전 완료] {context.truck_id}: 배터리 레벨 {context.battery_level}%, 상태 변경: CHARGING → IDLE")
         
         if self.command_sender:
             self.command_sender.send(context.truck_id, "CHARGING_COMPLETED")
             
         # 완충 후 미션 할당 시도
         self.handle_event(context.truck_id, "ASSIGN_MISSION", {})
+        return True
     
     # -------------------------------------------------------------------------------   
 
