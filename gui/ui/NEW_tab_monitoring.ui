@@ -29,7 +29,7 @@
     </size>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox_facility_control">
+  <widget class="QGroupBox" name="group_facility_control">
    <property name="geometry">
     <rect>
      <x>460</x>
@@ -41,7 +41,7 @@
    <property name="title">
     <string/>
    </property>
-   <widget class="QLabel" name="label_alert_9">
+   <widget class="QLabel" name="label_facility">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -54,7 +54,7 @@
      <string>시설 제어</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_gate_a_2">
+   <widget class="QPushButton" name="button_control_mode">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -75,7 +75,7 @@
    <property name="geometry">
     <rect>
      <x>950</x>
-     <y>20</y>
+     <y>30</y>
      <width>311</width>
      <height>371</height>
     </rect>
@@ -109,7 +109,7 @@
       <number>1</number>
      </property>
      <property name="text">
-      <string>Truck Image</string>
+      <string>트럭 이미지</string>
      </property>
     </widget>
     <widget class="QLabel" name="pop_up_message">
@@ -137,7 +137,7 @@
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
-    <widget class="QProgressBar" name="progressBar_battery_truck1">
+    <widget class="QProgressBar" name="progressBar_battery">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -150,7 +150,7 @@
       <number>24</number>
      </property>
     </widget>
-    <widget class="QLabel" name="label_3">
+    <widget class="QLabel" name="label_battery">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -166,7 +166,7 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_pause">
+    <widget class="QPushButton" name="button_new_mission">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -182,7 +182,7 @@
       <bool>true</bool>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_mission_cancel">
+    <widget class="QPushButton" name="button_delete_mission">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -195,7 +195,7 @@
       <string>미션 취소</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="label_mission">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -211,7 +211,7 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
     </widget>
-    <widget class="QProgressBar" name="progressBar_battery_truck1_2">
+    <widget class="QProgressBar" name="progressBar_mission">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -246,7 +246,7 @@
     </attribute>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox">
+  <widget class="QGroupBox" name="group_facility_list">
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -258,7 +258,7 @@
    <property name="title">
     <string/>
    </property>
-   <widget class="QTextEdit" name="textEdit_alert">
+   <widget class="QTextEdit" name="textEdit_facility_list">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -268,7 +268,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_alert_2">
+   <widget class="QLabel" name="label_faility_list">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -281,7 +281,7 @@
      <string>기구 상태 알림</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_belt_3">
+   <widget class="QPushButton" name="button_facility_list">
     <property name="geometry">
      <rect>
       <x>90</x>
@@ -298,7 +298,7 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_2">
+  <widget class="QGroupBox" name="group_location">
    <property name="geometry">
     <rect>
      <x>750</x>
@@ -310,7 +310,7 @@
    <property name="title">
     <string/>
    </property>
-   <widget class="QLabel" name="label_alert_3">
+   <widget class="QLabel" name="label_loc">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -328,7 +328,7 @@
      <string>현재 위치</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_alert_4">
+   <widget class="QLabel" name="label_loc_name">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -342,7 +342,7 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_3">
+  <widget class="QGroupBox" name="group_container">
    <property name="geometry">
     <rect>
      <x>750</x>
@@ -372,7 +372,7 @@
      <string>저장고 상태</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_alert_6">
+   <widget class="QLabel" name="label_state_A">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -385,7 +385,7 @@
      <string>FULL</string>
     </property>
    </widget>
-   <widget class="QLabel" name="truck_image_2">
+   <widget class="QLabel" name="container_A">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -404,10 +404,10 @@
      <number>1</number>
     </property>
     <property name="text">
-     <string>Storage A</string>
+     <string>컨테이너 A</string>
     </property>
    </widget>
-   <widget class="QLabel" name="truck_image_3">
+   <widget class="QLabel" name="container_B">
     <property name="geometry">
      <rect>
       <x>90</x>
@@ -426,10 +426,10 @@
      <number>1</number>
     </property>
     <property name="text">
-     <string>Storage B</string>
+     <string>컨테이너 B</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_alert_8">
+   <widget class="QLabel" name="label_state_B">
     <property name="geometry">
      <rect>
       <x>90</x>
@@ -443,7 +443,7 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_4">
+  <widget class="QGroupBox" name="group_missions">
    <property name="geometry">
     <rect>
      <x>750</x>
@@ -455,7 +455,7 @@
    <property name="title">
     <string/>
    </property>
-   <widget class="QTextEdit" name="textEdit_alert_2">
+   <widget class="QTextEdit" name="textEdit_mission_list">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -465,7 +465,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_alert_7">
+   <widget class="QLabel" name="label_mission_list">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -478,7 +478,7 @@
      <string>임무 목록</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_belt_4">
+   <widget class="QPushButton" name="button_mission_list">
     <property name="geometry">
      <rect>
       <x>70</x>
@@ -495,11 +495,11 @@
     </property>
    </widget>
   </widget>
-  <widget class="QPushButton" name="pushButton_toggle_belt_2">
+  <widget class="QPushButton" name="button_emergency_stop">
    <property name="geometry">
     <rect>
      <x>950</x>
-     <y>400</y>
+     <y>410</y>
      <width>311</width>
      <height>41</height>
     </rect>
@@ -531,7 +531,7 @@ QPushButton:pressed {
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox_facility_control_2">
+  <widget class="QGroupBox" name="group_dispenser">
    <property name="geometry">
     <rect>
      <x>460</x>
@@ -543,7 +543,7 @@ QPushButton:pressed {
    <property name="title">
     <string/>
    </property>
-   <widget class="QLabel" name="label_alert_10">
+   <widget class="QLabel" name="label_dispenser">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -553,10 +553,10 @@ QPushButton:pressed {
      </rect>
     </property>
     <property name="text">
-     <string>사일로 제어</string>
+     <string>디스펜서 제어</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_gate_a_3">
+   <widget class="QPushButton" name="button_left">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -572,7 +572,7 @@ QPushButton:pressed {
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_gate_a_4">
+   <widget class="QPushButton" name="button_right">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -588,7 +588,7 @@ QPushButton:pressed {
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_gate_a_5">
+   <widget class="QPushButton" name="button_dispense">
     <property name="geometry">
      <rect>
       <x>190</x>
