@@ -3,20 +3,61 @@
 #include <WiFi.h>
 #include <ESP32Servo.h>
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <time.h>
+
+//트럭 - > server 명령어
+#define ARRIVED          0x01
+#define OBSTACLE         0x02
+#define STATUS_UPDATE    0x03
+#define START_LOADING    0x04
+#define FINISH_LOADING   0x05
+#define START_UNLOADING  0x06
+#define FINISH_UNLOADING 0x07
+#define ASSIGN_MISSION   0x08
+#define ACK_GATE_OPENED  0x09
+#define FINISH_CHARGING  0x0A
+
+//SERVER → 트럭 명령어
+#define MISSION_ASSIGNED  0x10
+#define NO_MISSION        0x11
+#define RUN               0x12
+#define STOP              0x13
+#define GATE_OPENED       0x14
+#define START_CHARGING    0x15
+
+//상수 정의 
+#define SERVER   0x10
+#define TRUCK_01 0x01
+#define TRUCK_02 0x02
+#define TRUCK_03 0x03
+
+//position
+#define CHECKPOINT_A 0x01
+#define CHECKPOINT_B 0x02
+#define CHECKPOINT_C 0x03
+#define CHECKPOINT_D 0x04
+#define LOAD_A       0x05
+#define LOAD_B       0x06
+#define BELT         0x07
+#define STANDBY      0x08
+
+// 게이트 ID
+#define GATE_A       0xA1
+#define GATE_B       0xA2
 
 /*--------------------------------WiFi 설정--------------------------------*/
 
-const char* ssid = "addinedu_class_2 (2.4G)";
-const char* password = "addinedu1";
+// const char* ssid = "addinedu_class_2 (2.4G)";
+const char* ssid = "base";
+// const char* password = "addinedu1";
+const char* password = "base6666";
 
 /*--------------------------------PC 서버 주소 및 포트--------------------------------*/
 
-IPAddress serverIP(192, 168, 0, 166);  // ← PC IP로 바꾸세요
+IPAddress serverIP(192, 168, 146, 129);  // ← PC IP로 바꾸세요
 const int serverPort = 8001;  
 WiFiClient client;
-String incoming_msg = "";
+
 
 /*--------------------------------등록된 UID 목록--------------------------------*/
 
@@ -30,8 +71,8 @@ UIDEntry registeredCards[] = {
   // { {0x8B, 0xEE, 0xC9, 0x01}, "CHARGE_LOCATION" },
   { {0x86, 0x51, 0x0A, 0x05}, "CHECKPOINT_A" },
   { {0x12, 0x6D, 0x07, 0x05}, "CHECKPOINT_B" },
-  { {0xD9, 0x3F, 0x09, 0x05}, "load_A" },
-  { {0xA3, 0x8F, 0x09, 0x05}, "load_B" },
+  { {0xD9, 0x3F, 0x09, 0x05}, "LOAD_A" },
+  { {0xA3, 0x8F, 0x09, 0x05}, "LOAD_B" },
   { {0x9C, 0x84, 0x0B, 0x05}, "CHECKPOINT_C" },
   { {0x83, 0x58, 0xAE, 0x1A}, "BELT" },
   { {0x63, 0x9D, 0x9F, 0x35}, "CHECKPOINT_D" },
@@ -47,6 +88,13 @@ const unsigned long RFID_CHECK_INTERVAL = 300;  // 0.3초마다 RFID 체크
 
 char* truck_id = "TRUCK_01";
 
+uint8_t get_sender_id_from_truck_id(const char* id) {
+  if (strcmp(id, "TRUCK_01") == 0) return 0x01;
+  if (strcmp(id, "TRUCK_02") == 0) return 0x02;
+  if (strcmp(id, "TRUCK_03") == 0) return 0x03;
+  return 0xFF;  // 알 수 없는 경우
+}
+
 /*-------------------------상태 로직 변환 및 기타 변수들--------------------------------*/
 
 bool run_command = false;
@@ -55,10 +103,25 @@ bool prev_obstacle_state = false;
 float last_distance_cm = 0;
 
 String current_position = "UNKNOWN";
+uint8_t current_position_id = 0xFF;  // UNKNOWN
 String last_cmd = "";
-String mission_target = "";
+uint8_t mission_target = 0xFF;  // 0xFF = 미할당 상태
+bool mission_requested = false;
 unsigned long last_mission_check = 0;    // 마지막 미션 체크 시간
 const unsigned long MISSION_CHECK_INTERVAL = 5000;  // 5초마다 체크
+
+uint8_t get_position_id(const String& desc) 
+{
+  if (desc == "CHECKPOINT_A") return CHECKPOINT_A;
+  if (desc == "CHECKPOINT_B") return CHECKPOINT_B;
+  if (desc == "CHECKPOINT_C") return CHECKPOINT_C;
+  if (desc == "CHECKPOINT_D") return CHECKPOINT_D;
+  if (desc == "LOAD_A") return LOAD_A;
+  if (desc == "LOAD_B") return LOAD_B;
+  if (desc == "BELT") return BELT;
+  if (desc == "STANDBY") return STANDBY;
+  return 0xFF;
+}
 
 /*-------------------------loading 변수들--------------------------------*/
 
@@ -146,9 +209,8 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 
 /*--------------------------------함수 선언--------------------------------*/
 
-void receive_json(const String& msg);
-void send_obstacle(float distance_cm, bool detected, const char* position);
-void send_arrived(const char* position, const char* gate_id);
+void send_obstacle(uint8_t position_id, bool detected, uint16_t distance_cm); 
+void send_arrived(uint8_t position_id, uint8_t gate_id);
 bool isSameUID(byte* uid1, byte* uid2);
 bool checkAndPrintUID(byte* uid);
 
@@ -194,19 +256,14 @@ void setup()
   rfid.PCD_Init();
   Serial.println("✅RC522 RFID 리더기 시작됨!");
 
-  // 시간 동기화
-  configTime(9 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-  Serial.println("⏳ 시간 동기화 대기 중...");
-  while (time(nullptr) < 100000) 
-  {
-    delay(100);
-    Serial.println("...");
-  }
-  Serial.println("✅시간 동기화 완료!");
 
   // 미션 요청 자동 전송
   delay(2000);  // 안정화 대기
   send_assign_mission();
+  // ✅ 시작 위치를 STANDBY로 설정
+  current_position = "STANDBY";
+  current_position_id = STANDBY;
+  Serial.println("🟢 초기 위치 상태: STANDBY");
 
 }
 
@@ -214,16 +271,15 @@ void loop()
 {
   reconnectToServer();
 
-  // ✅ 수신 메시지 처리
-  if (client && client.available()) {
-    incoming_msg = client.readStringUntil('\n');
-    incoming_msg.trim();
-
-    Serial.println("========== 📩 [서버 메시지 수신] ==========");
-    Serial.println(incoming_msg);
-    Serial.println("===========================================");
-
-    receive_json(incoming_msg);
+  // ✅ 서버로부터 수신 메시지 처리
+  if (client && client.available() >= 4) 
+  {
+    static uint8_t buffer[64];
+    int len = client.readBytes(buffer, sizeof(buffer));  // 프레임 길이 기준 수신
+    if (len >= 4) 
+    {
+      receive_binary(buffer, len);
+    }
   }
 
   // ✅ 현재 시간 갱신
@@ -233,81 +289,82 @@ void loop()
   if (current_time - last_mission_check >= MISSION_CHECK_INTERVAL) 
   {
     last_mission_check = current_time;
-    if (current_position == "UNKNOWN" || current_position == "STANDBY") 
+    if (!mission_requested && (current_position_id == 0xFF || current_position_id == STANDBY)) 
     {
       Serial.println("[🔄 미션 체크] 새로운 미션 확인 중...");
       send_assign_mission();
+      mission_requested = true;  // ✅ 중복 요청 방지
     }
   }
 
-    // ✅ 주행 제어
+  // ✅ 주행 제어
   obstacle_block = obstacle_detected();
   if (run_command && !obstacle_block && !battery_empty)
   {
-    //Serial.println("run");
     line_trace();
-    send_obstacle(last_distance_cm, false, current_position.c_str());
+    Serial.println("hello");
+    send_obstacle(current_position_id, false, (uint16_t)last_distance_cm);
   }
   else if (obstacle_block) 
   {
-    Serial.println("stop");
-    //Serial.print("Distance: ");
-    //Serial.print(distance_cm);
-    //Serial.println(" cm");
+    Serial.println("🛑 장애물 감지로 정지");
     stop_motors();
-    send_obstacle(last_distance_cm, true, current_position.c_str());
+    send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
   }
-  //적재 시작 지연 처리
+
+  // ✅ 적재 시작 지연 처리
   if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
   {
     Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
-    send_start_loading();
+    send_start_loading(current_position_id);
     loading_in_progress = true;
     loading_start_time = current_time;
     wait_start_loading = false;
   }
-  // 적재 완료 로직 추가 (5초 뒤 자동 전송)
+
+  // ✅ 적재 완료 로직 (5초 후 자동 전송)
   if (loading_in_progress && (current_time - loading_start_time >= 5000)) 
   {
     Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
-    send_finish_loading();
+    send_finish_loading(current_position_id);
     loading_in_progress = false;
   }
 
-  // 언로딩 시작 지연 처리
+  // ✅ 언로딩 시작 지연 처리
   if (wait_start_unloading && (current_time - wait_start_unloading_time >= 2000)) 
   {
     start_unloading();
     wait_start_unloading = false;
   }
 
-  // 언로딩 FSM 처리
-  handle_unloading(current_time);
+  // ✅ 언로딩 FSM 처리 (위치 검사 추가)
+  if (current_position_id == BELT) 
+  {
+    handle_unloading(current_time);
+  }
     
-  // RFID 체크
+  // ✅RFID 체크
   if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
   {
     return;
   }
 
-  // Serial.print("UID: ");
-  // for (byte i = 0; i < rfid.uid.size; i++) {
-  //   if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
-  //   Serial.print(rfid.uid.uidByte[i], HEX);
-  //   if (i < rfid.uid.size - 1) Serial.print("-");
-  // }
-  // Serial.println();
-
   // UID 확인 및 서버 전송
   checkAndPrintUID(rfid.uid.uidByte);
 
-  // 🪫 10초마다 배터리 감소
-  if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) {
+
+
+  // ✅ 배터리 감소 처리 (STANDBY에서는 감소 안 함)
+  if (current_time - last_battery_drop >= BATTERY_DROP_INTERVAL) 
+  {
     last_battery_drop = current_time;
 
-    if (battery_level > 0) {
+    // STANDBY일 때는 배터리 유지
+    if (current_position_id != STANDBY && battery_level > 0) 
+    {
       battery_level -= 5;
-      if (battery_level <= 0) {
+      if (battery_level <= 0) 
+      {
         battery_level = 0;
         battery_empty = true;
         run_command = false;
@@ -321,231 +378,186 @@ void loop()
     }
   }
 
-  // 📤 5초마다 서버에 배터리 상태 전송
-  if (current_time - last_battery_report >= BATTERY_REPORT_INTERVAL) {
+  // ✅ 상태 전송 (STATUS_UPDATE)
+  if (current_time - last_battery_report >= BATTERY_REPORT_INTERVAL) 
+  {
     last_battery_report = current_time;
-    send_battery_status();
+    send_status_update(battery_level, current_position_id);
   }
 
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
-
 }
+
 
 /*------------------------------- 수신 처리--------------------------------*/
 
-void receive_json(const String& msg)
-{
-  Serial.println("📩 [디버깅] receive_json() 호출됨");  // ✔️
+void receive_binary(const uint8_t* buffer, uint8_t len) {
+  if (len < 4) return;  // 최소한의 헤더 길이 확인
 
-  Serial.print("📩 [디버깅] 원본 메시지: ");
-  Serial.println(msg);  // ✔️
+  uint8_t sender_id = buffer[0];
+  uint8_t receiver_id = buffer[1];
+  uint8_t cmd_id = buffer[2];
+  uint8_t payload_len = buffer[3];
+  const uint8_t* payload = &buffer[4];
 
-  StaticJsonDocument<256> doc;
-  DeserializationError err = deserializeJson(doc, msg);
-
-  if (err)
-  {
-    Serial.println("⚠️ [JSON 파싱 실패]");
-    Serial.println(err.c_str());  // ✔️ 구체적인 파싱 에러 출력
+  if (receiver_id != get_sender_id_from_truck_id(truck_id)) {
+    Serial.println("[❌ 수신 무시] 나에게 온 메시지가 아님");
     return;
   }
 
-  Serial.println("✅ [JSON 파싱 성공]");  // ✔️
+  Serial.printf("[📩 수신] cmd: %02X, payload_len: %d\n", cmd_id, payload_len);
 
-  const char* cmd = doc["cmd"];
-  Serial.print("📩 [디버깅] 파싱된 명령어: ");
-  Serial.println(cmd);
+  switch (cmd_id) {
+    case MISSION_ASSIGNED:
+      if (payload_len >= 1) {
+        mission_target = payload[0];  // 예: LOAD_A
+        run_command = true;
+        mission_requested = false;  // ✅ 다음 미션 요청 허용
+        Serial.printf("📝 [미션 할당] 목표 위치 ID: %02X\n", mission_target);
+      }
+      break;
 
-  if (last_cmd == String(cmd))
-  {
-    Serial.print("[⏭️ 중복 명령 무시] 이미 처리한 명령: ");  
-    Serial.println(cmd);
-    return;
-  }
 
-  last_cmd = String(cmd);
-  
-  // 명령 처리
-  if (strcmp(cmd, "SET_SPEED") == 0) 
-  {
-    Serial.println("[디버깅] SET_SPEED 명령 처리 시작");
-  } 
-  else if (strcmp(cmd, "RUN") == 0) 
-  {
-    Serial.println("[✅ 디버깅] RUN 명령 수신됨!");
-    run_command = true;
-  } 
-  else if (strcmp(cmd, "STOP") == 0) 
-  {
-    Serial.println("[⛔ 디버깅] STOP 명령 수신됨!");
-    run_command = false;
-    stop_motors();
-  } 
-  else if (strcmp(cmd, "GATE_OPENED") == 0) 
-  {
-  const char* gate_id = doc["payload"]["gate_id"];
-  Serial.print("[🚪 게이트 열림 감지] : ");
-  Serial.println(gate_id);
+    case NO_MISSION:
+      mission_target = 0;
+      run_command = false;
+      Serial.println("📭 [미션 없음] 대기 상태 유지");
+      break;
 
-  send_gateopen_message(gate_id);  // 응답 전송
-  run_command = true;
-  }
-  else if (strcmp(cmd, "MISSION_ASSIGNED") == 0) 
-  {
-    const char* target = doc["payload"]["source"];
-    mission_target = String(target);
-    Serial.print("[📦 미션 할당됨] 목표 위치: ");
-    Serial.println(mission_target);
-    run_command = true;
-  }
-  else if (strcmp(cmd, "NO_MISSION") == 0) 
-  {
-    Serial.println("📭 [서버 응답] 미션 없음 → 대기 상태 유지");
-    run_command = false;
-    mission_target = "";
-  }
-  else 
-  {
-    Serial.print("[ℹ️ 디버깅] 알 수 없는 명령: ");
-    Serial.println(cmd);
+    case RUN:
+      run_command = true;
+      Serial.println("🏃‍♂️ [명령] 주행 시작");
+      break;
+
+    case STOP:
+      run_command = false;
+      stop_motors();
+      Serial.println("🛑 [명령] 주행 정지");
+      break;
+
+    case GATE_OPENED:
+      if (payload_len >= 1) {
+        uint8_t gate_id = payload[0];
+        Serial.printf("🚪 [게이트 열림 감지] gate_id: %02X\n", gate_id);
+        run_command = true;
+      }
+      break;
+
+    case START_CHARGING:
+      battery_level = 100;
+      battery_empty = false;
+      send_finish_charging(battery_level);
+      Serial.println("🔌 [충전 시작] 배터리 100% 충전됨");
+      break;
+
+    default:
+      Serial.printf("⚠️ [알 수 없는 명령] cmd_id: %02X\n", cmd_id);
+      break;
   }
 }
-
 
 /*-------------------------------- 송신 처리 --------------------------------*/
-
-// JSON 송신 함수
-void send_json(const char* cmd, JsonObject payload)
+//공통 바이너리 송신 함수
+void send_binary(uint8_t cmd_id, const uint8_t* payload, uint8_t payload_len) 
 {
-  StaticJsonDocument<256> doc;
+  uint8_t buffer[32];
+  uint8_t sender_id = get_sender_id_from_truck_id(truck_id);  // 예: TRUCK_01 → 0x01
+  const uint8_t receiver_id = SERVER;  // 0x10
 
-  // 공통 메시지 구조
-  doc["sender"] = truck_id;
-  doc["receiver"] = "SERVER";
-  doc["cmd"] = cmd;
-  doc["payload"] = payload;
-  
-  // 서버 연결 확인 후 메시지 전송
-  if (client && client.connected())
+  buffer[0] = sender_id;
+  buffer[1] = receiver_id;
+  buffer[2] = cmd_id;
+  buffer[3] = payload_len;
+
+  for (uint8_t i = 0; i < payload_len; ++i) 
   {
-    serializeJson(doc, client);
-    client.print("\n");
-    Serial.println("[📤 송신] 메시지 전송:");
-    serializeJsonPretty(doc, Serial);
+    buffer[4 + i] = payload[i];
+  }
+
+  if (client && client.connected()) 
+  {
+    client.write(buffer, 4 + payload_len);
+    Serial.printf("[📤 Binary] CMD %02X → SERVER: ", cmd_id);
+    for (int i = 0; i < 4 + payload_len; i++) Serial.printf("%02X ", buffer[i]);
     Serial.println();
   }
-  else
-  {
-    Serial.println("[❌ 오류] 서버와 연결되지 않음 (메시지 전송 실패)");
-  }
+}
+//도착 메시지 (ARRIVED)
+void send_arrived(uint8_t position_id, uint8_t gate_id) 
+{
+  uint8_t payload[2] = { position_id, gate_id };
+  send_binary(ARRIVED, payload, 2);
 }
 
-// 미션 요청 메시지 (ASSIGN_MISSION)
-void send_assign_mission() 
+//장애물 메시지 (OBSTACLE)
+void send_obstacle(uint8_t position_id, bool detected, uint16_t distance_cm) 
 {
-  StaticJsonDocument<256> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-  send_json("ASSIGN_MISSION", payload);
-}
-
-void send_gateopen_message(const char* gate_id)
-{
-  StaticJsonDocument<256> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["gate_id"] = gate_id;
-  payload["position"] = current_position;
-  payload["timestamp"] = getISOTime();
-
-  send_json("ACK_GATE_OPENED", payload);
-}
-
-
-// 도착 메시지 (ARRIVED)
-void send_arrived(const char* position, const char* gate_id) 
-{
-  StaticJsonDocument<256> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-  payload["position"] = position;
-  payload["gate_id"] = gate_id;
-  payload["timestamp"] = getISOTime();
-  send_json("ARRIVED", payload);
-}
-
-// 장애물 감지 메시지 (OBSTACLE)
-void send_obstacle(float distance_cm, bool detected, const char* position) 
-{
-
   if (detected == prev_obstacle_state) return;
-
   prev_obstacle_state = detected;
 
-  StaticJsonDocument<256> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["position"] = position;
-  payload["distance_cm"] = distance_cm;
-  payload["timestamp"] = getISOTime();
-  payload["detected"] = detected ? "DETECTED" : "CLEARED";
-  
-  send_json("OBSTACLE", payload);
+  uint8_t payload[4] = 
+  {
+    position_id,
+    detected ? 0x01 : 0x00,
+    (distance_cm >> 8) & 0xFF,
+    distance_cm & 0xFF
+  };
+  send_binary(OBSTACLE, payload, 4);
 }
 
-//로딩 시작 메세지
-void send_start_loading() 
+//상태 메시지 (STATUS_UPDATE: 배터리 + 위치)
+void send_status_update(uint8_t battery_level, uint8_t position_id) 
 {
-  StaticJsonDocument<128> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["position"] = current_position;
-  payload["timestamp"] = getISOTime();
-
-  send_json("START_LOADING", payload);
+  uint8_t payload[2] = { battery_level, position_id };
+  send_binary(STATUS_UPDATE, payload, 2);
 }
 
-void send_finish_loading() 
+//로딩 메시지
+void send_start_loading(uint8_t position_id) 
 {
-  StaticJsonDocument<128> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["position"] = current_position;
-  payload["timestamp"] = getISOTime();
-
-  send_json("FINISH_LOADING", payload);
-}
-//언로딩 시작 메세지
-void send_start_unloading() {
-  StaticJsonDocument<128> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["position"] = current_position;
-  payload["timestamp"] = getISOTime();
-
-  send_json("START_UNLOADING", payload);
+  uint8_t payload[1] = { position_id };
+  send_binary(START_LOADING, payload, 1);
 }
 
-void send_finish_unloading() {
-  StaticJsonDocument<128> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["position"] = current_position;
-  payload["timestamp"] = getISOTime();
-
-  send_json("FINISH_UNLOADING", payload);
+void send_finish_loading(uint8_t position_id) 
+{
+  uint8_t payload[1] = { position_id };
+  send_binary(FINISH_LOADING, payload, 1);
 }
 
-
-void send_battery_status() {
-  StaticJsonDocument<128> doc;
-  JsonObject payload = doc.createNestedObject("payload");
-
-  payload["battery_level"] = battery_level;
-  payload["timestamp"] = getISOTime();
-
-  send_json("BATTERY", payload);
+//언로딩 메시지
+void send_start_unloading(uint8_t position_id) 
+{
+  uint8_t payload[1] = { position_id };
+  send_binary(START_UNLOADING, payload, 1);
 }
 
+void send_finish_unloading(uint8_t position_id) 
+{
+  uint8_t payload[1] = { position_id };
+  send_binary(FINISH_UNLOADING, payload, 1);
+}
+
+//미션 요청 (ASSIGN_MISSION)
+void send_assign_mission() 
+{
+  send_binary(ASSIGN_MISSION, nullptr, 0);  // payload 없음
+}
+
+//게이트 열림 응답 (ACK_GATE_OPENED)
+void send_gate_opened_ack(uint8_t gate_id, uint8_t position_id) 
+{
+  uint8_t payload[2] = { gate_id, position_id };
+  send_binary(ACK_GATE_OPENED, payload, 2);
+}
+
+//충전 완료 보고 (FINISH_CHARGING)
+void send_finish_charging(uint8_t battery_level) 
+{
+  uint8_t payload[1] = { battery_level };
+  send_binary(FINISH_CHARGING, payload, 1);
+}
 
 /*--------------------------------라인트레이서 제어--------------------------------*/
 
@@ -626,7 +638,7 @@ bool obstacle_detected() {
 
 void start_unloading() {
   Serial.println("🕒 언로딩 시작 메시지 전송 (2초 지연 후)");
-  send_start_unloading();
+  send_start_unloading(current_position_id);
   unloading_in_progress = true;
   unloading_stage = 1;
   unloading_stage_time = millis();
@@ -650,7 +662,7 @@ void handle_unloading(unsigned long current_time) {
   }
   else if (unloading_stage == 3 && current_time - unloading_stage_time >= 1000) {
     Serial.println("✅ 언로딩 완료 메시지 전송");
-    send_finish_unloading();
+    send_finish_unloading(current_position_id);
     unloading_in_progress = false;
     unloading_stage = 0;
   }
@@ -668,78 +680,66 @@ bool isSameUID(byte *uid1, byte *uid2)
   return true;
 }
 
-bool checkAndPrintUID(byte* uid) 
-{
+bool checkAndPrintUID(byte* uid) {
   for (int i = 0; i < numRegistered; i++) {
     if (isSameUID(uid, registeredCards[i].uid)) {
       const char* desc = registeredCards[i].description;
-
       Serial.println("✅ 등록된 카드입니다!");
       Serial.print("📌 ");
       Serial.println(desc);
 
-      // 위치 갱신 및 도착 메시지 전송
+      // 문자열로 유지 (디버깅용)
       current_position = String(desc);
+      uint8_t pos_id = get_position_id(desc);  // ⬅️ 추가
+      current_position_id = pos_id;
 
-      if (strcmp(desc, "CHECKPOINT_A") == 0) 
-      {
-        send_arrived("CHECKPOINT_A", "GATE_A");
+      // 위치별 처리
+      if (pos_id == CHECKPOINT_A) {
+        send_arrived(CHECKPOINT_A, GATE_A);
         run_command = false;
-      } 
-      else if (strcmp(desc, "CHECKPOINT_B") == 0) 
-      {
-        send_arrived("CHECKPOINT_B", "GATE_A");
-      } 
-      else if (strcmp(desc, "CHECKPOINT_C") == 0) 
-      {
-        send_arrived("CHECKPOINT_C", "GATE_B");
+      }
+      else if (pos_id == CHECKPOINT_B) {
+        send_arrived(CHECKPOINT_B, GATE_A);
+      }
+      else if (pos_id == CHECKPOINT_C) {
+        send_arrived(CHECKPOINT_C, GATE_B);
         run_command = false;
-      } 
-      else if (strcmp(desc, "CHECKPOINT_D") == 0) 
-      {
-        send_arrived("CHECKPOINT_D", "GATE_B");
       }
-      else if (strcmp(desc, "load_A") == 0)                        //load_A
-      {
-        send_arrived("load_A", "LOAD_A");
-        // 현재 목적지가 load_A인 경우에만 적재 시작 대기
-        if ((mission_target == "LOAD_A")or(mission_target == "load_A")) 
-        {
-          Serial.println(mission_target);
-          Serial.println("Debug1");
-          wait_start_loading = true;
-          wait_start_loading_time = millis();
-        }
+      else if (pos_id == CHECKPOINT_D) {
+        send_arrived(CHECKPOINT_D, GATE_B);
       }
-      else if (strcmp(desc, "load_B") == 0)                       //load_B
-      {
-        send_arrived("load_B", "LOAD_B");
-
-        if ((mission_target == "load_B") or (mission_target == "LOAD_B")) 
+      else if (pos_id == LOAD_A) {
+        send_arrived(LOAD_A, GATE_A);  // 게이트는 선택적으로 지정
+        if (mission_target == pos_id) 
         {
           wait_start_loading = true;
           wait_start_loading_time = millis();
         }
       }
-      else if (strcmp(desc, "BELT") == 0) 
-      {
-        send_arrived("BELT", "BELT");
+      else if (pos_id == LOAD_B) {
+        send_arrived(LOAD_B, GATE_B);
+        if (mission_target == pos_id) 
+        {
+          wait_start_loading = true;
+          wait_start_loading_time = millis();
+        }
+      }
+      else if (pos_id == BELT) {
+        send_arrived(BELT, 0x00);  // 게이트 ID 생략 또는 지정
         wait_start_unloading = true;
         wait_start_unloading_time = millis();
-        
       }
-      else if (strcmp(desc, "STANDBY") == 0) 
-      {
-        send_arrived("STANDBY", "STANDBY");
+      else if (pos_id == STANDBY) {
+        send_arrived(STANDBY, 0x00);
         run_command = false;
         stop_motors();
-        send_assign_mission(); 
-      } 
+        send_assign_mission();
+      }
 
-
-      // 🎯 목적지에 도달한 경우 멈춤
-      if (mission_target != "" && mission_target == String(desc)) {
-        Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 중지");
+      // 도착 위치가 목표 위치인 경우 정지
+      if (mission_target == pos_id) 
+      {
+        Serial.println("🎯 [도착 확인] 목적지 도달 → 주행 정지");
         run_command = false;
         stop_motors();
       }
@@ -749,19 +749,10 @@ bool checkAndPrintUID(byte* uid)
   }
 
   Serial.println("❌ 등록되지 않은 카드입니다!");
-  return false;  // 등록되지 않음
+  return false;
 }
 
 /*-------------------------------유틸 함수--------------------------------*/
-
-String getISOTime() 
-{
-  time_t now = time(nullptr);
-  struct tm* t = localtime(&now);
-  char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", t);
-  return String(buffer);
-}
 
 void reconnectToServer() 
 {
@@ -778,3 +769,4 @@ void reconnectToServer()
     }
   }
 }
+

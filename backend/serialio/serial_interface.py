@@ -49,6 +49,36 @@ class SerialInterface:
                 command = parts[1]
                 # 결과가 없는 경우 빈 문자열로 처리
                 result = parts[2] if len(parts) > 2 else ""
+                
+                # 게이트 특수 명령 처리
+                if "GATE_" in command:
+                    # ACK:GATE_A_OPENED 또는 ACK:GATE_A_CLOSED 형식 감지
+                    gate_id = None
+                    state = None
+                    
+                    # 게이트 ID 추출 (GATE_A, GATE_B, GATE_C)
+                    for gate_id_candidate in ["GATE_A", "GATE_B", "GATE_C"]:
+                        if gate_id_candidate in command:
+                            gate_id = gate_id_candidate
+                            break
+                    
+                    # 상태 감지
+                    if "_OPENED" in command:
+                        state = "OPENED"
+                    elif "_CLOSED" in command:
+                        state = "CLOSED"
+                        
+                    # 게이트 명령 응답이면 특별히 처리 (GATE 타입으로 변환)
+                    if gate_id and state:
+                        print(f"[게이트 응답 변환] ACK 응답을 GATE 타입으로 변환: {response} -> {gate_id}:{state}")
+                        return {
+                            "type": "GATE",
+                            "gate_id": gate_id,
+                            "state": state,
+                            "raw": response
+                        }
+                
+                # 일반 ACK 응답 처리
                 return {
                     "type": "ACK",
                     "command": command,
@@ -70,7 +100,17 @@ class SerialInterface:
         # 게이트 응답 처리 (하위 호환성)
         elif "GATE_" in response:
             if "_OPENED" in response:
-                gate_id = response.split("_")[0]
+                gate_id = None
+                for gate_id_candidate in ["GATE_A", "GATE_B", "GATE_C"]:
+                    if gate_id_candidate in response:
+                        gate_id = gate_id_candidate
+                        break
+                        
+                if not gate_id and response.startswith("GATE_"):
+                    parts = response.split("_")
+                    if len(parts) >= 2:
+                        gate_id = f"{parts[0]}_{parts[1]}"
+                
                 return {
                     "type": "GATE",
                     "gate_id": gate_id,
@@ -78,7 +118,17 @@ class SerialInterface:
                     "raw": response
                 }
             elif "_CLOSED" in response:
-                gate_id = response.split("_")[0]
+                gate_id = None
+                for gate_id_candidate in ["GATE_A", "GATE_B", "GATE_C"]:
+                    if gate_id_candidate in response:
+                        gate_id = gate_id_candidate
+                        break
+                        
+                if not gate_id and response.startswith("GATE_"):
+                    parts = response.split("_")
+                    if len(parts) >= 2:
+                        gate_id = f"{parts[0]}_{parts[1]}"
+                
                 return {
                     "type": "GATE",
                     "gate_id": gate_id,
