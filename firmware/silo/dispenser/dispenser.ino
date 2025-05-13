@@ -20,6 +20,7 @@ bool c = false;
 bool open = false;
 int btnServo = 0;
 char move = 'S'; // 회전 방향을 결정함
+char lastmove= 'S';
 
 int direction = 0; // 스텝모터 내부 로직의 왼쪽 = -1 | 정지 = 0 | 오른쪽 = 1 
 
@@ -40,17 +41,18 @@ void setup()
 
 void loop()
 { 
-  receiveIR();
-  moveMotor();
-
-  checkServButton();
-  dispense();
-
   if (Serial.available()) 
   {
     readCommand();
   }
-  debug(); // 1초에 한번씩 출력
+
+  receiveIR();
+  moveLeftRight();
+
+  checkServButton();
+  dispense();
+
+  //debug(); // 1초에 한번씩 출력
 }
 
 void readCommand()
@@ -58,30 +60,65 @@ void readCommand()
   String cmd = Serial.readStringUntil('\n');
   cmd.trim();
 
-  if (cmd == "A") 
+  if (cmd == "A" || cmd == "DI_LEFT_TURN") 
   {
     move = 'L';
+    Serial.println("ACK:DI_LEFT_TURN:OK");
   } 
 
-  else if (cmd == "D") 
+  else if (cmd == "D" || cmd == "DI_RIGHT_TURN") 
   {
     move = 'R';
+    Serial.println("ACK:DI_RIGHT_TURN:OK");
   } 
 
-  else if (cmd == "S") 
+  else if (cmd == "S" || cmd == "DI_STOP_TURN") 
   {
     move = 'S';
+    Serial.println("ACK:DI_STOP_TURN:OK");
   } 
+
+  else if (cmd == "V" || cmd == "DI_LOC_ROUTE_A")
+  {
+    if (lastmove != 'A')
+    {
+      move = 'A';
+    }
+    Serial.println("ACK:DI_LOC_A:OK");
+  }
+  
+  else if (cmd == "B" || cmd == "DI_LOC_ROUTE_B")
+  {
+    if (lastmove != 'B')
+    {
+      move = 'B';
+    }
+    Serial.println("ACK:DI_LOC_B:OK");
+  }
 
   else if (cmd == "W") 
   {
     if (open == false)
     {
       open = true;
+      Serial.println("ACK:DI_OPENED");
     }
     else
     {
       open = false;
+      Serial.println("ACK:DI_CLOSED");
     }
   }
+
+  else if (cmd == "DI_OPEN")
+  {
+    open = true;
+    Serial.println("ACK:DI_OPENED");
+  }
+  else if (cmd == "DI_CLOSE")
+  {
+    open = false;
+    Serial.println("ACK:DI_CLOSED");
+  }
+
 }
