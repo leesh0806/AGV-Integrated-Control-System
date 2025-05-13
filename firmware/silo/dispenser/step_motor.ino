@@ -29,7 +29,7 @@ void moveLeftRight() // 모터를 실제로 움직임
     {
       for(int i = 0; i < 1200; i++) 
       {
-        direction = -1;     // 오른쪽 방향
+        direction = -1;   // 오른쪽 방향
         stepper(1);         // 한 스텝 이동
         lastMoved = time;   // 시간 업데이트
         delay(3);
