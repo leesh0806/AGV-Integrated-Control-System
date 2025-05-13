@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1200</width>
-    <height>600</height>
+    <width>1277</width>
+    <height>683</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,10 +16,10 @@
   <widget class="QGraphicsView" name="graphicsView_map">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>820</width>
-     <height>580</height>
+     <x>20</x>
+     <y>20</y>
+     <width>911</width>
+     <height>431</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -29,217 +29,576 @@
     </size>
    </property>
   </widget>
-  <widget class="QLabel" name="label_alert">
+  <widget class="QGroupBox" name="groupBox_facility_control">
    <property name="geometry">
     <rect>
-     <x>840</x>
-     <y>500</y>
-     <width>150</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>긴급 알림</string>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="textEdit_alert">
-   <property name="geometry">
-    <rect>
-     <x>840</x>
-     <y>529</y>
-     <width>351</width>
-     <height>61</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_battery">
-   <property name="geometry">
-    <rect>
-     <x>840</x>
-     <y>10</y>
-     <width>351</width>
-     <height>125</height>
+     <x>460</x>
+     <y>460</y>
+     <width>281</width>
+     <height>81</height>
     </rect>
    </property>
    <property name="title">
-    <string>배터리 상태</string>
+    <string/>
    </property>
-   <widget class="QProgressBar" name="progressBar_battery_truck1">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>30</y>
-      <width>241</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="value">
-     <number>24</number>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_battery_truck1">
+   <widget class="QLabel" name="label_alert_9">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>30</y>
-      <width>100</width>
+      <y>10</y>
+      <width>81</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>TRUCK_01</string>
+     <string>시설 제어</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_battery_truck2">
+   <widget class="QPushButton" name="pushButton_toggle_gate_a_2">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
-      <width>100</width>
-      <height>25</height>
+      <y>40</y>
+      <width>261</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
-     <string>TRUCK_02</string>
+     <string>수동 제어 모드 ON</string>
     </property>
-   </widget>
-   <widget class="QProgressBar" name="progressBar_battery_truck2">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>60</y>
-      <width>241</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="value">
-     <number>24</number>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_battery_truck3">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>90</y>
-      <width>100</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>TRUCK_03</string>
-    </property>
-   </widget>
-   <widget class="QProgressBar" name="progressBar_battery_truck3">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>90</y>
-      <width>241</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="value">
-     <number>24</number>
+    <property name="checkable">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_truck_control">
+  <widget class="QTabWidget" name="tabWidget">
    <property name="geometry">
     <rect>
-     <x>840</x>
-     <y>140</y>
-     <width>351</width>
+     <x>950</x>
+     <y>20</y>
+     <width>311</width>
+     <height>371</height>
+    </rect>
+   </property>
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <property name="tabBarAutoHide">
+    <bool>true</bool>
+   </property>
+   <widget class="QWidget" name="Truck1">
+    <attribute name="title">
+     <string>Truck 1</string>
+    </attribute>
+    <widget class="QLabel" name="truck_image">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>288</width>
+       <height>174</height>
+      </rect>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
+     <property name="text">
+      <string>Truck Image</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="pop_up_message">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>80</y>
+       <width>121</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>20</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="text">
+      <string>WARNING</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QProgressBar" name="progressBar_battery_truck1">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>210</y>
+       <width>291</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>190</y>
+       <width>53</width>
+       <height>15</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>배터리</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_pause">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>300</y>
+       <width>141</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>새 미션 등록</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_mission_cancel">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>300</y>
+       <width>141</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>미션 취소</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>240</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>임무 완료도</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QProgressBar" name="progressBar_battery_truck1_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>260</y>
+       <width>291</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="truck2">
+    <attribute name="title">
+     <string>Truck 2</string>
+    </attribute>
+   </widget>
+   <widget class="QWidget" name="truck3">
+    <attribute name="title">
+     <string>Truck 3</string>
+    </attribute>
+   </widget>
+   <widget class="QWidget" name="truck4">
+    <attribute name="title">
+     <string>Truck 4</string>
+    </attribute>
+   </widget>
+   <widget class="QWidget" name="truck5">
+    <attribute name="title">
+     <string>Truck 5</string>
+    </attribute>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>460</y>
+     <width>431</width>
+     <height>201</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <widget class="QTextEdit" name="textEdit_alert">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>411</width>
+      <height>151</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_alert_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>9</y>
+      <width>81</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>기구 상태 알림</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_toggle_belt_3">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>12</y>
+      <width>51</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>더 보기</string>
+    </property>
+    <property name="checkable">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>30</y>
+     <width>171</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <widget class="QLabel" name="label_alert_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>현재 위치</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_alert_4">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>위치 이름</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_3">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>290</y>
+     <width>171</width>
+     <height>151</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <widget class="QLabel" name="label_alert_5">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>81</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>저장고 상태</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_alert_6">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>71</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>FULL</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="truck_image_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>60</y>
+      <width>71</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Plain</enum>
+    </property>
+    <property name="lineWidth">
+     <number>1</number>
+    </property>
+    <property name="text">
+     <string>Storage A</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="truck_image_3">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>60</y>
+      <width>71</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Plain</enum>
+    </property>
+    <property name="lineWidth">
+     <number>1</number>
+    </property>
+    <property name="text">
+     <string>Storage B</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_alert_8">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>30</y>
+      <width>71</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>AVAILABLE</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_4">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>460</y>
+     <width>511</width>
+     <height>201</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <widget class="QTextEdit" name="textEdit_alert_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>491</width>
+      <height>151</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_alert_7">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>9</y>
+      <width>81</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>임무 목록</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_toggle_belt_4">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>12</y>
+      <width>51</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>더 보기</string>
+    </property>
+    <property name="checkable">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="pushButton_toggle_belt_2">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>400</y>
+     <width>311</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QPushButton {
+    background-color: #FF5555;
+    color: black;
+    font-weight: bold;
+    border: 1px solid #CC0000;
+    border-radius: 2px;
+}
+QPushButton:hover {
+    background-color: #FF0000;
+}
+QPushButton:pressed {
+    background-color: #CC0000;
+}</string>
+   </property>
+   <property name="text">
+    <string>비상 정지</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_facility_control_2">
+   <property name="geometry">
+    <rect>
+     <x>460</x>
+     <y>550</y>
+     <width>281</width>
      <height>111</height>
     </rect>
    </property>
    <property name="title">
-    <string>트럭 수동 제어</string>
+    <string/>
    </property>
-   <widget class="QPushButton" name="pushButton_mission_cancel">
+   <widget class="QLabel" name="label_alert_10">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>70</y>
-      <width>331</width>
-      <height>31</height>
+      <y>10</y>
+      <width>81</width>
+      <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>미션 취소</string>
+     <string>사일로 제어</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_pause">
+   <widget class="QPushButton" name="pushButton_toggle_gate_a_3">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>30</y>
-      <width>331</width>
-      <height>31</height>
+      <y>40</y>
+      <width>81</width>
+      <height>61</height>
      </rect>
     </property>
     <property name="text">
-     <string>일시 정지</string>
+     <string>왼쪽</string>
     </property>
     <property name="checkable">
      <bool>true</bool>
     </property>
    </widget>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_facility_control">
-   <property name="geometry">
-    <rect>
-     <x>840</x>
-     <y>260</y>
-     <width>351</width>
-     <height>150</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>시설 수동 제어</string>
-   </property>
-   <widget class="QPushButton" name="pushButton_toggle_gate_a">
+   <widget class="QPushButton" name="pushButton_toggle_gate_a_4">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>331</width>
-      <height>31</height>
+      <x>100</x>
+      <y>40</y>
+      <width>81</width>
+      <height>61</height>
      </rect>
     </property>
     <property name="text">
-     <string>게이트 A 열기</string>
+     <string>오른쪽</string>
     </property>
     <property name="checkable">
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_toggle_gate_b">
+   <widget class="QPushButton" name="pushButton_toggle_gate_a_5">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>70</y>
-      <width>331</width>
-      <height>31</height>
+      <x>190</x>
+      <y>40</y>
+      <width>81</width>
+      <height>61</height>
      </rect>
     </property>
     <property name="text">
-     <string>게이트 B 열기</string>
-    </property>
-    <property name="checkable">
-     <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_toggle_belt">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>110</y>
-      <width>331</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>벨트 시작</string>
+     <string>투하</string>
     </property>
     <property name="checkable">
      <bool>true</bool>
