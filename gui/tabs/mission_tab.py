@@ -23,33 +23,33 @@ class MissionTab(QWidget):
         
     def init_ui(self):
         """UI 초기화"""
+        # 디버깅: 모든 위젯 이름 출력
+        print("[디버그] UI에 있는 모든 위젯 목록:")
+        for child in self.findChildren(QWidget):
+            if hasattr(child, 'objectName') and child.objectName():
+                print(f"- {child.objectName()}")
+        
         # 미션 추가 버튼 이벤트 연결
-        add_button = self.findChild(QWidget, "pushButton_add_for_add")
+        add_button = self.findChild(QWidget, "pushButton_add_mission")
         if add_button:
             add_button.clicked.connect(self.add_mission)
+            print("[정보] 미션 추가 버튼 이벤트 연결 성공")
         else:
-            print("[경고] 'pushButton_add_for_add' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_add_mission' 버튼을 찾을 수 없습니다")
         
         # 미션 새로고침 버튼 이벤트 연결
-        refresh_button = self.findChild(QWidget, "pushButton_refresh")
+        refresh_button = self.findChild(QWidget, "pushButton_refresh_table")
         if refresh_button:
             refresh_button.clicked.connect(self.refresh_mission_table)
         else:
-            print("[경고] 'pushButton_refresh' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_refresh_table' 버튼을 찾을 수 없습니다")
             
         # 미션 삭제 버튼 이벤트 연결
-        delete_button = self.findChild(QWidget, "pushButton_delete_selected")
+        delete_button = self.findChild(QWidget, "pushButton_cancel_mission")
         if delete_button:
             delete_button.clicked.connect(self.delete_selected_mission)
         else:
-            print("[경고] 'pushButton_delete_selected' 버튼을 찾을 수 없습니다")
-            
-        # 모두 완료 처리 버튼 이벤트 연결
-        complete_all_button = self.findChild(QWidget, "pushButton_complete_all")
-        if complete_all_button:
-            complete_all_button.clicked.connect(self.complete_all_missions)
-        else:
-            print("[경고] 'pushButton_complete_all' 버튼을 찾을 수 없습니다")
+            print("[경고] 'pushButton_cancel_mission' 버튼을 찾을 수 없습니다")
             
         # 상태 필터 체크박스 변경 이벤트 연결
         status_checkboxes = [
@@ -190,7 +190,7 @@ class MissionTab(QWidget):
             else:
                 source = source_widget.currentText()
                 
-            # 목적지는 UI에 없으므로 하드코딩
+            # 목적지는 UI에 없으므로 하드코딩 - 항상 대문자로 설정
             destination = "BELT"
             
             # 미션 ID 생성 (UI에는 없으므로 현재 시간 기반으로 생성)
@@ -218,20 +218,25 @@ class MissionTab(QWidget):
             print(f"[정보] 미션 생성 시도: {mission_data}")
             
             # API로 미션 생성
-            response = api_client.create_mission(mission_data)
-            
-            # 성공 메시지 표시
-            QMessageBox.information(self, "미션 생성", f"미션 {mission_id}이(가) 성공적으로 생성되었습니다.")
-            
-            # 미션 테이블 갱신 (필터 유지)
-            self.search_missions()
-            
-            # 입력 필드 초기화
-            if lineedit_type:
-                lineedit_type.clear()
+            try:
+                response = api_client.create_mission(mission_data)
+                print(f"[정보] 미션 생성 성공: {response}")
                 
-            if spinBox:
-                spinBox.setValue(1)
+                # 성공 메시지 표시
+                QMessageBox.information(self, "미션 생성", f"미션 {mission_id}이(가) 성공적으로 생성되었습니다.")
+                
+                # 미션 테이블 갱신 (필터 유지)
+                self.search_missions()
+                
+                # 입력 필드 초기화
+                if lineedit_type:
+                    lineedit_type.clear()
+                    
+                if spinBox:
+                    spinBox.setValue(1)
+            except Exception as api_error:
+                print(f"[ERROR] API 호출 중 오류 발생: {api_error}")
+                QMessageBox.critical(self, "API 오류", f"미션 생성 API 호출 중 오류가 발생했습니다: {api_error}")
             
         except Exception as e:
             print(f"[ERROR] 미션 생성 중 오류 발생: {e}")
@@ -282,64 +287,6 @@ class MissionTab(QWidget):
             self.search_missions()
             QMessageBox.information(self, "미션 취소", "선택한 미션이 취소되었습니다.")
             
-    def complete_all_missions(self):
-        """모든 미션을 완료 처리"""
-        if not self.tablewidget:
-            print("[오류] 테이블 위젯이 없어 미션을 완료할 수 없습니다")
-            return
-        
-        # 테이블에서 완료되지 않은 미션 ID 가져오기
-        incomplete_mission_ids = []
-        for row in range(self.tablewidget.rowCount()):
-            status_item = self.tablewidget.item(row, 5)
-            if status_item and status_item.text() in ["WAITING", "ASSIGNED"]:
-                mission_id_item = self.tablewidget.item(row, 0)
-                if mission_id_item:
-                    incomplete_mission_ids.append(mission_id_item.text())
-        
-        # 완료할 미션이 없으면 메시지 표시 후 종료
-        if not incomplete_mission_ids:
-            QMessageBox.information(self, "완료 처리", "완료할 미션이 없습니다.")
-            return
-        
-        # 완료 확인 메시지 표시
-        reply = QMessageBox.question(
-            self, 
-            "미션 일괄 완료", 
-            f"완료되지 않은 {len(incomplete_mission_ids)}개 미션을 모두 완료 처리하시겠습니까?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            # 성공/실패 카운터
-            success_count = 0
-            error_count = 0
-            
-            # 모든 미션 완료 처리
-            for mission_id in incomplete_mission_ids:
-                try:
-                    api_client.complete_mission(mission_id)
-                    print(f"[INFO] 미션 완료 처리: {mission_id}")
-                    success_count += 1
-                except Exception as e:
-                    print(f"[ERROR] 미션 완료 처리 중 오류 발생: {e}")
-                    error_count += 1
-            
-            # 결과 메시지 생성
-            if error_count == 0:
-                result_msg = f"{success_count}개의 미션이 성공적으로 완료 처리되었습니다."
-            else:
-                result_msg = f"{success_count}개의 미션이 완료 처리되었습니다. (오류: {error_count}개)"
-            
-            # 결과 메시지 표시
-            if error_count > 0:
-                QMessageBox.warning(self, "완료 처리 결과", result_msg)
-            else:
-                QMessageBox.information(self, "완료 처리 결과", result_msg)
-            
-            # 미션 테이블 갱신 (필터 유지)
-            self.search_missions() 
-
     def auto_refresh_missions(self):
         """필터 변경 시 자동으로 미션 리스트 새로고침"""
         self.search_missions()

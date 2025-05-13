@@ -98,17 +98,30 @@ class Mission:
             "timestamp_completed": self.timestamp_completed.isoformat() if self.timestamp_completed else None,
         }
 
-    @staticmethod
-    def from_row(row: Dict) -> 'Mission':
-        return Mission(
-            mission_id=row["mission_id"],
-            cargo_type=row["cargo_type"],
-            cargo_amount=row["cargo_amount"],
-            source=row["source"],
-            destination=row["destination"],
-            assigned_truck_id=row["assigned_truck_id"],
-            status=MissionStatus[row["status_code"]],
-            timestamp_created=row["timestamp_created"],
-            timestamp_assigned=row["timestamp_assigned"],
-            timestamp_completed=row["timestamp_completed"]
+    @classmethod
+    def from_row(cls, row: Dict) -> 'Mission':
+        """DB 결과를 Mission 객체로 변환"""
+        if not row:
+            raise ValueError("데이터가 없습니다")
+        
+        # 상태 코드 처리
+        status_code = row.get('status_code') or 'WAITING'
+        try:
+            status = MissionStatus[status_code]
+        except KeyError:
+            status = MissionStatus.WAITING
+            print(f"[⚠️ 경고] 알 수 없는 상태 코드: {status_code}, 기본값 'WAITING' 사용")
+        
+        # Mission 객체 생성
+        return cls(
+            mission_id=row.get('mission_id'),
+            cargo_type=row.get('cargo_type'),
+            cargo_amount=float(row.get('cargo_amount', 0)),
+            source=row.get('source', 'LOAD_A'),
+            destination=row.get('destination', 'BELT'),
+            assigned_truck_id=row.get('assigned_truck_id'),
+            status=status,
+            timestamp_created=row.get('timestamp_created'),
+            timestamp_assigned=row.get('timestamp_assigned'),
+            timestamp_completed=row.get('timestamp_completed')
         )

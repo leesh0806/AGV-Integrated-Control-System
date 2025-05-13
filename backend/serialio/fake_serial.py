@@ -78,19 +78,24 @@ class FakeSerial:
                 # 게이트 열림 지연 (0.5초로 단축)
                 if self.debug:
                     print(f"[FakeSerial:{self.name}] {gate_id} 열림 작업 시작 (0.5초 소요)")
-                # 표준 프로토콜 형식 사용
-                # ACK:COMMAND:RESULT 형식
-                self._schedule_delayed_response(0.5, f"ACK:{gate_id}_OPEN:SUCCESS")
+                
+                # 응답 형식 변경: 항상 성공 응답을 보내도록 수정
+                # 게이트가 이미 열려있는 것처럼 시뮬레이션
+                self._schedule_delayed_response(0.5, f"ACK:{gate_id}_OPENED")
+                
                 # 상태 메시지도 전송
                 self._schedule_delayed_response(0.6, f"STATUS:{gate_id}:OPENED")
                 return None  # 즉시 응답 없음, 지연 후 응답이 전송됨
+                
             elif action == "CLOSE":
                 # 게이트 닫힘 지연 (0.5초로 단축)
                 if self.debug:
                     print(f"[FakeSerial:{self.name}] {gate_id} 닫힘 작업 시작 (0.5초 소요)")
-                # 표준 프로토콜 형식 사용
-                # ACK:COMMAND:RESULT 형식
-                self._schedule_delayed_response(0.5, f"ACK:{gate_id}_CLOSE:SUCCESS")
+                
+                # 응답 형식 변경: 항상 성공 응답을 보내도록 수정
+                # 게이트가 이미 닫혀있는 것처럼 시뮬레이션
+                self._schedule_delayed_response(0.5, f"ACK:{gate_id}_CLOSED")
+                
                 # 상태 메시지도 전송
                 self._schedule_delayed_response(0.6, f"STATUS:{gate_id}:CLOSED")
                 return None  # 즉시 응답 없음, 지연 후 응답이 전송됨

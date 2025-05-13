@@ -78,7 +78,7 @@ class BeltTester:
 
 def main():
     parser = argparse.ArgumentParser(description="벨트 테스트 도구")
-    parser.add_argument("-p", "--port", default="/dev/ttyACM0", help="시리얼 포트 (기본값: /dev/ttyACM0)")
+    parser.add_argument("-p", "--port", default="/dev/ttyACM1", help="시리얼 포트 (기본값: /dev/ttyACM1)")
     parser.add_argument("-b", "--baudrate", type=int, default=9600, help="통신 속도 (기본값: 9600)")
     parser.add_argument("-c", "--count", type=int, default=1, help="명령 전송 횟수 (기본값: 1)")
     parser.add_argument("-i", "--interval", type=float, default=3, help="명령 사이 간격(초) (기본값: 3)")
