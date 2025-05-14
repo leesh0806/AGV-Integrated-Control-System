@@ -10,10 +10,11 @@ facility_api = Blueprint('facility_api', __name__)
 device_manager = None
 gate_controllers = {}
 belt_controller = None
+dispenser_controller = None
 
 def get_controllers():
     """필요한 컨트롤러들을 초기화합니다."""
-    global device_manager, gate_controllers, belt_controller
+    global device_manager, gate_controllers, belt_controller, dispenser_controller
     
     # 이미 초기화됐으면 반환
     if device_manager is not None:
@@ -24,7 +25,8 @@ def get_controllers():
     port_map = {
         "GATE_A": "/dev/ttyUSB0",
         "GATE_B": "/dev/ttyUSB1",
-        "BELT": "/dev/ttyUSB2"
+        "BELT": "/dev/ttyUSB2",
+        "DISPENSER": "/dev/ttyUSB3"
     }
     
     # 상태 관리자 참조
@@ -50,11 +52,17 @@ def get_controllers():
         # 벨트 컨트롤러 참조
         belt_controller = device_manager.get_controller("BELT")
         
+        # 디스펜서 컨트롤러 참조
+        dispenser_controller = device_manager.get_controller("DISPENSER")
+        
         if not gate_controllers:
             print("[⚠️ 경고] 사용 가능한 게이트 컨트롤러가 없습니다")
             
         if not belt_controller:
             print("[⚠️ 경고] 벨트 컨트롤러를 찾을 수 없습니다")
+            
+        if not dispenser_controller:
+            print("[⚠️ 경고] 디스펜서 컨트롤러를 찾을 수 없습니다")
             
     except Exception as e:
         print(f"[ERROR] 장치 컨트롤러 초기화 실패: {e}")
@@ -82,6 +90,13 @@ def get_belt_status(belt_id):
     belt_status = manager.get_belt_status(belt_id)
     return jsonify(belt_status)
 
+# 특정 디스펜서 상태 조회
+@facility_api.route("/facilities/dispenser/<dispenser_id>", methods=["GET"])
+def get_dispenser_status(dispenser_id):
+    manager = get_facility_status_manager()
+    dispenser_status = manager.get_dispenser_status(dispenser_id)
+    return jsonify(dispenser_status)
+
 # 모든 게이트 상태 조회
 @facility_api.route("/facilities/gates", methods=["GET"])
 def get_all_gates():
@@ -102,6 +117,16 @@ def get_all_belts():
     belts = {k: v for k, v in facilities.items() if k.startswith("BELT")}
     return jsonify(belts)
 
+# 모든 디스펜서 상태 조회
+@facility_api.route("/facilities/dispensers", methods=["GET"])
+def get_all_dispensers():
+    manager = get_facility_status_manager()
+    facilities = manager.get_all_facilities()
+    
+    # 디스펜서만 필터링
+    dispensers = {k: v for k, v in facilities.items() if k.startswith("DISPENSER")}
+    return jsonify(dispensers)
+
 # 게이트 히스토리 조회
 @facility_api.route("/facilities/gates/<gate_id>/history", methods=["GET"])
 def get_gate_history(gate_id):
@@ -116,6 +141,14 @@ def get_belt_history(belt_id):
     manager = get_facility_status_manager()
     limit = request.args.get('limit', default=100, type=int)
     history = manager.get_belt_history(belt_id, limit)
+    return jsonify(history)
+
+# 디스펜서 히스토리 조회
+@facility_api.route("/facilities/dispenser/<dispenser_id>/history", methods=["GET"])
+def get_dispenser_history(dispenser_id):
+    manager = get_facility_status_manager()
+    limit = request.args.get('limit', default=100, type=int)
+    history = manager.get_dispenser_history(dispenser_id, limit)
     return jsonify(history)
 
 # ------------------ 시설 제어 API ----------------------------
@@ -245,4 +278,65 @@ def control_belt(belt_id):
             }), 500
     except Exception as e:
         print(f"[ERROR] 벨트 제어 실패: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# 디스펜서 제어
+@facility_api.route("/facilities/dispenser/<dispenser_id>/control", methods=["POST"])
+def control_dispenser(dispenser_id):
+    """디스펜서 제어 API
+    
+    요청 본문 예시:
+    {
+        "command": "open", "close", "left_turn", "right_turn", "stop_turn", "loc_route_a", "loc_route_b" 중 하나
+    }
+    """
+    data = request.json
+    
+    if not data or "command" not in data:
+        return jsonify({"error": "command 필드가 필요합니다."}), 400
+        
+    command = data["command"].lower()
+    valid_commands = ["open", "close", "left_turn", "right_turn", "stop_turn", "loc_route_a", "loc_route_b"]
+    if command not in valid_commands:
+        return jsonify({"error": f"command는 {', '.join(valid_commands)} 중 하나여야 합니다."}), 400
+    
+    # 컨트롤러 초기화 확인
+    get_controllers()
+    
+    # 디스펜서 컨트롤러 확인
+    if not dispenser_controller:
+        return jsonify({"error": "디스펜서 컨트롤러를 찾을 수 없습니다."}), 500
+    
+    try:
+        success = False
+        
+        # DispenserController의 명령 인터페이스에 맞게 변환하여 전송
+        action = command.upper()  # 명령을 대문자로 변환
+        success = dispenser_controller.send_command(dispenser_id, action)
+        
+        # 명령에 따른 메시지 설정
+        action_messages = {
+            "open": "열기",
+            "close": "닫기",
+            "left_turn": "왼쪽 회전",
+            "right_turn": "오른쪽 회전",
+            "stop_turn": "회전 정지",
+            "loc_route_a": "A 경로로 이동",
+            "loc_route_b": "B 경로로 이동"
+        }
+        
+        message = f"디스펜서 {dispenser_id} {action_messages.get(command, command)}"
+            
+        if success:
+            return jsonify({
+                "status": "success",
+                "message": message + " 명령 성공"
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": message + " 명령 실패"
+            }), 500
+    except Exception as e:
+        print(f"[ERROR] 디스펜서 제어 실패: {e}")
         return jsonify({"error": str(e)}), 500 

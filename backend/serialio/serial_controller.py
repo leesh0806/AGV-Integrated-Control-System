@@ -104,4 +104,31 @@ class SerialController:
             self.polling_thread.join(timeout=1)
         if hasattr(self.interface, 'close'):
             self.interface.close()
-        print(f"[{self.__class__.__name__}] 종료됨") 
+        print(f"[{self.__class__.__name__}] 종료됨")
+
+    def read_responses(self, max_count=10):
+        """한 번에 여러 개의 응답을 읽어오는 메서드"""
+        responses = []
+        for _ in range(max_count):
+            response = self.interface.peek_response()
+            if not response:
+                break
+            self.handle_message(response)
+            responses.append(response)
+        return responses
+
+    def start_response_reader(self):
+        """백그라운드에서 응답을 지속적으로 읽는 스레드 시작"""
+        import threading
+        
+        def reader_thread():
+            import time
+            while True:
+                # 인터페이스에 데이터가 있는지 확인하고 모두 처리
+                if hasattr(self.interface.ser, 'in_waiting') and self.interface.ser.in_waiting > 0:
+                    self.read_responses()
+                time.sleep(0.1)  # 0.1초마다 확인
+                
+        self.reader_thread = threading.Thread(target=reader_thread, daemon=True)
+        self.reader_thread.start()
+        print(f"[🔄 응답 리더 시작] 백그라운드 응답 처리 스레드 시작됨") 
