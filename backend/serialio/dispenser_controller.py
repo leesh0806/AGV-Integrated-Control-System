@@ -14,6 +14,7 @@ class DispenserController(SerialController):
         self.facility_status_manager = facility_status_manager
         self.current_truck_id = "TRUCK_01"  # 기본값으로 TRUCK_01 설정, 나중에 업데이트됨
         self._last_loaded_message_time = 0  # 중복 메시지 방지를 위한 타임스탬프
+        self._loading_completed = False  # 추가된 적재 완료 플래그
         
     # ----------------------- 명령 전송 -----------------------
     
@@ -64,171 +65,55 @@ class DispenserController(SerialController):
     # ----------------------- 메시지 처리 -----------------------
     
     def handle_message(self, message: str):
-        if not message:
-            return
+        """디스펜서로부터 받은 메시지 처리"""
+        print(f"[디스펜서 메시지] {message}")
+        
+        # LOADED 메시지 처리
+        if "STATUS:DISPENSER:LOADED" in message:
+            print(f"[🎯 적재 완료] 디스펜서에서 적재 완료 메시지 수신")
+            self._loading_completed = True  # 적재 완료 플래그 설정
             
-        # 디버그 로그 추가 - 모든 메시지 표시
-        print(f"[🔍 DispenserController 원본 메시지] '{message}'")
+            # 디스펜서 상태 업데이트
+            self._update_dispenser_status("DISPENSER", "LOADED", 
+                                         self.dispenser_position.get("DISPENSER", "ROUTE_A"), "LOADED")
             
-        # LOADED 상태 감지 및 처리 강화 - 문자열에 "LOADED"가 포함된 모든 메시지 처리
-        if "LOADED" in message:
-            # 중복 메시지 방지 - 디스펜서가 LOADED 메시지를 2번 보내므로, 300ms 내에 동일 메시지는 스킵
-            current_time = time.time()
-            if current_time - self._last_loaded_message_time < 0.3:
-                print(f"[🔄 중복 LOADED 메시지 무시] 이전 메시지와의 시간 간격: {current_time - self._last_loaded_message_time:.3f}초")
-                return True
+            # 등록된 트럭 ID가 있으면 처리
+            if hasattr(self, 'current_truck_id') and self.current_truck_id:
+                truck_id = self.current_truck_id
                 
-            # 타임스탬프 갱신
-            self._last_loaded_message_time = current_time
-            
-            print(f"[🚨 LOADED 메시지 감지] 메시지: '{message}'")
-            truck_id = self.current_truck_id
-            position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
-            
-            # 중요: truck_id 가 없으면 기본값 사용
-            if not truck_id or truck_id == "":
-                truck_id = "TRUCK_01"  # 기본값 설정
-                print(f"[⚠️ 트럭 ID 누락] 기본값 '{truck_id}' 사용")
-            
-            print(f"[🌟 디스펜서 LOADED 처리] 트럭: {truck_id}, 위치: {position}")
-            
-            # 새 상태 설정 (디스펜서가 열렸고 적재되었음을 명시)
-            self._update_dispenser_status("DISPENSER", "LOADED", position, "LOADED")
-            
-            # 즉시 FINISH_LOADING 명령 직접 전송 (가장 빠른 경로)
-            if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-                command_sender = self.facility_status_manager.command_sender
-                if command_sender:
-                    try:
-                        print(f"[⚡ 즉시 명령 전송] 트럭 {truck_id}에게 FINISH_LOADING 명령 즉시 전송")
-                        success = command_sender.send(truck_id, "FINISH_LOADING", {
-                            "position": position
-                        })
-                        print(f"[⚡ 즉시 명령 전송 결과] {'성공' if success else '실패'}")
-                        
-                        # 0.5초 후 RUN 명령도 즉시 전송
-                        import time
-                        time.sleep(0.5)
-                        print(f"[⚡ 즉시 명령 전송] 트럭 {truck_id}에게 RUN 명령 즉시 전송")
-                        success = command_sender.send(truck_id, "RUN", {
-                            "target": "CHECKPOINT_C"
-                        })
-                        print(f"[⚡ 즉시 명령 전송 결과] {'성공' if success else '실패'}")
-                    except Exception as e:
-                        print(f"[⚠️ 즉시 명령 전송 오류] {e}")
-                        
-            # 즉시 직접 FSM에 이벤트 전달 (가장 안정적인 방법)
-            print(f"[🔥 FSM 직접 이벤트 전달] MainController에서 truck_fsm_manager 직접 접근 시도")
-            try:
-                import sys
-                from backend.main_controller.main_controller import MainController
-                
-                # MainController 인스턴스 접근
-                main_controller = None
-                for module in sys.modules.values():
-                    if hasattr(module, 'main_controller') and isinstance(getattr(module, 'main_controller'), MainController):
-                        main_controller = getattr(module, 'main_controller')
-                        break
-                
-                if main_controller and hasattr(main_controller, 'truck_fsm_manager'):
-                    truck_fsm_manager = main_controller.truck_fsm_manager
-                    if truck_fsm_manager:
-                        print(f"[🚀 FSM 이벤트 전송] 트럭: {truck_id}, DISPENSER_LOADED 이벤트 전송 시작")
-                        result = truck_fsm_manager.handle_trigger(truck_id, "DISPENSER_LOADED", {
-                            "dispenser_id": "DISPENSER",
-                            "position": position
-                        })
-                        print(f"[✅ FSM 이벤트 전송 완료] 결과: {'성공' if result else '실패'}")
-                        
-                        # 5초 후 자동으로 FINISH_LOADING 명령 스케줄링
-                        print(f"[⏱️ FINISH_LOADING 예약] 5초 후 자동 FINISH_LOADING 명령 예약")
-                        self._schedule_finish_loading(truck_id)
-                        
-                        return True
-                    else:
-                        print("[❌ FSM 오류] truck_fsm_manager가 None입니다")
-                else:
-                    print("[❌ FSM 오류] main_controller를 찾을 수 없거나 truck_fsm_manager 속성이 없습니다")
-            except Exception as e:
-                print(f"[❌ FSM 오류] FSM 직접 이벤트 전달 중 예외 발생: {e}")
-                import traceback
-                traceback.print_exc()
-            
-            # command_sender 통한 전송 시도 (백업)
-            print(f"[📢 백업 방법] command_sender를 통한 이벤트 전송 시도")
-            try:
-                if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-                    command_sender = self.facility_status_manager.command_sender
-                    if command_sender:
-                        print(f"[📤 Command Sender] DISPENSER_LOADED 명령 전송 시도: {truck_id}")
-                        success = command_sender.send(truck_id, "DISPENSER_LOADED", {
-                            "dispenser_id": "DISPENSER",
-                            "position": position
-                        })
-                        print(f"[📤 Command Sender 결과] {'성공' if success else '실패'}")
-                        
-                        # 두 방식 모두 실패했을 때를 대비해 여전히 FINISH_LOADING 스케줄링
-                        print(f"[⏱️ FINISH_LOADING 예약] 5초 후 자동 FINISH_LOADING 명령 예약")
-                        self._schedule_finish_loading(truck_id)
-                        
-                        return True
-                    else:
-                        print("[❌ Command Sender 오류] command_sender가 None입니다")
-                else:
-                    print("[❌ Command Sender 오류] facility_status_manager가 None이거나 command_sender 속성이 없습니다")
-            except Exception as e:
-                print(f"[❌ Command Sender 오류] 명령 전송 중 예외 발생: {e}")
-                import traceback
-                traceback.print_exc()
-            
-            # 위의 모든 방법이 실패해도 FINISH_LOADING 스케줄링 (최후의 안전장치)
-            print(f"[🔄 최종 안전장치] 이벤트 전송 실패 시에도 자동 FINISH_LOADING 예약")
-            self._schedule_finish_loading(truck_id)
+                # facility_status_manager를 통한 트럭 명령 전송
+                if self.facility_status_manager:
+                    print(f"[🔄 자동 명령 처리] 적재 완료 후 트럭 명령 전송 처리")
+                    
+                    # 자동 FINISH_LOADING 예약
+                    self._schedule_finish_loading(truck_id)
             
             return True
-            
-        # 디스펜서 상태 메시지 처리 (디스펜서가 보내는 다양한 상태 메시지)
-        elif "STATUS:DISPENSER:" in message:
-            # 상태 메시지 파싱
-            parts = message.split(":")
-            if len(parts) >= 3:
-                state = parts[2]
                 
-                # 위치 관련 상태 메시지 처리
-                if state == "AT_ROUTE_A":
-                    print(f"[🧭 디스펜서 위치 변경] 현재 위치: ROUTE_A")
-                    self._update_dispenser_status("DISPENSER", self.dispenser_state.get("DISPENSER", "CLOSED"), "ROUTE_A", "IDLE")
-                    return True
-                    
-                elif state == "AT_ROUTE_B":
-                    print(f"[🧭 디스펜서 위치 변경] 현재 위치: ROUTE_B")
-                    self._update_dispenser_status("DISPENSER", self.dispenser_state.get("DISPENSER", "CLOSED"), "ROUTE_B", "IDLE")
-                    return True
-                    
-                # 준비 상태 메시지 처리
-                elif state == "READY":
-                    print(f"[✅ 디스펜서 준비 완료] 디스펜서가 준비 상태입니다.")
-                    self._update_dispenser_status("DISPENSER", "CLOSED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "IDLE")
-                    return True
-                    
-                # 열림 과정 상태 메시지 처리
-                elif state == "OPENING_COMPLETE":
-                    print(f"[🔓 디스펜서 열림 완료] 디스펜서가 열림 상태로 전환되었습니다.")
+        # 디스펜서 상태 처리
+        if message.startswith("STATUS:DISPENSER:"):
+            status_parts = message.split(":")
+            if len(status_parts) > 2:
+                state = status_parts[2]
+                
+                # OPENING_COMPLETE 상태 처리
+                if state == "OPENING_COMPLETE":
+                    print(f"[디스펜서 열림 완료] 디스펜서 개방 완료됨")
                     self._update_dispenser_status("DISPENSER", "OPENED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "IDLE")
                     return True
                     
-                # 적재 대기 상태 메시지 처리
+                # WAITING_FOR_LOADED 상태 처리
                 elif state == "WAITING_FOR_LOADED":
-                    print(f"[⏳ 디스펜서 적재 대기 중] 디스펜서가 적재 완료를 기다리고 있습니다.")
+                    print(f"[⏳ 적재 대기중] 디스펜서 적재 대기")
                     self._update_dispenser_status("DISPENSER", "OPENED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "LOADING")
                     return True
                     
                 # 자동 닫힘 상태 메시지 처리
                 elif state == "AUTO_CLOSED":
-                    print(f"[🔒 디스펜서 자동 닫힘] 디스펜서가 자동으로 닫혔습니다.")
+                    print(f"[🔒 자동 닫힘] 디스펜서 닫힘")
                     self._update_dispenser_status("DISPENSER", "CLOSED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "IDLE")
                     return True
-            
+
         # 표준 메시지 처리 로직 (응답 파싱)
         try:
             parsed = self.interface.parse_response(message)
@@ -236,17 +121,14 @@ class DispenserController(SerialController):
             # ACK 메시지 처리
             if parsed["type"] == "ACK":
                 if "DI_OPENED" in parsed["raw"]:
-                    print(f"[디스펜서 ACK] DISPENSER가 열림 상태가 되었습니다. LOADED 상태를 즉시 처리합니다.")
+                    print(f"[디스펜서] 열림 상태 확인됨")
                     self._update_dispenser_status("DISPENSER", "OPENED", None, "IDLE")
                     
-                    # ACK:DI_OPENED 메시지를 받으면 즉시 LOADED 메시지 강제 처리 (지연 제거)
-                    print(f"[🔄 즉시 LOADED 처리] ACK:DI_OPENED 수신 후 즉시 LOADED 메시지 강제 처리")
-                    
-                    # 상태 업데이트를 LOADED로 강제 변경
-                    self._update_dispenser_status("DISPENSER", "LOADED", None, "LOADED")
-                    
-                    # 즉시 LOADED 메시지 처리 - 자신에게 메시지 보내 처리
-                    self.handle_message("STATUS:DISPENSER:LOADED")
+                    # ACK:DI_OPENED 메시지를 받으면 즉시 LOADED 처리 (테스트용)
+                    if not hasattr(self, '_loaded_ack_processed') or not self._loaded_ack_processed:
+                        self._loaded_ack_processed = True
+                        self._update_dispenser_status("DISPENSER", "LOADED", None, "LOADED")
+                        self.handle_message("STATUS:DISPENSER:LOADED")
                     
             # 디스펜서 상태 메시지 처리
             elif parsed["type"] == "DISPENSER" and "state" in parsed:
@@ -254,94 +136,186 @@ class DispenserController(SerialController):
                 state = parsed["state"]
                 position = parsed.get("position", self.dispenser_position.get(dispenser_id))
                 
-                print(f"[⚡ 디스펜서 메시지 수신] 타입: DISPENSER, 상태: {state}, 위치: {position}, 원본: {parsed.get('raw', '')}")
-                
                 # 상태 업데이트
                 self._update_dispenser_status(dispenser_id, state, position, "STATUS_UPDATE")
                 
-                # OPENED 상태이고 DI_OPENED가 포함된 경우 (타입 변환으로 ACK가 DISPENSER로 변환된 경우 처리)
+                # OPENED 상태이고 DI_OPENED가 포함된 경우 처리
                 if state == "OPENED" and "DI_OPENED" in parsed.get("raw", ""):
-                    print(f"[🔄 디스펜서 열림 감지] DISPENSER가 열림 상태가 되었습니다. LOADED 상태를 즉시 처리합니다.")
-                    
-                    # 즉시 LOADED 메시지 처리 - 자신에게 메시지 보내 처리
-                    self.handle_message("STATUS:DISPENSER:LOADED")
+                    # 자동 LOADED 처리는 한 번만 (중복 방지)
+                    if not hasattr(self, '_opened_processed') or not self._opened_processed:
+                        self._opened_processed = True
+                        self.handle_message("STATUS:DISPENSER:LOADED")
                 
                 # LOADED 메시지 처리 (중복 처리 방지)
                 elif state == "LOADED" and not "HANDLE_MESSAGE" in parsed.get("raw", ""):
-                    print(f"[⚡ LOADED 상태 감지] 즉시 LOADED 메시지 처리")
-                    
-                    # 즉시 LOADED 메시지 처리 (완전히 새로 메시지를 만들어 처리)
-                    self.handle_message("STATUS:DISPENSER:LOADED:HANDLE_MESSAGE")
-            
-            # command_sender를 통한 전송 시도 (백업 방법)
-            if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-                command_sender = self.facility_status_manager.command_sender
-                if command_sender:
-                    try:
-                        print(f"[⭐ 명령 전송자 호출] command_sender를 통해 DISPENSER_LOADED 메시지 전송")
-                        success = command_sender.send(truck_id, "DISPENSER_LOADED", {
-                            "dispenser_id": "DISPENSER",
-                            "position": position
-                        })
-                        print(f"[⭐ 명령 전송 결과] {'성공' if success else '실패'}")
-                    except Exception as e:
-                        print(f"[⚠️ 명령 전송 오류] {e}")
-                        import traceback
-                        traceback.print_exc()
-                else:
-                    print(f"[⚠️ facility_status_manager 또는 command_sender 없음] DISPENSER_LOADED 메시지를 전송할 수 없습니다")
-            
-            # 3초 후 FINISH_LOADING 자동 전송 (마지막 안전장치)
-            def send_finish_loading(truck_id=truck_id, position=position):
-                import time
-                time.sleep(3.0)  # 3초 대기
-                try:
-                    print(f"[⭐ 자동 FINISH_LOADING] 트럭 {truck_id}에 FINISH_LOADING 메시지 전송")
-                    # FSM 직접 호출
-                    from backend.main_controller.main_controller import main_controller
-                    if main_controller and main_controller.truck_fsm_manager:
-                        result = main_controller.truck_fsm_manager.handle_trigger(truck_id, "FINISH_LOADING", {
-                            "position": position
-                        })
-                        print(f"[⭐ 자동 FINISH_LOADING FSM 직접 호출 결과] {'성공' if result else '실패'}")
-                    
-                    # command_sender 호출
-                    if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-                        command_sender = self.facility_status_manager.command_sender
-                        if command_sender:
-                            success = command_sender.send(truck_id, "FINISH_LOADING", {
-                                "position": position
-                            })
-                            print(f"[⭐ 자동 FINISH_LOADING 메시지 전송 결과] {'성공' if success else '실패'}")
-                            
-                            # 1초 후 RUN 명령도 전송
-                            time.sleep(1.0)
-                            success = command_sender.send(truck_id, "RUN", {
-                                "target": "CHECKPOINT_C"  # 다음 목적지로 명시적 지정
-                            })
-                            print(f"[⭐ 자동 RUN 명령 전송 결과] {'성공' if success else '실패'}")
-                            
-                            # 명시적으로 다음 목적지 설정 추가
-                            success = command_sender.send(truck_id, "SET_DESTINATION", {
-                                "position": "CHECKPOINT_C"
-                            })
-                            print(f"[🔄 자동 목적지 설정 결과] {'성공' if success else '실패'}")
-                except Exception as e:
-                    print(f"[⚠️ 자동 FINISH_LOADING 오류] {e}")
-                    import traceback
-                    traceback.print_exc()
-            
-            # 백그라운드에서 자동 FINISH_LOADING 실행
-            import threading
-            threading.Thread(target=send_finish_loading, daemon=True).start()
+                    # LOADED 처리는 한 번만 (중복 방지)
+                    if not hasattr(self, '_loaded_processed') or not self._loaded_processed:
+                        self._loaded_processed = True
+                        self.handle_message("STATUS:DISPENSER:LOADED:HANDLE_MESSAGE")
             
             return
             
         except Exception as e:
-            print(f"[⚠️ 메시지 처리 오류] 원본 메시지: {message}, 오류: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[⚠️ 처리 오류] {e}")
+            
+    # ----------------------- 자동 FINISH_LOADING 스케줄링 -----------------------
     
+    def _schedule_finish_loading(self, truck_id):
+        """FINISH_LOADING 명령을 예약"""
+        print(f"[🔄 FINISH_LOADING 예약] 1초 후 자동 전송")
+        
+        # 중복 명령 방지 플래그 초기화
+        self._finish_loading_sent = False
+        self._run_command_sent = False
+        
+        def send_delayed_finish_loading():
+            # time 모듈 명시적 import
+            import time
+            
+            # 1초 대기
+            time.sleep(1.0)
+            
+            # 위치 정보 (스레드에서 안전하게 사용하기 위해 미리 가져옴)
+            position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
+            
+            # command_sender를 통한 명령 전송 (주요 방법)
+            if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
+                command_sender = self.facility_status_manager.command_sender
+                if command_sender:
+                    # FINISH_LOADING 명령 전송 (한 번만)
+                    if not self._finish_loading_sent:
+                        self._finish_loading_sent = True
+                        print(f"[📤 명령 전송] FINISH_LOADING")
+                        command_sender.send(truck_id, "FINISH_LOADING", {
+                            "position": position
+                        })
+                    
+                    # 0.5초 후 RUN 명령 전송
+                    time.sleep(0.5)
+                    if not self._run_command_sent:
+                        self._run_command_sent = True
+                        print(f"[📤 명령 전송] RUN → CHECKPOINT_C")
+                        command_sender.send(truck_id, "RUN", {
+                            "target": "CHECKPOINT_C"
+                        })
+        
+        # 백그라운드 스레드에서 실행
+        import threading
+        thread = threading.Thread(target=send_delayed_finish_loading, daemon=True)
+        thread.start()
+
+    # ----------------------- 자동 적재 완료 타이머 -----------------------
+    
+    def _schedule_auto_loading(self, dispenser_id, delay=10.0):
+        """지정된 시간 후 자동으로 적재 완료(LOADED) 상태로 변경"""
+        # 중복 타이머 방지를 위한 플래그
+        self._auto_loading_scheduled = True
+        
+        def send_auto_loaded_message():
+            # time 모듈 명시적 import
+            import time
+            
+            # 지정된 시간 대기
+            time.sleep(delay)
+            
+            # 디스펜서가 여전히 열린 상태인지 확인
+            if self.dispenser_state.get(dispenser_id) == "OPENED":
+                print(f"[⏱️ 자동 적재 완료] {dispenser_id} - {delay}초 경과, 자동으로 적재 완료 처리")
+                
+                # LOADED 상태로 직접 변경
+                # 가상 LOADED 메시지 생성 및 처리 (handle_message를 호출)
+                self.handle_message("STATUS:DISPENSER:LOADED")
+            else:
+                print(f"[⚠️ 자동 적재 취소] {dispenser_id} - 디스펜서가 더 이상 열린 상태가 아닙니다.")
+            
+            # 타이머 플래그 초기화
+            self._auto_loading_scheduled = False
+        
+        # 백그라운드 스레드에서 실행
+        import threading
+        thread = threading.Thread(target=send_auto_loaded_message, daemon=True)
+        thread.start()
+
+    # ----------------------- 적재 타임아웃 처리 -----------------------
+    
+    def _schedule_loading_timeout(self, dispenser_id, timeout=15.0):
+        """적재 작업 타임아웃 처리 - 지정된 시간 후에도 로딩이 완료되지 않으면 강제 종료"""
+        # 타임아웃 플래그 초기화
+        self._loading_timeout_scheduled = True
+        self._loading_completed = False
+        
+        def handle_loading_timeout():
+            # time 모듈 명시적 import
+            import time
+            
+            # 시작 시간 기록
+            start_time = time.time()
+            
+            # 지정된 시간 대기
+            time.sleep(timeout)
+            
+            # 이미 로딩이 완료되었는지 확인
+            if not self._loading_completed:
+                print(f"[⚠️ 적재 타임아웃] {dispenser_id} - {timeout}초 경과, 작업 강제 종료")
+                
+                # 현재 트럭 ID 가져오기
+                truck_id = self.current_truck_id if hasattr(self, 'current_truck_id') else None
+                
+                if truck_id:
+                    print(f"[🔄 강제 적재 완료] 트럭 {truck_id}의 적재 작업을 강제로 완료 처리합니다.")
+                    
+                    # 디스펜서 닫기
+                    self.close_dispenser(dispenser_id)
+                    
+                    # FINISH_LOADING 및 RUN 명령 강제 전송
+                    self._force_finish_loading_and_run(truck_id)
+                else:
+                    print(f"[⚠️ 오류] 트럭 ID를 찾을 수 없어 강제 종료 작업을 완료할 수 없습니다.")
+                    # 디스펜서만 닫기
+                    self.close_dispenser(dispenser_id)
+            else:
+                print(f"[✅ 정상 완료] {dispenser_id} - 적재 작업이 타임아웃 전에 정상 완료되었습니다.")
+            
+            # 타임아웃 플래그 해제
+            self._loading_timeout_scheduled = False
+        
+        # 백그라운드 스레드에서 실행
+        import threading
+        thread = threading.Thread(target=handle_loading_timeout, daemon=True)
+        thread.start()
+    
+    def _force_finish_loading_and_run(self, truck_id):
+        """적재 작업 강제 종료 및 트럭 출발 명령 전송"""
+        # time 모듈 명시적 import
+        import time
+        
+        # 위치 정보 (스레드에서 안전하게 사용하기 위해 미리 가져옴)
+        position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
+        
+        # command_sender를 통한 명령 전송
+        if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
+            command_sender = self.facility_status_manager.command_sender
+            if command_sender:
+                # FINISH_LOADING 명령 전송
+                print(f"[📤 강제 명령 전송] FINISH_LOADING → {truck_id}")
+                command_sender.send(truck_id, "FINISH_LOADING", {
+                    "position": position
+                })
+                
+                # 0.5초 후 RUN 명령 전송
+                time.sleep(0.5)
+                print(f"[📤 강제 명령 전송] RUN → {truck_id}")
+                command_sender.send(truck_id, "RUN", {
+                    "target": "CHECKPOINT_C"
+                })
+                
+                print(f"[✅ 강제 이동 명령 완료] 트럭 {truck_id}이(가) 이동을 시작합니다.")
+                
+                # 적재 완료 상태로 변경
+                self._loading_completed = True
+        else:
+            print(f"[⚠️ 명령 전송 실패] command_sender를 찾을 수 없습니다.")
+
     # ----------------------- 명령 함수 -----------------------
     
     def _is_success_response(self, response, action):
@@ -402,21 +376,35 @@ class DispenserController(SerialController):
         if success:
             print(f"[디스펜서 열림 완료] {dispenser_id} - 응답: {response}")
             self._update_dispenser_status(dispenser_id, "OPENED", None, "IDLE")
+            
+            # 자동 적재 타이머 시작 (10초 후 자동으로 LOADED 상태로 변경)
+            self._schedule_auto_loading(dispenser_id, 10.0)
+            print(f"[⏱️ 자동 적재 타이머 시작] {dispenser_id} - 10초 후 자동으로 적재 완료됩니다.")
+            
+            # 15초 타임아웃 타이머 시작 (15초 후에도 로딩이 완료되지 않으면 강제 종료)
+            self._schedule_loading_timeout(dispenser_id, 15.0)
+            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 15초 후 자동으로 작업 강제 종료됩니다.")
         else:
             print(f"[디스펜서 열림 실패] {dispenser_id} - 응답: {response}")
             
             # 응답 실패 시 강제 상태 업데이트
-            if "DI_OPENED" in (response or ""):
-                print(f"[디스펜서 열림 대체 확인] {dispenser_id}")
-                self._update_dispenser_status(dispenser_id, "OPENED", None, "IDLE")
-                success = True
-            else:
-                print(f"[강제 상태 변경] {dispenser_id} - 응답 실패로 강제로 OPENED 상태로 설정")
-                self._update_dispenser_status(dispenser_id, "OPENED", None, "FORCED_OPEN")
-                success = True
+            print(f"[강제 상태 변경] {dispenser_id} - 응답 실패로 강제로 OPENED 상태로 설정")
+            self._update_dispenser_status(dispenser_id, "OPENED", None, "FORCED_OPEN")
+            
+            # 작업 중 플래그 제거
+            if dispenser_id in self.operations_in_progress:
+                self.operations_in_progress[dispenser_id] = False
                 
-        # 작업 완료 표시
-        self.operations_in_progress[dispenser_id] = False
+            # 15초 타임아웃 타이머 시작 (응답 실패 시에도 적용)
+            self._schedule_loading_timeout(dispenser_id, 15.0)
+            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 15초 후 자동으로 작업 강제 종료됩니다.")
+            
+            return True
+        
+        # 작업 중 플래그 제거
+        if dispenser_id in self.operations_in_progress:
+            self.operations_in_progress[dispenser_id] = False
+            
         return success
         
     def close_dispenser(self, dispenser_id: str):
@@ -566,155 +554,3 @@ class DispenserController(SerialController):
         # 작업 완료 표시
         self.operations_in_progress[dispenser_id] = False
         return success
-
-    # ----------------------- 자동 FINISH_LOADING 스케줄링 -----------------------
-    
-    def _schedule_finish_loading(self, truck_id):
-        """FINISH_LOADING 명령을 자동으로 예약하는 함수"""
-        print(f"[🔄 자동 FINISH_LOADING 예약] {truck_id}에게 1초 후 자동으로 FINISH_LOADING 명령을 전송할 예정입니다.")
-        
-        # truck_id를 클로저로 캡처하기 위해 매개변수로 전달
-        def send_finish_loading(truck_id=truck_id):
-            import time
-            time.sleep(1.0)  # 1초로 단축 (5초에서 변경) 
-            print(f"[🔄 자동 완료 처리] 자동으로 FINISH_LOADING 명령 전송을 시도합니다.")
-            
-            try:
-                # 1. 먼저 command_sender 사용 (직접 트럭에게 메시지 전송)
-                if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-                    command_sender = self.facility_status_manager.command_sender
-                    if command_sender:
-                        position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
-                        
-                        # FINISH_LOADING 명령 즉시 전송
-                        print(f"[🚀 직접 명령 전송] 트럭 {truck_id}에게 FINISH_LOADING 명령 직접 전송")
-                        success = command_sender.send(truck_id, "FINISH_LOADING", {
-                            "position": position
-                        })
-                        print(f"[🔄 FINISH_LOADING 명령 전송 결과] {'성공' if success else '실패'}")
-                        
-                        # 0.5초 후 RUN 명령 즉시 전송
-                        time.sleep(0.5)
-                        print(f"[🚀 직접 명령 전송] 트럭 {truck_id}에게 RUN 명령 직접 전송 (목적지: CHECKPOINT_C)")
-                        success = command_sender.send(truck_id, "RUN", {
-                            "target": "CHECKPOINT_C"  # 다음 목적지로 명시적 지정
-                        })
-                        print(f"[🔄 RUN 명령 전송 결과] {'성공' if success else '실패'}")
-                        
-                        # 명시적으로 다음 목적지 설정
-                        print(f"[🚀 목적지 설정] 트럭 {truck_id}의 다음 목적지를 CHECKPOINT_C로 명시적 설정")
-                        success = command_sender.send(truck_id, "SET_DESTINATION", {
-                            "position": "CHECKPOINT_C"
-                        })
-                        print(f"[🔄 목적지 설정 결과] {'성공' if success else '실패'}")
-                        
-                        return True
-                    else:
-                        print("[⚠️ 명령 전송 실패] command_sender가 없습니다.")
-                else:
-                    print("[⚠️ 명령 전송 실패] facility_status_manager가 없거나 command_sender 속성이 없습니다.")
-                
-                # 2. 백업 방법: FSM 직접 호출 (command_sender 실패 시)
-                print("[🔄 백업 방법] FSM 매니저 직접 호출")
-                success = self._notify_fsm_manager_directly(truck_id, "FINISH_LOADING", {
-                    "position": self.dispenser_position.get("DISPENSER", "ROUTE_A")
-                })
-                print(f"[🔄 FSM 직접 호출 결과] {'성공' if success else '실패'}")
-                
-                # FSM 직접 호출로 RUN 명령도 시도
-                time.sleep(0.5)
-                success = self._notify_fsm_manager_directly(truck_id, "RUN", {
-                    "target": "CHECKPOINT_C"
-                })
-                print(f"[🔄 FSM RUN 명령 직접 호출 결과] {'성공' if success else '실패'}")
-                
-            except Exception as e:
-                print(f"[⚠️ 자동 FINISH_LOADING 오류] {e}")
-                import traceback
-                traceback.print_exc()
-        
-        # 백그라운드에서 자동 FINISH_LOADING 실행
-        import threading
-        thread = threading.Thread(target=send_finish_loading, daemon=True)
-        thread.start()
-        
-        # 중요: 주 스레드에서도 즉시 메시지 전송 시도 (최대한 신속하게 처리)
-        if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-            command_sender = self.facility_status_manager.command_sender
-            if command_sender:
-                try:
-                    position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
-                    print(f"[⚡ 즉시 명령 전송] 트럭 {truck_id}에게 DISPENSER_LOADED 이벤트 즉시 전송")
-                    command_sender.send(truck_id, "DISPENSER_LOADED", {
-                        "dispenser_id": "DISPENSER",
-                        "position": position
-                    })
-                except Exception as e:
-                    print(f"[⚠️ 즉시 명령 전송 오류] {e}")
-                    pass
-
-    # ----------------------- 백업 방법 구현 -----------------------
-    
-    def _notify_fsm_manager_directly(self, truck_id, event, payload=None):
-        """트럭 FSM 매니저에 직접 이벤트 전달하는 백업 방법"""
-        try:
-            import sys
-            import importlib
-            
-            # FSM 매니저를 직접 찾기 위한 임시 코드
-            from backend.main_controller.main_controller import MainController
-            
-            # MainController 인스턴스 접근 시도
-            main_controller = None
-            for module in sys.modules.values():
-                if hasattr(module, 'main_controller') and isinstance(module.main_controller, MainController):
-                    main_controller = module.main_controller
-                    break
-            
-            if main_controller:
-                truck_fsm_manager = getattr(main_controller, 'truck_fsm_manager', None)
-                if truck_fsm_manager:
-                    print(f"[🌟 백업 성공] FSM 매니저를 직접 찾았습니다. 이벤트 직접 전달: {event}")
-                    truck_fsm_manager.handle_trigger(truck_id, event, payload)
-                    return True
-            
-            print("[⚠️ 백업 실패] FSM 매니저를 찾을 수 없습니다.")
-            return False
-        except Exception as e:
-            print(f"[⚠️ 백업 오류] 직접 FSM 매니저 호출 실패: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-
-    # 디스펜서 적재 완료 메시지 전송 헬퍼 함수
-    def _send_dispenser_loaded_to_truck(self, truck_id, dispenser_id, position):
-        """트럭에 디스펜서 적재 완료 메시지를 전송하는 헬퍼 함수"""
-        print(f"[⭐⭐⭐ 디스펜서 적재 완료 메시지 전송] 트럭 {truck_id}에게 DISPENSER_LOADED 메시지 전송 시작")
-        
-        # 1. 먼저 직접 FSM 호출 시도 (가장 안정적)
-        print(f"[🌟 FSM 직접 호출] 트럭 FSM 매니저에 직접 DISPENSER_LOADED 이벤트 전달")
-        fsm_result = self._notify_fsm_manager_directly(truck_id, "DISPENSER_LOADED", {
-            "dispenser_id": dispenser_id,
-            "position": position
-        })
-        print(f"[🌟 FSM 직접 호출 결과] {'성공' if fsm_result else '실패'}")
-        
-        # 2. command_sender를 통한 전송
-        if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
-            command_sender = self.facility_status_manager.command_sender
-            if command_sender:
-                print(f"[⭐ 명령 전송자 호출] command_sender를 통해 DISPENSER_LOADED 메시지 전송")
-                try:
-                    success = command_sender.send(truck_id, "DISPENSER_LOADED", {
-                        "dispenser_id": dispenser_id,
-                        "position": position
-                    })
-                    print(f"[⭐ 명령 전송 결과] {'성공' if success else '실패'}")
-                except Exception as e:
-                    print(f"[⚠️ 명령 전송 오류] {e}")
-            else:
-                print(f"[❌ 명령 전송자 없음] command_sender가 없어 추가 메시지를 전송할 수 없습니다.")
-        else:
-            print(f"[⚠️ facility_status_manager 누락] facility_status_manager가 설정되지 않았습니다.")
-        
-        print(f"[⭐⭐⭐ 디스펜서 적재 완료 메시지 전송 완료] 메시지 전송 시도 완료")

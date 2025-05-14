@@ -48,7 +48,7 @@
 
 // 자동 닫힘 타이머 (ms)
 #define AUTO_CLOSE_TIMEOUT 30000  // 30초
-#define LOADING_DELAY 1500        // 적재 시뮬레이션 시간 (1.5초)
+#define LOADING_DELAY 10000       // 적재 시뮬레이션 시간 (10초)
 
 // IR 리모컨 버튼 코드
 const unsigned long BTN_CHAD =  0xBA45FF00;
@@ -106,6 +106,8 @@ boolean commandComplete = false;
 
 // 상태 추적 및 타임스탬프
 unsigned long lastCommandTime = 0;
+unsigned long loadingStartTime = 0;  // 적재 시작 시간
+bool isLoadingInProgress = false;    // 적재 진행 중 상태
 
 //============================= 초기화 =============================
 
@@ -160,11 +162,14 @@ void loop() {
   checkServButton();
   dispense();
   
+  // 적재 완료 타이머 체크 (중요: 우선적으로 처리)
+  checkLoadingComplete();
+  
   // 일정 시간 이후 자동 닫기 (안전장치)
   autoCloseCheck();
   
-  // 디버그 정보 (필요시 주석 해제)
-  // debug();
+  // 디버그 정보 매 5초마다 출력 (활성화)
+  debugStatusInfo();
 }
 
 //============================= 시리얼 통신 함수 =============================
@@ -286,12 +291,43 @@ void simulateLoading() {
   Serial.println("STATUS:DISPENSER:OPENING_COMPLETE");
   Serial.println("STATUS:DISPENSER:WAITING_FOR_LOADED");
   
-  // 적재 완료 메시지는 설정된 지연 시간 후에 보냄 (시뮬레이션)
-  delay(LOADING_DELAY);
+  // 적재 시작 시간 기록 및 상태 설정
+  loadingStartTime = millis();
+  isLoadingInProgress = true;
   
-  // 적재 완료 메시지 전송 (중요 메시지이므로 두 번 전송)
-  Serial.println("STATUS:DISPENSER:LOADED");
-  Serial.println("STATUS:DISPENSER:LOADED");
+  // 디버그 메시지 (중요)
+  Serial.print("적재 타이머 시작: ");
+  Serial.print(loadingStartTime);
+  Serial.print(", 예상 완료 시간: ");
+  Serial.println(loadingStartTime + LOADING_DELAY);
+}
+
+// 적재 완료 체크 - 비차단 방식
+void checkLoadingComplete() {
+  if (isLoadingInProgress) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - loadingStartTime;
+    
+    // 1초마다 상태 업데이트
+    if (currentTime % 1000 < 10) {
+      Serial.print("적재 진행 중... ");
+      Serial.print(elapsedTime / 1000);
+      Serial.println("초 경과");
+    }
+    
+    // 적재 완료 시간이 되면
+    if (elapsedTime >= LOADING_DELAY) {
+      // 적재 완료 메시지 전송 (확실하게 전송되도록 여러 번 전송)
+      for (int i = 0; i < 5; i++) {
+        Serial.println("STATUS:DISPENSER:LOADED");
+        delay(50); // 약간 간격을 두고 전송
+      }
+      
+      // 적재 완료 상태로 변경
+      isLoadingInProgress = false;
+      Serial.println("적재 완료 처리됨!");
+    }
+  }
 }
 
 // 자동 닫기 체크 (안전 기능)
@@ -516,10 +552,16 @@ void dispense() {
 
 //============================= 디버그 함수 =============================
 
-// 디버그 정보 출력 (필요시 주석 해제)
-void debug() {
-  unsigned long time = millis();
-  if (time % 1000 == 0) {  // 1초마다 출력
+// 디버그 정보 출력
+void debugStatusInfo() {
+  static unsigned long lastDebugTime = 0;
+  unsigned long currentTime = millis();
+  
+  // 5초마다 상태 출력
+  if (currentTime - lastDebugTime >= 5000) {
+    lastDebugTime = currentTime;
+    
+    Serial.println("==================== 디스펜서 상태 ====================");
     Serial.print("위치: ");
     if (lastmove == 'A') Serial.print("ROUTE_A");
     else if (lastmove == 'B') Serial.print("ROUTE_B");
@@ -528,16 +570,17 @@ void debug() {
     Serial.print(", 상태: ");
     Serial.print(open ? "열림" : "닫힘");
     
-    Serial.print(", 방향: ");
-    Serial.print(move);
+    Serial.print(", 적재 진행 중: ");
+    Serial.print(isLoadingInProgress ? "예" : "아니오");
     
-    Serial.print(", 조이스틱: ");
-    Serial.print(x);
-    Serial.print(",");
-    Serial.print(y);
-    Serial.print(",");
-    Serial.print(c ? "클릭" : "-");
+    if (isLoadingInProgress) {
+      Serial.print(" (");
+      Serial.print((currentTime - loadingStartTime) / 1000);
+      Serial.print("초 경과, 목표: ");
+      Serial.print(LOADING_DELAY / 1000);
+      Serial.print("초)");
+    }
     
-    Serial.println();
+    Serial.println("\n=======================================================");
   }
 }

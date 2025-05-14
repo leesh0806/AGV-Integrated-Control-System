@@ -16,7 +16,8 @@ import sys
 
 # 백엔드 코드 사용을 위한 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(current_dir))  # 상위 디렉토리 추가
+project_root = os.path.dirname(current_dir)  # 프로젝트 루트 디렉토리
+sys.path.append(project_root)  # 프로젝트 루트 디렉토리 추가
 
 try:
     from backend.serialio.serial_interface import SerialInterface
@@ -24,6 +25,27 @@ try:
 except ImportError:
     print("백엔드 모듈을 가져올 수 없습니다. 경로를 확인해주세요.")
     raise
+
+# 테스트용 더미 FacilityStatusManager 및 CommandSender 클래스
+class DummyCommandSender:
+    def __init__(self):
+        self.truck_status_manager = None
+        
+    def send(self, truck_id, command, payload=None):
+        print(f"[▶️ 더미 명령 전송] 트럭: {truck_id}, 명령: {command}, 페이로드: {payload}")
+        return True
+        
+    def set_truck_status_manager(self, truck_status_manager):
+        self.truck_status_manager = truck_status_manager
+        print(f"[✅ 더미 트럭 상태 관리자 설정] truck_status_manager 설정됨")
+
+class DummyFacilityStatusManager:
+    def __init__(self):
+        self.command_sender = DummyCommandSender()
+        
+    def update_dispenser_status(self, dispenser_id, state, position, operation):
+        print(f"[▶️ 더미 상태 업데이트] 디스펜서: {dispenser_id}, 상태: {state}, 위치: {position}, 작업: {operation}")
+        return True
 
 class DispenserTester:
     def __init__(self, port="/dev/ttyACM2", baudrate=9600, use_fake=False):
@@ -35,6 +57,8 @@ class DispenserTester:
         self.controller = None
         self.running = True
         self.message_listener = None
+        self.current_truck_id = "TRUCK_01"  # 기본 트럭 ID
+        self.dummy_facility_manager = DummyFacilityStatusManager()  # 더미 매니저
 
     def initialize(self):
         """디스펜서 연결 초기화"""
@@ -47,9 +71,15 @@ class DispenserTester:
                 debug=True
             )
             
-            # 컨트롤러 생성
-            self.controller = DispenserController(self.interface)
-            print(f"[✅ 초기화 완료] 디스펜서 컨트롤러 준비됨")
+            # 컨트롤러 생성 - 더미 facility_status_manager 전달
+            self.controller = DispenserController(
+                self.interface, 
+                facility_status_manager=self.dummy_facility_manager
+            )
+            
+            # 현재 트럭 ID 설정
+            self.controller.current_truck_id = self.current_truck_id
+            print(f"[✅ 초기화 완료] 디스펜서 컨트롤러 준비됨 (트럭 ID: {self.current_truck_id})")
             
             # 메시지 리스너 시작
             self.start_message_listener()
@@ -155,6 +185,40 @@ class DispenserTester:
         print("[🔍 테스트] 디스펜서 B 경로 이동")
         return self.controller.move_to_route("DISPENSER", "ROUTE_B")
 
+    def set_truck_id(self):
+        """현재 사용 중인 트럭 ID 변경"""
+        if not self.controller:
+            print("[❌ 오류] 컨트롤러가 초기화되지 않았습니다.")
+            return False
+            
+        try:
+            new_truck_id = input("새 트럭 ID를 입력하세요 (예: TRUCK_01): ")
+            if new_truck_id.strip():
+                self.current_truck_id = new_truck_id
+                self.controller.current_truck_id = new_truck_id
+                print(f"[✅ 설정 완료] 트럭 ID가 {new_truck_id}로 변경되었습니다.")
+                return True
+            else:
+                print("[❌ 오류] 유효한 트럭 ID를 입력해주세요.")
+                return False
+        except Exception as e:
+            print(f"[❌ 설정 실패] {e}")
+            return False
+
+    def simulate_loaded(self):
+        """LOADED 상태 시뮬레이션"""
+        if not self.controller:
+            print("[❌ 오류] 컨트롤러가 초기화되지 않았습니다.")
+            return False
+            
+        try:
+            print("[🔍 테스트] LOADED 상태 시뮬레이션")
+            self.controller.handle_message("STATUS:DISPENSER:LOADED")
+            return True
+        except Exception as e:
+            print(f"[❌ 시뮬레이션 실패] {e}")
+            return False
+
     def print_status(self):
         """현재 디스펜서 상태 출력"""
         if not self.controller:
@@ -166,6 +230,7 @@ class DispenserTester:
         print(f"\n[📊 디스펜서 상태]")
         print(f"상태: {state}")
         print(f"위치: {position}")
+        print(f"트럭 ID: {self.current_truck_id}")
 
     def display_menu(self):
         """메뉴 표시"""
@@ -181,6 +246,7 @@ class DispenserTester:
         print("7. B 경로로 이동")
         print("8. 상태 확인")
         print("9. 원시 명령어 보내기")
+        print("b. LOADED 상태 시뮬레이션")
         print("0. 종료")
         print("="*50)
 
@@ -194,7 +260,7 @@ class DispenserTester:
         
         while self.running:
             self.display_menu()
-            choice = input("선택하세요 (0-9): ")
+            choice = input("선택하세요 (0-9 또는 a-b): ")
             
             if choice == '0':
                 self.running = False
@@ -219,6 +285,10 @@ class DispenserTester:
             elif choice == '9':
                 cmd = input("원시 명령어 입력 (예: DISPENSER_DI_OPEN): ")
                 self.send_raw_command(cmd)
+            elif choice.lower() == 'a':
+                self.set_truck_id()
+            elif choice.lower() == 'b':
+                self.simulate_loaded()
             else:
                 print("[❌ 오류] 잘못된 선택입니다.")
             
@@ -246,6 +316,8 @@ def parse_arguments():
                         help='전송 속도 (기본값: 9600)')
     parser.add_argument('--fake', action='store_true',
                         help='가상 시리얼 인터페이스 사용 (테스트용)')
+    parser.add_argument('--truck-id', type=str, default='TRUCK_01',
+                        help='트럭 ID (기본값: TRUCK_01)')
     return parser.parse_args()
 
 def main():
@@ -257,6 +329,9 @@ def main():
         baudrate=args.baudrate,
         use_fake=args.fake
     )
+    
+    # 트럭 ID 설정
+    tester.current_truck_id = args.truck_id
     
     try:
         tester.run()

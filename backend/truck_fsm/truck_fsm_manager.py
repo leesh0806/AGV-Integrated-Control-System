@@ -34,7 +34,7 @@ class TruckFSMManager:
         
         # 새로 추가: command_sender에 truck_status_manager 설정
         if hasattr(command_sender, 'set_truck_status_manager') and self.truck_status_manager:
-            # 상태 관리자가 이미 설정되어 있는지 확인
+            # 상태 관리자가 이미 설정되어 있는지 확인 (is not으로 명시적 ID 비교)
             if not hasattr(command_sender, 'truck_status_manager') or command_sender.truck_status_manager is not self.truck_status_manager:
                 command_sender.set_truck_status_manager(self.truck_status_manager)
         

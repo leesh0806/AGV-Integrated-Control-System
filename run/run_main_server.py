@@ -32,7 +32,7 @@ port_map = {
 print("[초기화] 포트 맵:", port_map)
 
 # 하드웨어 사용 여부 설정
-USE_FAKE_HARDWARE = True  # 가상 하드웨어 모드로 설정
+USE_FAKE_HARDWARE = False  # 가상 하드웨어 모드로 설정
 
 # 특정 장치만 가상 모드로 설정
 FAKE_DEVICES = []  # 모든 장치를 가상으로 사용
