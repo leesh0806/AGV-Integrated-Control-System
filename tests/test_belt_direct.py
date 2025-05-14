@@ -41,6 +41,23 @@ def test_belt(port='/dev/ttyACM1', baudrate=9600):
                 print("[전송] BELT_STATUS")
                 ser.write(b"BELT_STATUS\n")
                 
+            elif cmd == "FINISH_LOADING":
+                position = payload.get("position", self.current_position)
+                print(f"[✅ 적재 완료 명령 수신] 위치: {position}에서 적재 작업 완료")
+                
+                # 적재 상태 해제
+                self.loading_in_progress = False
+                self.loading_finished = True
+                
+                # 위치 잠금 해제
+                if self.position_locked:
+                    self.position_locked = False
+                    print(f"[🔓 위치 잠금 해제] 위치 잠금이 해제되었습니다. 이제 RUN 명령으로 이동할 수 있습니다.")
+                
+                # ACK 응답 전송
+                self.send("ACK", {"cmd": "FINISH_LOADING", "status": "SUCCESS"}, wait=False)
+                return True
+                
             else:
                 print("[오류] 잘못된 명령어입니다.")
                 continue

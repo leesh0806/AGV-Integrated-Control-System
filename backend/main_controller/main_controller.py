@@ -101,16 +101,33 @@ class MainController:
         if self.command_sender_initialized and truck_socket_map:
             # truck_socket_map이 비어있지 않은 경우만 업데이트
             commander = TruckCommandSender(truck_socket_map)
+            # TCP 서버 참조 설정
+            if hasattr(self, 'tcp_server'):
+                commander.set_tcp_server(self.tcp_server)
+            # 상태 관리자 참조 설정 유지
+            if hasattr(self, 'truck_status_manager'):
+                commander.set_truck_status_manager(self.truck_status_manager)
             self.truck_fsm_manager.set_commander(commander)
             return
             
         # 최초 설정 또는 맵이 비어있는 초기화인 경우
         commander = TruckCommandSender(truck_socket_map)
+        
+        # TCP 서버 참조 설정
+        if hasattr(self, 'tcp_server'):
+            commander.set_tcp_server(self.tcp_server)
+            print("[✅ TCP 서버 참조 설정] commander에 tcp_server 참조가 설정되었습니다.")
+        
         self.truck_fsm_manager.set_commander(commander)
         
         # 시설 상태 관리자에도 명령 전송자 설정 (최초 한 번만)
         if self.facility_status_manager and not self.command_sender_initialized:
             self.facility_status_manager.set_command_sender(commander)
+            
+            # 상태 관리자 참조도 설정 - 안전하게 확인
+            if hasattr(self, 'truck_status_manager'):
+                commander.set_truck_status_manager(self.truck_status_manager)
+            
             print("[✅ 명령 전송자 설정] facility_status_manager에 명령 전송자 설정 완료")
             self.command_sender_initialized = True
 
@@ -199,4 +216,15 @@ class MainController:
         self.device_manager.close_all()
         if self.facility_status_manager:
             self.facility_status_manager.close()
-        print("[✅ 시스템 종료 완료]") 
+        print("[✅ 시스템 종료 완료]")
+
+    # TCP 서버 참조 설정
+    def set_tcp_server(self, tcp_server):
+        """TCP 서버 참조 설정"""
+        self.tcp_server = tcp_server
+        print("[✅ TCP 서버 참조 설정] MainController에 tcp_server 참조가 설정되었습니다.")
+        
+        # 기존 명령 전송자가 있으면 TCP 서버 참조도 설정
+        if hasattr(self.truck_fsm_manager, 'command_sender') and self.truck_fsm_manager.command_sender:
+            self.truck_fsm_manager.command_sender.set_tcp_server(tcp_server)
+            print("[✅ TCP 서버 참조 설정] 기존 command_sender에 tcp_server 참조가 설정되었습니다.") 

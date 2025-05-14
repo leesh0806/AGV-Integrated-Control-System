@@ -327,26 +327,51 @@ class DispenserController(SerialController):
         import time
         
         # 위치 정보 (스레드에서 안전하게 사용하기 위해 미리 가져옴)
-        position = self.dispenser_position.get("DISPENSER", "ROUTE_A")
+        # ROUTE_A는 잘못된 위치값이므로 LOAD_A로 수정
+        position = "LOAD_A"  # 디스펜서 위치가 ROUTE_A이면 트럭 위치는 LOAD_A
+        if self.dispenser_position.get("DISPENSER") == "ROUTE_B":
+            position = "LOAD_B"
+            
+        print(f"[🔄 강제 명령 전송 - 위치 결정] 디스펜서 위치: {self.dispenser_position.get('DISPENSER', 'ROUTE_A')} → 트럭 위치: {position}")
         
         # command_sender를 통한 명령 전송
         if self.facility_status_manager and hasattr(self.facility_status_manager, 'command_sender'):
             command_sender = self.facility_status_manager.command_sender
             if command_sender:
                 # FINISH_LOADING 명령 전송
-                print(f"[📤 강제 명령 전송] FINISH_LOADING → {truck_id}")
-                command_sender.send(truck_id, "FINISH_LOADING", {
+                print(f"[📤 강제 명령 전송 - 디버그] FINISH_LOADING → {truck_id}, 페이로드: {{'position': '{position}'}}")
+                result = command_sender.send(truck_id, "FINISH_LOADING", {
                     "position": position
                 })
+                print(f"[📤 강제 명령 전송 결과] FINISH_LOADING 전송 성공 여부: {result}")
+                
+                # 전송 실패 시 재시도
+                if not result:
+                    print(f"[🔄 FINISH_LOADING 재시도] 첫 번째 시도 실패, 1초 후 재시도...")
+                    time.sleep(1.0)
+                    result = command_sender.send(truck_id, "FINISH_LOADING", {
+                        "position": position
+                    })
+                    print(f"[📤 강제 명령 재전송 결과] FINISH_LOADING 재전송 성공 여부: {result}")
                 
                 # 0.5초 후 RUN 명령 전송
                 time.sleep(0.5)
-                print(f"[📤 강제 이동 명령 전송] RUN → {truck_id}")
-                command_sender.send(truck_id, "RUN", {
+                print(f"[📤 강제 이동 명령 전송 - 디버그] RUN → {truck_id}, 페이로드: {{'target': 'CHECKPOINT_C'}}")
+                run_result = command_sender.send(truck_id, "RUN", {
                     "target": "CHECKPOINT_C"
                 })
+                print(f"[📤 강제 이동 명령 전송 결과] RUN 전송 성공 여부: {run_result}")
                 
-                print(f"[✅ 강제 이동 명령 완료] 트럭 {truck_id}이(가) 이동을 시작합니다.")
+                # RUN 명령 전송 실패 시 재시도
+                if not run_result:
+                    print(f"[🔄 RUN 명령 재시도] 첫 번째 시도 실패, 1초 후 재시도...")
+                    time.sleep(1.0)
+                    run_result = command_sender.send(truck_id, "RUN", {
+                        "target": "CHECKPOINT_C"
+                    })
+                    print(f"[📤 강제 이동 명령 재전송 결과] RUN 재전송 성공 여부: {run_result}")
+                
+                print(f"[✅ 강제 이동 명령 완료] 트럭 {truck_id}이(가) {'이동을 시작합니다' if run_result else '명령 전송에 실패했습니다'}")
                 
                 # 적재 완료 상태로 변경
                 self._loading_completed = True

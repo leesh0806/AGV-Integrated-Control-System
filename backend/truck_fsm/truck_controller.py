@@ -53,6 +53,26 @@ class TruckController:
             if not self.truck_status_manager:
                 print("[TruckController] 트럭 상태 매니저가 설정되지 않음")
                 return
+            
+            # ✅ 트럭 소켓 등록 상태 확인 및 업데이트
+            try:
+                if hasattr(self.truck_fsm_manager, 'command_sender') and self.truck_fsm_manager.command_sender:
+                    command_sender = self.truck_fsm_manager.command_sender
+                    # STATUS_UPDATE를 수신했으나 트럭이 등록되어 있지 않은 경우 등록 시도
+                    if not command_sender.is_registered(truck_id):
+                        # tcp_server 인스턴스를 가져와 소켓 등록 시도
+                        if hasattr(self.truck_fsm_manager, 'app') and hasattr(self.truck_fsm_manager.app, 'tcp_server'):
+                            tcp_server = self.truck_fsm_manager.app.tcp_server
+                            # 현재 연결된 모든 소켓을 확인하여 해당 트럭 ID의 소켓을 찾아 등록
+                            for client_addr, client_sock in tcp_server.clients.items():
+                                # 트럭 ID와 소켓을 연결하여 등록
+                                tcp_server.truck_sockets[truck_id] = client_sock
+                                # command_sender에 업데이트된 truck_sockets 설정
+                                tcp_server.app.set_truck_commander(tcp_server.truck_sockets)
+                                print(f"[🔄 트럭 소켓 자동 등록] STATUS_UPDATE 수신 시 {truck_id} 소켓이 자동으로 등록되었습니다.")
+                                break
+            except Exception as e:
+                print(f"[⚠️ 트럭 소켓 등록 시도 실패] {e}")
                 
             # 타임스탬프는 이제 서버에서 생성
             timestamp = time.time()
@@ -166,6 +186,14 @@ class TruckController:
                     elif run_state == "UNLOADING":
                         self.truck_fsm_manager.handle_trigger(truck_id, "START_UNLOADING", {})
             
+            # ✅ 다시 한번 소켓 등록 상태 확인
+            if hasattr(self.truck_fsm_manager, 'command_sender') and self.truck_fsm_manager.command_sender:
+                command_sender = self.truck_fsm_manager.command_sender
+                if command_sender.is_registered(truck_id):
+                    print(f"[✅ 트럭 소켓 확인] {truck_id} 소켓이 정상적으로 등록되어 있습니다.")
+                else:
+                    print(f"[⚠️ 트럭 소켓 미등록] {truck_id} 소켓이 아직 등록되지 않았습니다.")
+                    
             print(f"[✅ 상태 업데이트 완료] {truck_id}")
             
         except Exception as e:

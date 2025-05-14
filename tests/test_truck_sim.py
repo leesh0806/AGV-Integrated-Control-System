@@ -273,7 +273,7 @@ class TruckSimulator:
                         
                         # 잠시 대기 후 미션 요청
                         time.sleep(1)
-                        print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                        print(f"[🔄 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
                         self.send("ASSIGN_MISSION", {}, wait=False)
                 elif self.current_position == "STANDBY":
                     # STANDBY에서는 배터리 유지
@@ -406,6 +406,13 @@ class TruckSimulator:
             cmd = msg.get("cmd", "")
             payload = msg.get("payload", {})
             
+            # 디버깅: 수신 메시지 바이트 단위 분석 (특히 FINISH_LOADING 관련)
+            if raw_hex.startswith("10") and len(raw_hex) >= 10:  # SERVER에서 오는 메시지(sender=0x10)
+                cmd_byte = raw_hex[4:6]
+                if cmd_byte == "05":  # FINISH_LOADING
+                    print(f"[🔍 FINISH_LOADING 명령 감지] raw_hex={raw_hex}, 명령 바이트=0x{cmd_byte}")
+                    print(f"[🔍 상세 파싱] sender={msg.get('sender')}, receiver={msg.get('receiver')}, cmd={cmd}, payload={payload}")
+            
             # 수신한 명령 저장
             self.last_command = cmd
             
@@ -497,6 +504,21 @@ class TruckSimulator:
                         # 언로딩 상태 설정 - 5초 후 자동으로 FINISH_UNLOADING 전송
                         self.unloading_in_progress = True
                         self.unloading_start_time = time.time()
+
+                    # 목적지가 STANDBY인 경우 미션 완료로 간주하고 새 미션 요청
+                    elif next_position == "STANDBY":
+                        print(f"[✅ 미션 완료] 트럭이 STANDBY 위치에 도착했습니다. 미션 사이클이 완료되었습니다.")
+                        # 미션 ID 초기화
+                        self.mission_id = None
+                        # 배터리 체크
+                        if self.battery_level < 30:
+                            print(f"[🔋 배터리 부족] 현재 배터리: {self.battery_level}%. 충전이 필요합니다.")
+                            # 배터리가 부족하면 충전 요청은 서버에서 할 것이므로 별도 조치 없음
+                        else:
+                            # 잠시 대기 후 새 미션 요청
+                            time.sleep(2)
+                            print(f"[🔄 새 미션 요청] STANDBY 위치에서 자동으로 새 미션을 요청합니다.")
+                            self.assign_mission_request()
                 else:
                     print(f"[⚠️ 경로 오류] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
                     print(f"[⚠️ 경고] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
@@ -541,6 +563,27 @@ class TruckSimulator:
                 
                 # 적재 시작 ACK 응답 전송
                 self.send("ACK", {"cmd": "START_LOADING", "status": "SUCCESS"}, wait=False)
+                return True
+                
+            # FINISH_LOADING 명령 처리
+            elif cmd == "FINISH_LOADING":
+                position = payload.get("position", self.current_position)
+                print(f"[✅ 적재 완료 명령 수신] 위치: {position}에서 적재 작업 완료")
+                print(f"[🔍 FINISH_LOADING 디버그] cmd={cmd}, position={position}, raw_hex={raw_hex}")
+                print(f"[🔍 상태 정보] loading_in_progress={self.loading_in_progress}, position_locked={self.position_locked}")
+                
+                # 적재 상태 해제
+                self.loading_in_progress = False
+                self.loading_finished = True
+                print(f"[🔍 상태 변경] loading_in_progress={self.loading_in_progress}, loading_finished={self.loading_finished}")
+                
+                # 위치 잠금 해제
+                if self.position_locked:
+                    self.position_locked = False
+                    print(f"[🔓 위치 잠금 해제] 위치 잠금이 해제되었습니다. 이제 RUN 명령으로 이동할 수 있습니다.")
+                
+                # ACK 응답 전송
+                self.send("ACK", {"cmd": "FINISH_LOADING", "status": "SUCCESS"}, wait=False)
                 return True
                 
             # DISPENSER_LOADED 명령 처리
@@ -619,11 +662,13 @@ class TruckSimulator:
                     
                     # 잠시 대기 후 미션 요청
                     time.sleep(1)
-                    print(f"[🔍 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                    print(f"[🔄 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
                     self.send("ASSIGN_MISSION", {}, wait=False)
                 else:
                     # 충전 시작
                     self.charging = True
+                    print(f"[🔋 충전 중] 현재 배터리: {self.battery_level}%. 충전이 시작되었습니다.")
+                    print(f"[ℹ️ 정보] 충전 완료 후 자동으로 새 미션을 요청합니다.")
             
             # NO_MISSION 응답 처리
             elif cmd == "NO_MISSION":
@@ -638,6 +683,10 @@ class TruckSimulator:
                     time.sleep(2)
                     # 하트비트 전송
                     self.send("HELLO", {}, wait=False)
+                
+                # 대기 시간이 지난 후 자동으로 새 미션 요청
+                print(f"[🔄 재요청] 대기 시간이 지났습니다. 새 미션을 자동으로 요청합니다.")
+                self.assign_mission_request()
             
             # 하트비트 응답 처리
             elif cmd == "HEARTBEAT_ACK" or cmd == "HEARTBEAT_CHECK":

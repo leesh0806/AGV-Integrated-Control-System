@@ -310,8 +310,8 @@ class DispenserTester:
 def parse_arguments():
     """명령줄 인자 파싱"""
     parser = argparse.ArgumentParser(description='디스펜서 테스트 스크립트')
-    parser.add_argument('--port', type=str, default='/dev/ttyACM0',
-                        help='시리얼 포트 (기본값: /dev/ttyACM0)')
+    parser.add_argument('--port', type=str, default='/dev/ttyACM3',
+                        help='시리얼 포트 (기본값: /dev/ttyACM3)')
     parser.add_argument('--baudrate', type=int, default=9600,
                         help='전송 속도 (기본값: 9600)')
     parser.add_argument('--fake', action='store_true',

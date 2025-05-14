@@ -94,51 +94,63 @@ class TruckFSMManager:
                 if position in ["LOAD_A", "LOAD_B"]:
                     print(f"[🚨 적재 위치 자동 감지] {truck_id}가 {position}에 도착")
                     
-                    # 트럭 ID를 디스펜서 컨트롤러에 전역 변수로 저장
-                    if self.dispenser_controller:
-                        self.dispenser_controller.current_truck_id = truck_id
-                        print(f"[🔄 트럭 ID 설정] 디스펜서 컨트롤러에 트럭 ID '{truck_id}' 설정")
+                    # 현재 트럭의 미션 정보 확인
+                    loading_target = getattr(context, 'loading_target', None)
+                    mission_id = getattr(context, 'mission_id', None)
                     
-                    # 먼저 트럭 정지 명령 전송
-                    if self.command_sender:
-                        print(f"[🛑 STOP 명령 전송] {truck_id}에게 정지 명령 전송")
-                        self.command_sender.send(truck_id, "STOP")
-                        timer.sleep(0.5)  # 잠시 대기
-                    
-                    # 적재 시작 명령 전송
-                    if self.command_sender:
-                        print(f"[📤 START_LOADING 명령 전송] {truck_id}에게 적재 시작 명령 전송")
-                        self.command_sender.send(truck_id, "START_LOADING", {"position": position})
-                        timer.sleep(0.5)
-                    
-                    # 명시적으로 FSM 상태 변경
-                    print(f"[🔄 FSM 상태 변경] {truck_id}: START_LOADING 이벤트 처리")
-                    self.fsm.handle_event(truck_id, "START_LOADING", {"position": position})
-                    
-                    # 디스펜서 직접 제어
-                    if self.dispenser_controller:
-                        print(f"[🔄 디스펜서 제어 시작] {position}에서 디스펜서 제어")
-                        try:
-                            if position == "LOAD_A":
-                                success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_A")
-                                print(f"[디스펜서 경로 설정 결과] ROUTE_A: {'성공' if success else '실패'}")
-                            elif position == "LOAD_B":
-                                success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_B")
-                                print(f"[디스펜서 경로 설정 결과] ROUTE_B: {'성공' if success else '실패'}")
-                                
-                            # 잠시 대기 후 디스펜서 열기
-                            timer.sleep(1.0)
-                            success = self.dispenser_controller.send_command("DISPENSER", "OPEN")
-                            print(f"[디스펜서 열기 결과] {'성공' if success else '실패'}")
-                        except Exception as e:
-                            print(f"[⚠️ 디스펜서 제어 오류] {e}")
+                    # 미션이 있고, 현재 위치가 미션의 목적지인 경우에만 정지 및 적재 시작
+                    if mission_id and (loading_target == position or loading_target is None):
+                        print(f"[✅ 미션 목적지 확인] {truck_id}의 미션 목적지({loading_target})와 현재 위치({position})가 일치")
+                        
+                        # 트럭 ID를 디스펜서 컨트롤러에 전역 변수로 저장
+                        if self.dispenser_controller:
+                            self.dispenser_controller.current_truck_id = truck_id
+                            print(f"[🔄 트럭 ID 설정] 디스펜서 컨트롤러에 트럭 ID '{truck_id}' 설정")
+                        
+                        # 먼저 트럭 정지 명령 전송
+                        if self.command_sender:
+                            print(f"[🛑 STOP 명령 전송] {truck_id}에게 정지 명령 전송")
+                            self.command_sender.send(truck_id, "STOP")
+                            timer.sleep(0.5)  # 잠시 대기
+                        
+                        # 적재 시작 명령 전송
+                        if self.command_sender:
+                            print(f"[📤 START_LOADING 명령 전송] {truck_id}에게 적재 시작 명령 전송")
+                            self.command_sender.send(truck_id, "START_LOADING", {"position": position})
+                            timer.sleep(0.5)
+                        
+                        # 명시적으로 FSM 상태 변경
+                        print(f"[🔄 FSM 상태 변경] {truck_id}: START_LOADING 이벤트 처리")
+                        self.fsm.handle_event(truck_id, "START_LOADING", {"position": position})
+                        
+                        # 디스펜서 직접 제어
+                        if self.dispenser_controller:
+                            print(f"[🔄 디스펜서 제어 시작] {position}에서 디스펜서 제어")
+                            try:
+                                if position == "LOAD_A":
+                                    success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_A")
+                                    print(f"[디스펜서 경로 설정 결과] ROUTE_A: {'성공' if success else '실패'}")
+                                elif position == "LOAD_B":
+                                    success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_B")
+                                    print(f"[디스펜서 경로 설정 결과] ROUTE_B: {'성공' if success else '실패'}")
+                                    
+                                # 잠시 대기 후 디스펜서 열기
+                                timer.sleep(1.0)
+                                success = self.dispenser_controller.send_command("DISPENSER", "OPEN")
+                                print(f"[디스펜서 열기 결과] {'성공' if success else '실패'}")
+                            except Exception as e:
+                                print(f"[⚠️ 디스펜서 제어 오류] {e}")
+                        else:
+                            print(f"[⚠️ 디스펜서 컨트롤러 없음] 디스펜서 제어 불가")
+                        
+                        # 중요: 적재 위치에 도착했을 때는 다음 RUN 명령을 자동으로 보내지 않음
+                        # DISPENSER_LOADED 이벤트를 받아야만 다음 이동 명령이 전송됨
+                        print(f"[🔒 자동 이동 대기] {truck_id}가 {position}에서 디스펜서 적재 완료(DISPENSER_LOADED) 이벤트를 기다리는 중...")
+                        return True
                     else:
-                        print(f"[⚠️ 디스펜서 컨트롤러 없음] 디스펜서 제어 불가")
-                    
-                    # 중요: 적재 위치에 도착했을 때는 다음 RUN 명령을 자동으로 보내지 않음
-                    # DISPENSER_LOADED 이벤트를 받아야만 다음 이동 명령이 전송됨
-                    print(f"[🔒 자동 이동 대기] {truck_id}가 {position}에서 디스펜서 적재 완료(DISPENSER_LOADED) 이벤트를 기다리는 중...")
-                    return True
+                        # 미션이 없거나 현재 위치가 미션의 목적지가 아닌 경우
+                        print(f"[⚠️ 미션 불일치] {truck_id}의 위치({position})에서 정지하지 않음. 미션 ID: {mission_id}, 목적지: {loading_target}")
+                        print(f"[🚚 계속 이동] {truck_id}는 목적지가 아닌 적재 위치를 지나 계속 이동합니다.")
                 
             # ASSIGN_MISSION 명령이고 미션 ID가 지정되지 않은 경우 미션 매니저에서 대기 중인 미션 찾기
             if cmd == "ASSIGN_MISSION" and "mission_id" not in payload and self.mission_manager:
@@ -598,38 +610,51 @@ class TruckFSMManager:
         if cmd == "ARRIVED" and position in ["LOAD_A", "LOAD_B"]:
             print(f"[🚨 강제 적재 시작 테스트] {sender}가 {position}에 도착함")
             
-            # 적재 위치에 도착한 경우 무조건 STOP 명령 전송
-            if self.command_sender:
-                print(f"[🚨 강제 STOP 명령 전송] {sender}에게 정지 명령 전송")
-                self.command_sender.send(sender, "STOP")
-                timer.sleep(0.5)  # 잠시 대기
+            # 현재 트럭의 미션 정보 확인
+            context = self.fsm._get_or_create_context(sender)
+            loading_target = getattr(context, 'loading_target', None)
+            mission_id = getattr(context, 'mission_id', None)
+            
+            # 미션이 있고, 현재 위치가 미션의 목적지인 경우에만 정지 및 적재 시작
+            if mission_id and (loading_target == position or loading_target is None):
+                print(f"[✅ 미션 목적지 확인] {sender}의 미션 목적지({loading_target})와 현재 위치({position})가 일치")
                 
-                # 적재 시작 명령 전송
-                print(f"[🚨 강제 START_LOADING 명령 전송] {sender}에게 적재 시작 명령 전송")
-                self.command_sender.send(sender, "START_LOADING", {"position": position})
-                timer.sleep(1.0)  # 프로세스를 위한 대기
-                
-                # 디스펜서 직접 제어
-                if self.dispenser_controller:
-                    print(f"[🚨 강제 디스펜서 제어 시작] {position}에서 디스펜서 제어")
-                    if position == "LOAD_A":
-                        success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_A")
-                        print(f"[🚨 디스펜서 경로 설정 결과] ROUTE_A: {'성공' if success else '실패'}")
-                    elif position == "LOAD_B":
-                        success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_B")
-                        print(f"[🚨 디스펜서 경로 설정 결과] ROUTE_B: {'성공' if success else '실패'}")
-                        
-                    # 잠시 대기 후 디스펜서 열기
-                    timer.sleep(1.0)
-                    success = self.dispenser_controller.send_command("DISPENSER", "OPEN")
-                    print(f"[🚨 디스펜서 열기 결과] {'성공' if success else '실패'}")
-                else:
-                    print(f"[🚨 디스펜서 컨트롤러 없음] 디스펜서 제어 불가")
-                
-                # 중요: 적재 위치에서는 다음 RUN 명령을 자동으로 보내지 않음
-                # DISPENSER_LOADED 이벤트를 받아야만 다음 이동 명령이 전송됨
-                print(f"[🔒 자동 이동 중단] {sender}가 {position}에서 디스펜서 적재 완료(DISPENSER_LOADED) 이벤트를 기다리는 중...")
-                return True
+                # 적재 위치에 도착한 경우 무조건 STOP 명령 전송
+                if self.command_sender:
+                    print(f"[🚨 강제 STOP 명령 전송] {sender}에게 정지 명령 전송")
+                    self.command_sender.send(sender, "STOP")
+                    timer.sleep(0.5)  # 잠시 대기
+                    
+                    # 적재 시작 명령 전송
+                    print(f"[🚨 강제 START_LOADING 명령 전송] {sender}에게 적재 시작 명령 전송")
+                    self.command_sender.send(sender, "START_LOADING", {"position": position})
+                    timer.sleep(1.0)  # 프로세스를 위한 대기
+                    
+                    # 디스펜서 직접 제어
+                    if self.dispenser_controller:
+                        print(f"[🚨 강제 디스펜서 제어 시작] {position}에서 디스펜서 제어")
+                        if position == "LOAD_A":
+                            success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_A")
+                            print(f"[🚨 디스펜서 경로 설정 결과] ROUTE_A: {'성공' if success else '실패'}")
+                        elif position == "LOAD_B":
+                            success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_B")
+                            print(f"[🚨 디스펜서 경로 설정 결과] ROUTE_B: {'성공' if success else '실패'}")
+                            
+                        # 잠시 대기 후 디스펜서 열기
+                        timer.sleep(1.0)
+                        success = self.dispenser_controller.send_command("DISPENSER", "OPEN")
+                        print(f"[🚨 디스펜서 열기 결과] {'성공' if success else '실패'}")
+                    else:
+                        print(f"[🚨 디스펜서 컨트롤러 없음] 디스펜서 제어 불가")
+                    
+                    # 중요: 적재 위치에서는 다음 RUN 명령을 자동으로 보내지 않음
+                    # DISPENSER_LOADED 이벤트를 받아야만 다음 이동 명령이 전송됨
+                    print(f"[🔒 자동 이동 중단] {sender}가 {position}에서 디스펜서 적재 완료(DISPENSER_LOADED) 이벤트를 기다리는 중...")
+                    return True
+            else:
+                # 미션이 없거나 현재 위치가 미션의 목적지가 아닌 경우
+                print(f"[⚠️ 미션 불일치] {sender}의 위치({position})에서 정지하지 않음. 미션 ID: {mission_id}, 목적지: {loading_target}")
+                print(f"[🚚 계속 이동] {sender}는 목적지가 아닌 적재 위치를 지나 계속 이동합니다.")
         
         # FSM 이벤트 처리
         return self.fsm.handle_event(sender, cmd, payload) 
