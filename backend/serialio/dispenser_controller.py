@@ -68,9 +68,20 @@ class DispenserController(SerialController):
         """디스펜서로부터 받은 메시지 처리"""
         print(f"[디스펜서 메시지] {message}")
         
-        # LOADED 메시지 처리
-        if "STATUS:DISPENSER:LOADED" in message:
-            print(f"[🎯 적재 완료] 디스펜서에서 적재 완료 메시지 수신")
+        # LOADED 메시지 처리 - 여러 형태의 메시지 인식
+        if ("STATUS:DISPENSER:LOADED" in message or 
+            "STATUS:DISPENSER:LOADED_CONFIRMED" in message or 
+            "STATUS:DISPENSER:FORCE_LOADED" in message):
+            
+            # 1초 이내 중복 메시지 방지
+            current_time = time.time()
+            if current_time - self._last_loaded_message_time < 1.0:
+                print(f"[🔄 중복 메시지 무시] 최근에 LOADED 메시지가 이미 처리되었습니다. ({current_time - self._last_loaded_message_time:.2f}초 전)")
+                return True
+                
+            self._last_loaded_message_time = current_time
+            
+            print(f"[🎯 적재 완료] 디스펜서에서 적재 완료 메시지 수신: {message}")
             self._loading_completed = True  # 적재 완료 플래그 설정
             
             # 디스펜서 상태 업데이트
@@ -107,6 +118,12 @@ class DispenserController(SerialController):
                     print(f"[⏳ 적재 대기중] 디스펜서 적재 대기")
                     self._update_dispenser_status("DISPENSER", "OPENED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "LOADING")
                     return True
+                
+                # LOADING_STARTED 상태 처리 (추가)
+                elif state == "LOADING_STARTED":
+                    print(f"[⏳ 적재 시작] 디스펜서 적재 시작됨")
+                    self._update_dispenser_status("DISPENSER", "OPENED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "LOADING")
+                    return True
                     
                 # 자동 닫힘 상태 메시지 처리
                 elif state == "AUTO_CLOSED":
@@ -114,6 +131,21 @@ class DispenserController(SerialController):
                     self._update_dispenser_status("DISPENSER", "CLOSED", self.dispenser_position.get("DISPENSER", "ROUTE_A"), "IDLE")
                     return True
 
+        # 적재 상태 디버그 패턴 인식
+        if "적재 진행 중" in message or "위치: " in message:
+            print(f"[디스펜서 상태 업데이트] {message}")
+            
+            # 닫힘 상태 인식
+            if "상태: 닫힘" in message:
+                self._update_dispenser_status("DISPENSER", "CLOSED", None, "IDLE")
+                
+            # 이미 닫힌 상태이고 적재 진행 중이 아님을 인식 -> 강제 로딩 완료 처리
+            if "상태: 닫힘" in message and "적재 진행 중: 아니오" in message and not self._loading_completed:
+                print(f"[🔍 상태 감지] 디스펜서가 이미 닫혔고 적재가 완료된 것으로 감지됨")
+                self.handle_message("STATUS:DISPENSER:LOADED")
+                
+            return True
+                
         # 표준 메시지 처리 로직 (응답 파싱)
         try:
             parsed = self.interface.parse_response(message)
@@ -189,15 +221,17 @@ class DispenserController(SerialController):
                         command_sender.send(truck_id, "FINISH_LOADING", {
                             "position": position
                         })
+                        print(f"[✅ 적재 완료 처리] 트럭 {truck_id}에게 FINISH_LOADING 명령 전송됨")
                     
                     # 0.5초 후 RUN 명령 전송
                     time.sleep(0.5)
                     if not self._run_command_sent:
                         self._run_command_sent = True
-                        print(f"[📤 명령 전송] RUN → CHECKPOINT_C")
+                        print(f"[📤 자동 이동 명령 전송] RUN → {truck_id}")
                         command_sender.send(truck_id, "RUN", {
                             "target": "CHECKPOINT_C"
                         })
+                        print(f"[✅ 이동 명령 전송 완료] 트럭 {truck_id}가 다음 위치로 이동합니다")
         
         # 백그라운드 스레드에서 실행
         import threading
@@ -206,7 +240,7 @@ class DispenserController(SerialController):
 
     # ----------------------- 자동 적재 완료 타이머 -----------------------
     
-    def _schedule_auto_loading(self, dispenser_id, delay=10.0):
+    def _schedule_auto_loading(self, dispenser_id, delay=5.0):
         """지정된 시간 후 자동으로 적재 완료(LOADED) 상태로 변경"""
         # 중복 타이머 방지를 위한 플래그
         self._auto_loading_scheduled = True
@@ -222,9 +256,12 @@ class DispenserController(SerialController):
             if self.dispenser_state.get(dispenser_id) == "OPENED":
                 print(f"[⏱️ 자동 적재 완료] {dispenser_id} - {delay}초 경과, 자동으로 적재 완료 처리")
                 
-                # LOADED 상태로 직접 변경
-                # 가상 LOADED 메시지 생성 및 처리 (handle_message를 호출)
-                self.handle_message("STATUS:DISPENSER:LOADED")
+                # 아직 로딩이 완료되지 않았으면 완료 처리
+                if not getattr(self, '_loading_completed', False):
+                    # 가상 LOADED 메시지 생성 및 처리 (handle_message를 호출)
+                    self.handle_message("STATUS:DISPENSER:LOADED")
+                else:
+                    print(f"[✅ 이미 적재 완료됨] 이미 적재가 완료되어 추가 처리가 필요하지 않습니다.")
             else:
                 print(f"[⚠️ 자동 적재 취소] {dispenser_id} - 디스펜서가 더 이상 열린 상태가 아닙니다.")
             
@@ -238,7 +275,7 @@ class DispenserController(SerialController):
 
     # ----------------------- 적재 타임아웃 처리 -----------------------
     
-    def _schedule_loading_timeout(self, dispenser_id, timeout=15.0):
+    def _schedule_loading_timeout(self, dispenser_id, timeout=10.0):
         """적재 작업 타임아웃 처리 - 지정된 시간 후에도 로딩이 완료되지 않으면 강제 종료"""
         # 타임아웃 플래그 초기화
         self._loading_timeout_scheduled = True
@@ -255,7 +292,7 @@ class DispenserController(SerialController):
             time.sleep(timeout)
             
             # 이미 로딩이 완료되었는지 확인
-            if not self._loading_completed:
+            if not getattr(self, '_loading_completed', False):
                 print(f"[⚠️ 적재 타임아웃] {dispenser_id} - {timeout}초 경과, 작업 강제 종료")
                 
                 # 현재 트럭 ID 가져오기
@@ -304,7 +341,7 @@ class DispenserController(SerialController):
                 
                 # 0.5초 후 RUN 명령 전송
                 time.sleep(0.5)
-                print(f"[📤 강제 명령 전송] RUN → {truck_id}")
+                print(f"[📤 강제 이동 명령 전송] RUN → {truck_id}")
                 command_sender.send(truck_id, "RUN", {
                     "target": "CHECKPOINT_C"
                 })
@@ -377,13 +414,13 @@ class DispenserController(SerialController):
             print(f"[디스펜서 열림 완료] {dispenser_id} - 응답: {response}")
             self._update_dispenser_status(dispenser_id, "OPENED", None, "IDLE")
             
-            # 자동 적재 타이머 시작 (10초 후 자동으로 LOADED 상태로 변경)
-            self._schedule_auto_loading(dispenser_id, 10.0)
-            print(f"[⏱️ 자동 적재 타이머 시작] {dispenser_id} - 10초 후 자동으로 적재 완료됩니다.")
+            # 자동 적재 타이머 시작 (5초 후 자동으로 LOADED 상태로 변경)
+            self._schedule_auto_loading(dispenser_id, 5.0)
+            print(f"[⏱️ 자동 적재 타이머 시작] {dispenser_id} - 5초 후 자동으로 적재 완료됩니다.")
             
-            # 15초 타임아웃 타이머 시작 (15초 후에도 로딩이 완료되지 않으면 강제 종료)
-            self._schedule_loading_timeout(dispenser_id, 15.0)
-            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 15초 후 자동으로 작업 강제 종료됩니다.")
+            # 10초 타임아웃 타이머 시작 (10초 후에도 로딩이 완료되지 않으면 강제 종료)
+            self._schedule_loading_timeout(dispenser_id, 10.0)
+            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 10초 후 자동으로 작업 강제 종료됩니다.")
         else:
             print(f"[디스펜서 열림 실패] {dispenser_id} - 응답: {response}")
             
@@ -395,9 +432,9 @@ class DispenserController(SerialController):
             if dispenser_id in self.operations_in_progress:
                 self.operations_in_progress[dispenser_id] = False
                 
-            # 15초 타임아웃 타이머 시작 (응답 실패 시에도 적용)
-            self._schedule_loading_timeout(dispenser_id, 15.0)
-            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 15초 후 자동으로 작업 강제 종료됩니다.")
+            # 10초 타임아웃 타이머 시작 (응답 실패 시에도 적용)
+            self._schedule_loading_timeout(dispenser_id, 10.0)
+            print(f"[⏱️ 안전 타임아웃 시작] {dispenser_id} - 10초 후 자동으로 작업 강제 종료됩니다.")
             
             return True
         

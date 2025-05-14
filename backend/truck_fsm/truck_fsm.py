@@ -629,11 +629,9 @@ class TruckFSM:
             # 2초 대기하여 게이트 닫힘 동작 완료 확인
             time.sleep(2)
             
-            # 게이트 닫힌 후에 이동 명령 전송
-            if self.command_sender:
-                print(f"[🔄 게이트 제어 후 이동] {context.truck_id}: GATE_A 닫은 후 이동")
-                self.command_sender.send(context.truck_id, "RUN", {})
-                
+            # 게이트 닫힌 후에는 이동 명령을 보내지 않음 (트럭이 이미 이동 중일 것이므로)
+            print(f"[ℹ️ 자동 이동 유지] {context.truck_id}: GATE_A 닫은 후 별도 RUN 명령 없이 자동 이동 진행")
+            
             return
             
         # 특수 처리: CHECKPOINT_C에서 직접 GATE_B 열기
@@ -646,8 +644,9 @@ class TruckFSM:
             # 2초 대기하여 게이트 열림 동작 완료 확인
             time.sleep(2)
             
-            # 게이트 열림 후에 이동 명령 전송 안 함 (게이트 열림 이벤트 처리에서 자동으로 이동)
-            # 트럭은 이후 GATE_OPENED 메시지를 수신하면 자동으로 이동
+            # 게이트 열림 후에는 반드시 RUN 명령을 전송 (멈춤→이동 필요)
+            print(f"[�� 게이트 열림 후 RUN 명령] {context.truck_id}: 게이트가 열렸으므로 이동 명령 전송")
+            self.command_sender.send(context.truck_id, "RUN", {})
                 
             return
         
@@ -693,8 +692,13 @@ class TruckFSM:
                 print(f"[게이트 제어 없음] {context.truck_id}: 체크포인트 {checkpoint}에서 게이트 제어가 필요 없습니다.")
                 # 바로 RUN 명령 전송
                 if self.command_sender:
-                    print(f"[자동 이동] {context.truck_id}: 게이트 제어 없이 바로 다음 위치로 이동")
-                    self.command_sender.send(context.truck_id, "RUN", {})
+                    # CHECKPOINT_D에서 게이트 닫기 후에는 별도로 RUN 명령 보내지 않음 (이미 이동 중)
+                    if checkpoint == "CHECKPOINT_D" and direction == Direction.CLOCKWISE:
+                        print(f"[ℹ️ RUN 명령 생략] {context.truck_id}: CHECKPOINT_D에서는 게이트 닫힘 이후 별도 RUN 명령 없이 이동 계속")
+                    else:
+                        print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
+                        # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
+                        self.command_sender.send(context.truck_id, "RUN", {})
         else:
             print(f"[알 수 없는 체크포인트] {checkpoint}에 대한 게이트 제어 정의가 없습니다.")
         
@@ -702,9 +706,13 @@ class TruckFSM:
         if not has_gate_action and checkpoint not in ["CHECKPOINT_A", "CHECKPOINT_C"]:  # CHECKPOINT_A, CHECKPOINT_C는 게이트 열기 후 이동
             # 다음 목표로 자동 이동 (체크포인트에서 경로 계속)
             if self.command_sender:
-                print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
-                # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
-                self.command_sender.send(context.truck_id, "RUN", {})
+                # CHECKPOINT_D에서 게이트 닫기 후에는 별도로 RUN 명령 보내지 않음 (이미 이동 중)
+                if checkpoint == "CHECKPOINT_D" and direction == Direction.CLOCKWISE:
+                    print(f"[ℹ️ RUN 명령 생략] {context.truck_id}: CHECKPOINT_D에서는 게이트 닫힘 이후 별도 RUN 명령 없이 이동 계속")
+                else:
+                    print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
+                    # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
+                    self.command_sender.send(context.truck_id, "RUN", {})
     
     # -------------------------------------------------------------------------------   
 
@@ -1002,8 +1010,8 @@ class TruckFSM:
             # 게이트 열림 후 잠시 대기 (트럭이 열림 메시지를 처리할 시간 제공)
             time.sleep(0.5)
             
-            # 게이트 열림 후 자동으로 RUN 명령도 전송
-            print(f"[📤 자동 RUN 명령 전송] {truck_id}에게 게이트 열림 후 RUN 명령 전송")
+            # 게이트 열림 후에는 반드시 RUN 명령을 전송 (멈춤→이동 필요)
+            print(f"[📤 게이트 열림 후 RUN 명령] {truck_id}: 게이트가 열렸으므로 이동 명령 전송")
             self.command_sender.send(truck_id, "RUN", {})
         else:
             print(f"[⚠️ 경고] command_sender가 없어 GATE_OPENED 메시지를 전송할 수 없습니다.")
@@ -1032,12 +1040,9 @@ class TruckFSM:
         # else:
         #     print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
             
-        # 게이트 닫힘 후 자동으로 트럭에게 RUN 명령 전송
+        # 게이트 닫힘 후에는 RUN 명령을 전송하지 않음 (이미 이동 중인 상태일 것이므로)
         if success and self.command_sender:
-            print(f"[🔄 게이트 닫힘 후 자동 이동] {truck_id}: 게이트가 닫혔으므로 자동으로 이동 명령 전송")
-            # 짧은 대기 후 실행 (게이트가 완전히 닫힌 후)
-            time.sleep(1.0)
-            self.command_sender.send(truck_id, "RUN", {})
+            print(f"[ℹ️ 게이트 닫힘 완료] {truck_id}: 게이트가 닫혔습니다 (이미 이동 중이므로 RUN 명령 전송 안 함)")
             
         return success
     

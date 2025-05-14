@@ -48,7 +48,7 @@
 
 // 자동 닫힘 타이머 (ms)
 #define AUTO_CLOSE_TIMEOUT 30000  // 30초
-#define LOADING_DELAY 10000       // 적재 시뮬레이션 시간 (10초)
+#define LOADING_DELAY 5000       // 적재 시뮬레이션 시간 (5초로 단축)
 
 // IR 리모컨 버튼 코드
 const unsigned long BTN_CHAD =  0xBA45FF00;
@@ -167,9 +167,6 @@ void loop() {
   
   // 일정 시간 이후 자동 닫기 (안전장치)
   autoCloseCheck();
-  
-  // 디버그 정보 매 5초마다 출력 (활성화)
-  debugStatusInfo();
 }
 
 //============================= 시리얼 통신 함수 =============================
@@ -195,9 +192,6 @@ void processCommand() {
   String command = commandBuffer;
   command.trim();
   
-  Serial.print("받은 명령: ");
-  Serial.println(command);
-  
   lastCommandTime = millis();
   
   // 명령어 처리 - 모든 형태의 명령어 호환성 지원
@@ -206,20 +200,14 @@ void processCommand() {
   // 1. "DISPENSER_DI_" 접두사 제거 (예: DISPENSER_DI_OPEN -> OPEN)
   if (cmd.startsWith("DISPENSER_DI_")) {
     cmd = cmd.substring(13);
-    Serial.print("변환된 명령(DISPENSER_DI_ 제거): ");
-    Serial.println(cmd);
   }
   // 2. "DISPENSER_" 접두사 제거 (예: DISPENSER_OPEN -> OPEN)
   else if (cmd.startsWith("DISPENSER_")) {
     cmd = cmd.substring(10);
-    Serial.print("변환된 명령(DISPENSER_ 제거): ");
-    Serial.println(cmd);
   }
   // 3. "DI_" 접두사 제거 (예: DI_OPEN -> OPEN)
   else if (cmd.startsWith("DI_")) {
     cmd = cmd.substring(3);
-    Serial.print("변환된 명령(DI_ 제거): ");
-    Serial.println(cmd);
   }
   
   // 명령어 대문자로 변환하여 일관성 유지
@@ -295,45 +283,50 @@ void simulateLoading() {
   loadingStartTime = millis();
   isLoadingInProgress = true;
   
-  // 디버그 메시지 (중요)
-  Serial.print("적재 타이머 시작: ");
-  Serial.print(loadingStartTime);
-  Serial.print(", 예상 완료 시간: ");
-  Serial.println(loadingStartTime + LOADING_DELAY);
+  // 즉시 상태 메시지 전송
+  Serial.println("STATUS:DISPENSER:LOADING_STARTED");
 }
 
-// 적재 완료 체크 - 비차단 방식
+// 적재 완료 체크 - 더 안정적인 메시지 전송
 void checkLoadingComplete() {
   if (isLoadingInProgress) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - loadingStartTime;
     
-    // 1초마다 상태 업데이트
-    if (currentTime % 1000 < 10) {
-      Serial.print("적재 진행 중... ");
-      Serial.print(elapsedTime / 1000);
-      Serial.println("초 경과");
-    }
-    
     // 적재 완료 시간이 되면
     if (elapsedTime >= LOADING_DELAY) {
       // 적재 완료 메시지 전송 (확실하게 전송되도록 여러 번 전송)
-      for (int i = 0; i < 5; i++) {
+      Serial.println("\n"); // 버퍼 정리
+      
+      // 10번 반복하여 메시지 전송 신뢰성 향상
+      for (int i = 0; i < 10; i++) {
         Serial.println("STATUS:DISPENSER:LOADED");
-        delay(50); // 약간 간격을 두고 전송
+        Serial.println("STATUS:DISPENSER:LOADED_CONFIRMED");
+        delay(100); // 간격 증가
       }
       
       // 적재 완료 상태로 변경
       isLoadingInProgress = false;
-      Serial.println("적재 완료 처리됨!");
+      Serial.println("STATUS:DISPENSER:LOADED");
+      
+      // 추가 백업 메시지
+      delay(500);
+      Serial.println("STATUS:DISPENSER:LOADED");
     }
   }
 }
 
-// 자동 닫기 체크 (안전 기능)
+// 자동 닫기 전에 LOADED 메시지 한 번 더 전송
 void autoCloseCheck() {
   // 열려있고, 마지막 명령 이후 설정된 시간이 지났을 때 자동으로 닫기
   if (open && (millis() - lastCommandTime > AUTO_CLOSE_TIMEOUT)) {
+    // 닫기 전 한 번 더 LOADED 메시지 전송
+    if (isLoadingInProgress) {
+      Serial.println("STATUS:DISPENSER:LOADED");
+      Serial.println("STATUS:DISPENSER:FORCE_LOADED");
+      isLoadingInProgress = false;
+    }
+    
     open = false;
     Serial.println("STATUS:DISPENSER:AUTO_CLOSED");
   }
@@ -547,40 +540,5 @@ void dispense() {
     dispenseServo.write(SERVO_OPEN);
   } else {
     dispenseServo.write(SERVO_CLOSED);
-  }
-}
-
-//============================= 디버그 함수 =============================
-
-// 디버그 정보 출력
-void debugStatusInfo() {
-  static unsigned long lastDebugTime = 0;
-  unsigned long currentTime = millis();
-  
-  // 5초마다 상태 출력
-  if (currentTime - lastDebugTime >= 5000) {
-    lastDebugTime = currentTime;
-    
-    Serial.println("==================== 디스펜서 상태 ====================");
-    Serial.print("위치: ");
-    if (lastmove == 'A') Serial.print("ROUTE_A");
-    else if (lastmove == 'B') Serial.print("ROUTE_B");
-    else Serial.print("이동 중");
-    
-    Serial.print(", 상태: ");
-    Serial.print(open ? "열림" : "닫힘");
-    
-    Serial.print(", 적재 진행 중: ");
-    Serial.print(isLoadingInProgress ? "예" : "아니오");
-    
-    if (isLoadingInProgress) {
-      Serial.print(" (");
-      Serial.print((currentTime - loadingStartTime) / 1000);
-      Serial.print("초 경과, 목표: ");
-      Serial.print(LOADING_DELAY / 1000);
-      Serial.print("초)");
-    }
-    
-    Serial.println("\n=======================================================");
   }
 }

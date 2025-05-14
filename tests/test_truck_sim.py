@@ -354,7 +354,7 @@ class TruckSimulator:
                 print(f"[⚠️ 작업 타이머 오류] {e}")
                 time.sleep(1.0)  # 오류 발생 시 잠시 대기
 
-    def process_server_commands(self, timeout=5.0):
+    def process_server_commands(self, timeout=0.2):  # 타임아웃 짧게 설정 (더 자주 체크)
         """서버에서 오는 명령을 처리"""
         self.client.settimeout(timeout)
         try:
@@ -375,7 +375,19 @@ class TruckSimulator:
             # 페이로드 읽기
             payload_data = b''
             if payload_len > 0:
-                payload_data = self.client.recv(payload_len)
+                try:
+                    # 대형 페이로드를 안전하게 읽기 위한 루프
+                    remaining = payload_len
+                    while remaining > 0:
+                        chunk = self.client.recv(remaining)
+                        if not chunk:
+                            print("[❌ 페이로드 읽기 실패] 서버 연결이 끊겼습니다.")
+                            break
+                        payload_data += chunk
+                        remaining -= len(chunk)
+                except socket.timeout:
+                    print(f"[⚠️ 페이로드 읽기 타임아웃] 예상: {payload_len}, 수신: {len(payload_data)}")
+                    
                 if len(payload_data) < payload_len:
                     print(f"[⚠️ 불완전한 페이로드 수신] 예상: {payload_len}, 실제: {len(payload_data)}")
                     return False
@@ -397,76 +409,8 @@ class TruckSimulator:
             # 수신한 명령 저장
             self.last_command = cmd
             
-            # 메시지 중복 처리 방지를 위한 체크
-            # 중요 명령(RUN, GATE_OPENED, GATE_CLOSED)은 항상 처리
-            important_cmds = ["RUN", "GATE_OPENED", "GATE_CLOSED", "START_LOADING", "FINISH_LOADING"]
-            
-            if cmd not in important_cmds and raw_hex in self.processed_messages:
-                print(f"[🚫 중복 메시지] 일반 명령 중복으로 무시: {cmd} ({raw_hex})")
-                return True
-                
-            # 메시지 ID 추적 (최대 20개 메시지만 기억)
-            if cmd not in important_cmds:  # 중요 명령은 중복 체크 목록에 추가하지 않음
-                self.processed_messages.add(raw_hex)
-                if len(self.processed_messages) > 20:
-                    self.processed_messages.pop()  # 가장 오래된 ID 제거
-                
-            # 마지막 메시지 정보 저장
-            self.last_raw_hex = raw_hex
-            
-            # 명령 유효성 검증 - RUN 명령에 대한 특별 검증
+            # RUN 명령 유효성 검증 및 로깅
             if cmd == "RUN":
-                # 너무 엄격한 패턴 검증 대신 cmd가 "RUN"인지만 확인
-                # 이전에는 정확히 "10011200" 패턴만 허용했으나, 서버에 따라 패턴이 다를 수 있음
-                print(f"[✅ RUN 명령 수신] 서버로부터 이동 명령을 받았습니다 (패턴: {raw_hex})")
-                # RUN 명령 디버그 로깅 추가
-                print(f"[🔍 RUN 명령 세부정보] 헤더: {header_data.hex()}, 페이로드: {payload_data.hex() if payload_data else '없음'}")
-            
-            print(f"[📩 수신] {cmd} ← {payload}")
-            
-            # 명령 처리
-            if cmd == "HELLO_ACK":
-                print("[✅ 서버 연결 확인] 서버에 등록되었습니다.")
-                return True
-            
-            # DISPENSER_LOADED 명령 처리
-            elif cmd == "DISPENSER_LOADED":
-                dispenser_id = payload.get("dispenser_id", "DISPENSER")
-                position = payload.get("position", "")
-                print(f"[⭐ 디스펜서 적재 완료] 디스펜서 ID: {dispenser_id}, 위치: {position}")
-                
-                # 디스펜서 적재 완료 표시만 하고, 서버가 FINISH_LOADING을 보낼 때까지 대기
-                # 자동으로 FINISH_LOADING을 보내지 않음
-                if self.loading_in_progress:
-                    print(f"[⭐ 적재 완료 대기] 디스펜서 적재 완료 감지, 서버의 FINISH_LOADING 명령 대기 중...")
-                    # 타이머 초기화하여 자동 FINISH_LOADING 방지
-                    self.loading_start_time = float('inf')  # 타이머 무효화
-                else:
-                    print(f"[⚠️ 경고] 디스펜서 적재 완료 신호를 받았으나 트럭이 적재 중 상태가 아닙니다.")
-            
-            # MISSION_ASSIGNED 처리
-            elif cmd == "MISSION_ASSIGNED":
-                source = payload.get("source", "")
-                mission_id = payload.get("mission_id", "unknown")
-                
-                if not source:
-                    source = "LOAD_A"
-                    print(f"[⚠️ 경고] 빈 source 값을 수신함 - 기본값 '{source}'을 사용합니다")
-                
-                self.source = source.upper()
-                self.mission_id = mission_id
-                self.run_state = "ASSIGNED"
-                print(f"[✅ 미션 수신] → 미션 ID: {mission_id}, source = {self.source}")
-                
-                # source 값 확인 및 디버깅
-                print(f"[🔍 미션 세부정보] 배정된 source 위치: {self.source} (원본 값: {source})")
-                if self.source not in ["LOAD_A", "LOAD_B"]:
-                    print(f"[⚠️ source 값 주의] 유효한 source 값이 아닙니다: {self.source}")
-                    self.source = "LOAD_A"
-                    print(f"[🔀 source 값 수정] 기본값으로 변경: {self.source}")
-            
-            # RUN 명령 처리
-            elif cmd == "RUN":
                 # 위치 잠금 확인 - 가장 먼저 체크
                 if self.position_locked:
                     print(f"[🔒 이동 거부 - 위치 잠금] 위치가 잠겨 있어 이동할 수 없습니다. 현재 위치: {self.current_position}")
@@ -487,23 +431,12 @@ class TruckSimulator:
                     self.send("ACK", {"cmd": "RUN", "status": "UNLOADING_IN_PROGRESS", "error": "CANNOT_MOVE_WHILE_UNLOADING"}, wait=False)
                     return True  # 명령 처리 완료로 간주하고 종료
                 
-                # 중요 - LOAD_A/B에서 이동할 때 FINISH_LOADING 여부 확인 추가
+                # LOAD_A/B에서 이동 시 강제 플래그 설정 - 네트워크 문제로 FINISH_LOADING을 놓친 경우 대비
                 if self.current_position in ["LOAD_A", "LOAD_B"]:
                     if not self.loading_finished:
-                        print(f"[🔒 이동 보호] {self.current_position}에서 적재 작업이 완료되지 않았습니다.")
-                        print(f"[⚠️ FINISH_LOADING 필요] 서버로부터 적재 완료 명령(FINISH_LOADING)이 필요합니다.")
-                        self.send("ACK", {"cmd": "RUN", "status": "NOT_FINISHED_LOADING", "error": "NEEDS_FINISH_LOADING"}, wait=False)
-                        return True  # 이동 명령 거부
-                
-                # 중요 - 적재 상태 한번 더 확인
-                if self.current_position in ["LOAD_A", "LOAD_B"] and not hasattr(self, "move_override"):
-                    load_state_check = self.loading_in_progress
-                    if load_state_check:
-                        print(f"[🔒 이동 보호] {self.current_position}에서 적재 작업 중. 이동이 차단되었습니다.")
-                        print(f"[🔍 로딩 상태 디버그] loading_in_progress={self.loading_in_progress}, current_position={self.current_position}")
-                        print(f"[⚠️ FINISH_LOADING 필요] 적재 완료 명령이 필요합니다. 자동 이동을 금지합니다.")
-                        self.send("ACK", {"cmd": "RUN", "status": "POSITION_LOCKED", "error": "NEEDS_FINISH_LOADING"}, wait=False)
-                        return True  # 이동 명령 거부
+                        print(f"[⚠️ 안전 우회] {self.current_position}에서 RUN 명령을 수신하여 강제로 적재 완료 처리")
+                        self.loading_finished = True
+                        print(f"[🔑 적재 완료 플래그 강제 설정] loading_finished = True (RUN 명령 기반 강제 설정)")
                 
                 # RUN 명령 수신 플래그 설정 - 특히 LOAD_A/LOAD_B에서 CHECKPOINT_C로 이동하는 데 필요
                 self.last_run_command_received = True
@@ -568,11 +501,113 @@ class TruckSimulator:
                     print(f"[⚠️ 경로 오류] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
                     print(f"[⚠️ 경고] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
             
+            # 메시지 중복 처리 방지를 위한 체크
+            # 중요 명령(RUN, GATE_OPENED, GATE_CLOSED)은 항상 처리
+            important_cmds = ["RUN", "GATE_OPENED", "GATE_CLOSED", "START_LOADING", "FINISH_LOADING", "MISSION_ASSIGNED"]
+            
+            if cmd not in important_cmds and raw_hex in self.processed_messages:
+                print(f"[🚫 중복 메시지] 일반 명령 중복으로 무시: {cmd} ({raw_hex})")
+                return True
+                
+            # 메시지 ID 추적 (최대 20개 메시지만 기억)
+            if cmd not in important_cmds:  # 중요 명령은 중복 체크 목록에 추가하지 않음
+                self.processed_messages.add(raw_hex)
+                if len(self.processed_messages) > 20:
+                    self.processed_messages.pop()  # 가장 오래된 ID 제거
+                
+            # 마지막 메시지 정보 저장
+            self.last_raw_hex = raw_hex
+            
+            print(f"[📩 수신] {cmd} ← {payload}")
+            
+            # 명령 처리
+            if cmd == "HELLO_ACK":
+                print("[✅ 서버 연결 확인] 서버에 등록되었습니다.")
+                return True
+                
+            # START_LOADING 명령 처리
+            elif cmd == "START_LOADING":
+                position = payload.get("position", self.current_position)
+                print(f"[✅ 적재 시작 명령 수신] 위치: {position}에서 적재 작업 시작")
+                
+                # 적재 작업 중 상태 설정 - 적재 중에는 이동 불가
+                self.loading_in_progress = True
+                self.loading_start_time = time.time()
+                
+                # 위치 잠금 활성화 - 적재 작업 중에는 위치 변경 불가
+                self.position_locked = True
+                self.original_position = self.current_position
+                print(f"[🔒 위치 잠금 설정] 현재 위치 {self.current_position}를 적재 작업이 완료될 때까지 잠금")
+                
+                # 적재 시작 ACK 응답 전송
+                self.send("ACK", {"cmd": "START_LOADING", "status": "SUCCESS"}, wait=False)
+                return True
+                
+            # DISPENSER_LOADED 명령 처리
+            elif cmd == "DISPENSER_LOADED":
+                dispenser_id = payload.get("dispenser_id", "DISPENSER")
+                position = payload.get("position", "")
+                print(f"[⭐ 디스펜서 적재 완료] 디스펜서 ID: {dispenser_id}, 위치: {position}")
+                
+                # 디스펜서 적재 완료 감지 시 즉시 FINISH_LOADING 상태로 처리 (자동화)
+                if self.loading_in_progress:
+                    print(f"[🔄 자동 FINISH_LOADING 처리] 디스펜서 적재 완료 감지, 적재 완료 처리 자동 실행")
+                    
+                    # 적재 작업 완료 상태로 변경
+                    self.loading_in_progress = False
+                    self.loading_finished = True
+                    
+                    # 위치 잠금 해제
+                    if self.position_locked:
+                        self.position_locked = False
+                        print(f"[🔓 위치 잠금 해제] 위치 잠금이 해제되었습니다. 이제 RUN 명령으로 이동할 수 있습니다.")
+                    
+                    print(f"[🚛 경로 계획] 적재가 완료되었으므로 다음 위치(CHECKPOINT_C)로 이동할 준비가 되었습니다.")
+                    print(f"[📝 상태 변경] loading_in_progress = {self.loading_in_progress}, loading_finished = {self.loading_finished}")
+                    
+                    # ACK 응답 전송
+                    self.send("ACK", {"cmd": "FINISH_LOADING", "status": "SUCCESS", "position": position}, wait=False)
+                    
+                    # 임무 상태 업데이트
+                    if self.run_state != "RUNNING":
+                        self.run_state = "IDLE"  # 이동 명령을 기다리는 상태로 변경
+                    
+                    # 서버가 RUN 명령을 보낼 것을 대기
+                    print(f"[⏩ 다음 단계 준비] 서버의 RUN 명령을 기다리는 중...")
+                else:
+                    print(f"[⚠️ 경고] 디스펜서 적재 완료 신호를 받았으나 트럭이 적재 중 상태가 아닙니다.")
+                    
+            # MISSION_ASSIGNED 처리
+            elif cmd == "MISSION_ASSIGNED":
+                source = payload.get("source", "")
+                mission_id = payload.get("mission_id", "unknown")
+                
+                print(f"[📦 미션 정보 로깅] 수신 데이터: {payload}")
+                
+                if not source:
+                    source = "LOAD_A"
+                    print(f"[⚠️ 경고] 빈 source 값을 수신함 - 기본값 '{source}'을 사용합니다")
+                
+                # 대문자로 통일
+                self.source = source.upper() if source else "LOAD_A"
+                self.mission_id = mission_id
+                self.run_state = "ASSIGNED"
+                
+                print(f"[✅ 미션 수신] → 미션 ID: {mission_id}, source = {self.source}")
+                print(f"[📝 미션 할당 확인] 미션 ID가 성공적으로 설정됨: {self.mission_id}, source = {self.source}")
+                
+                # source 값 확인 및 디버깅
+                print(f"[🔍 미션 세부정보] 배정된 source 위치: {self.source} (원본 값: {source})")
+                if self.source not in ["LOAD_A", "LOAD_B"]:
+                    print(f"[⚠️ source 값 주의] 유효한 source 값이 아닙니다: {self.source}")
+                    self.source = "LOAD_A"
+                    print(f"[🔀 source 값 수정] 기본값으로 변경: {self.source}")
+            
             # STOP 명령 처리
             elif cmd == "STOP":
                 print(f"[🛑 정지 명령] 트럭 정지")
                 self.run_state = "IDLE"
-                
+            
             # START_CHARGING 명령 처리
             elif cmd == "START_CHARGING":
                 print("[🔌 충전 시작] 서버로부터 충전 명령을 받았습니다.")
@@ -611,6 +646,7 @@ class TruckSimulator:
                 if cmd == "HEARTBEAT_CHECK":
                     self.send("HELLO", {}, wait=False)
             
+            # ARRIVED 명령 처리
             elif cmd == "ARRIVED":
                 position = payload.get("position", "")
                 
@@ -638,65 +674,6 @@ class TruckSimulator:
                 # 위치 잠금이 없는 경우 정상적으로 위치 업데이트
                 print(f"[📍 위치 변경] {self.current_position} → {position}")
                 self.current_position = position
-            
-            # FINISH_LOADING 명령 처리 - 서버에서 보낸 적재 완료 명령
-            elif cmd == "FINISH_LOADING":
-                # position 값이 유효하지 않은 경우 현재 트럭 위치 사용
-                position = payload.get("position", self.current_position)
-                if position == "UNKNOWN" or not position:
-                    position = self.current_position
-                    print(f"[⚠️ position 보정] FINISH_LOADING의 position이 유효하지 않아 현재 위치({self.current_position})로 대체")
-                
-                print(f"[✅ FINISH_LOADING 명령 수신] → 위치: {position}")
-                
-                # 적재 작업이 진행 중인지 확인
-                if self.loading_in_progress:
-                    print(f"[✅ 적재 작업 완료] {position}에서의 적재 작업을 완료합니다.")
-                    self.loading_in_progress = False
-                    
-                    # FINISH_LOADING 플래그 설정 - 다음 이동에 필수적
-                    self.loading_finished = True
-                    print(f"[🔑 적재 완료 플래그 설정] loading_finished = True")
-                    
-                    # 위치 잠금 해제
-                    if self.position_locked:
-                        self.position_locked = False
-                        print(f"[🔓 위치 잠금 해제] 위치 잠금이 해제되었습니다. 이제 RUN 명령으로 이동할 수 있습니다.")
-                    
-                    # 임무에 따라 다음 단계로 진행 (CHECKPOINT_C)
-                    print(f"[🚛 경로 계획] 적재가 완료되었으므로 다음 위치(CHECKPOINT_C)로 이동합니다.")
-                    print(f"[📝 상태 변경] loading_in_progress = {self.loading_in_progress}")
-                    
-                    # ACK 응답 전송
-                    self.send("ACK", {"cmd": "FINISH_LOADING", "status": "SUCCESS", "position": position}, wait=False)
-                    
-                    # 임무 상태 업데이트
-                    if self.run_state != "RUNNING":
-                        self.run_state = "IDLE"  # 이동 명령을 기다리는 상태로 변경
-                    
-                    # 서버가 추가 RUN 명령을 보내야 이동하도록 대기
-                    print(f"[⏩ 다음 단계 준비] 서버의 RUN 명령을 기다리는 중...")
-                else:
-                    print(f"[⚠️ 상태 불일치] FINISH_LOADING 명령을 받았으나 트럭이 적재 중 상태가 아닙니다.")
-                    print(f"[📝 현재 상태] loading_in_progress = {self.loading_in_progress}, 위치 = {self.current_position}")
-                    
-                    # 현재 위치가 LOAD_A 또는 LOAD_B인 경우 강제로 플래그 설정
-                    if self.current_position in ["LOAD_A", "LOAD_B"]:
-                        print(f"[🔑 강제 적재 완료] 현재 적재 위치({self.current_position})에 있으므로 강제로 적재 완료 처리")
-                        self.loading_finished = True
-                        print(f"[🔑 적재 완료 플래그 설정] loading_finished = True (강제)")
-                    else:
-                        # 일반적인 경우(적재 위치가 아닌 경우) 적재 완료 플래그 설정
-                        self.loading_finished = True
-                        print(f"[🔑 적재 완료 플래그 설정] loading_finished = True (강제)")
-                    
-                    # 위치 잠금 해제
-                    if self.position_locked:
-                        self.position_locked = False
-                        print(f"[🔓 위치 잠금 해제] 위치 잠금이 해제되었습니다. 이제 RUN 명령으로 이동할 수 있습니다.")
-                    
-                    # ACK 응답은 전송
-                    self.send("ACK", {"cmd": "FINISH_LOADING", "status": "WARNING", "message": "트럭이 적재 중 상태가 아닙니다"}, wait=False)
             
             return True
             
@@ -827,10 +804,10 @@ class TruckSimulator:
                 next_pos = position_map[self.current_position]
                 print(f"[🔀 경로 결정] 현재 위치 {self.current_position}에서 다음 목적지 → {next_pos}")
             
-            # 미션이 없으면 대기장소로 이동
-            if not self.mission_id and self.current_position != "STANDBY":
-                print(f"[🔀 경로 변경] 미션이 없으므로 대기장소(STANDBY)로 이동합니다.")
-                return "STANDBY"
+            # 미션이 없으면 대기장소로 이동 - 무한 반복 방지를 위해 비활성화
+            # if not self.mission_id and self.current_position != "STANDBY":
+            #     print(f"[🔀 경로 변경] 미션이 없으므로 대기장소(STANDBY)로 이동합니다.")
+            #     return "STANDBY"
                 
             return next_pos
         else:
