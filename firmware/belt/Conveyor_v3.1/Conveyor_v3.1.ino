@@ -7,9 +7,13 @@ const int SERVO_PIN = 9;
 const int SENSOR_PIN_A = A0;
 const int SENSOR_PIN_B = A1;
 
-const int CDS_THRESHOLD_LOW = 40;
-const int CDS_THRESHOLD_HIGH = 100;
+const int CDS_THRESHOLD_LOW = 20;
+const int CDS_THRESHOLD_HIGH = 60;
 const int MOTOR_SPEED =254;
+
+bool debugMode = false;
+unsigned long lastDebugTime = 0;
+const unsigned long DEBUG_INTERVAL = 1000;
 
 #define ROUTE_A 0
 #define ROUTE_B 1
@@ -41,11 +45,17 @@ void setup()
   conveyorServo.attach(SERVO_PIN);
   conveyorServo.write(70);
   Serial.println("BELT_ROUTE_A");
+  Serial.println("벨트 컨트롤러 초기화 완료. 'CDS_VALUE' 명령으로 센서값 확인 가능");
 }
 
 void loop() {
   
   reportStatus();
+
+  if (debugMode && (millis() - lastDebugTime > DEBUG_INTERVAL)) {
+    reportCDSValues();
+    lastDebugTime = millis();
+  }
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
@@ -55,8 +65,18 @@ void loop() {
       if (decideRoute()) {
         startMotor(MOTOR_DURATION);
       }
-    } else if (command == "E") {
+    } else if (command == "BELT_STOP" || command == "E") {
       stopMotor();
+    } else if (command == "CDS_VALUE") {
+      reportCDSValues();
+    } else if (command == "DEBUG_ON") {
+      debugMode = true;
+      Serial.println("DEBUG_MODE:ON");
+    } else if (command == "DEBUG_OFF") {
+      debugMode = false;
+      Serial.println("DEBUG_MODE:OFF");
+    } else if (command == "CALIBRATE") {
+      calibrateCDS();
     }
   }
 
@@ -73,7 +93,7 @@ void loop() {
       if (currentRoute == ROUTE_A && !isWarehouseFullStable(ROUTE_B)) {
         currentRoute = ROUTE_B;
         routeLock = ROUTE_B;
-        conveyorServo.write(110);
+        conveyorServo.write(90);
         Serial.println("BELT_ROUTE_B");
       } 
       else if (currentRoute == ROUTE_B && !isWarehouseFullStable(ROUTE_A)) {
@@ -92,6 +112,59 @@ void loop() {
       Serial.println(remainingTime);
     }
   }
+}
+
+void reportCDSValues() {
+  int valueA = getAveragedSensor(SENSOR_PIN_A);
+  int valueB = getAveragedSensor(SENSOR_PIN_B);
+  Serial.print("CDS_VALUE:A=");
+  Serial.print(valueA);
+  Serial.print(",B=");
+  Serial.print(valueB);
+  Serial.print(",FULL_A=");
+  Serial.print(fullA_state ? "YES" : "NO");
+  Serial.print(",FULL_B=");
+  Serial.println(fullB_state ? "YES" : "NO");
+}
+
+void calibrateCDS() {
+  Serial.println("CALIBRATING_START");
+  
+  int minA = 1023, maxA = 0;
+  int minB = 1023, maxB = 0;
+  
+  for (int i = 0; i < 50; i++) {
+    int valueA = analogRead(SENSOR_PIN_A);
+    int valueB = analogRead(SENSOR_PIN_B);
+    
+    minA = min(minA, valueA);
+    maxA = max(maxA, valueA);
+    minB = min(minB, valueB);
+    maxB = max(maxB, valueB);
+    
+    Serial.print(".");
+    delay(100);
+  }
+  Serial.println();
+  
+  int thresholdLowA = (int)(minA + (maxA-minA) * 0.3);
+  int thresholdHighA = (int)(minA + (maxA-minA) * 0.7);
+  int thresholdLowB = (int)(minB + (maxB-minB) * 0.3);
+  int thresholdHighB = (int)(minB + (maxB-minB) * 0.7);
+  
+  Serial.print("CALIBRATION_RESULT:A=");
+  Serial.print(minA);
+  Serial.print("-");
+  Serial.print(maxA);
+  Serial.print(",B=");
+  Serial.print(minB);
+  Serial.print("-");
+  Serial.println(maxB);
+  
+  Serial.print("SUGGESTED_THRESHOLDS:LOW=");
+  Serial.print(thresholdLowA);
+  Serial.print(",HIGH=");
+  Serial.println(thresholdHighA);
 }
 
 bool decideRoute() {
