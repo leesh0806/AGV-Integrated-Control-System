@@ -25,7 +25,7 @@ port_map = {
     # 실제 장치 연결 설정
     "GATE_A": "/dev/ttyACM0",  # 게이트 A, B가 같은 아두이노에 연결됨
     "GATE_B": "/dev/ttyACM0",  # 게이트 A, B에 동일한 포트 지정
-    "BELT": "/dev/ttyACM1"     # 벨트는 실제 장치로 연결
+    "BELT": "/dev/ttyACM2"     # 벨트는 실제 장치로 연결
 }
 
 print("[초기화] 포트 맵:", port_map)
