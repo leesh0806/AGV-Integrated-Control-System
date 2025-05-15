@@ -1,9 +1,11 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QFileDialog
-from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QHeaderView, QMessageBox, QFileDialog
+from PyQt6.QtCore import Qt, QTimer, QDate, QSize
 from PyQt6 import uic
 import os
 from datetime import datetime, timedelta
 
+# API 클라이언트 가져오기
+from gui.api_client import api_client
 
 class EventLogTab(QWidget):
     """이벤트 로그 탭 클래스"""
@@ -18,172 +20,341 @@ class EventLogTab(QWidget):
         else:
             print(f"[경고] UI 파일을 찾을 수 없습니다: {ui_path}")
             
-        # 초기화
-        self.init_ui()
-        self.log_data = []  # 로그 데이터 저장 리스트
+        # 탭 위젯 크기 정책 설정
+        self.setMinimumHeight(600)  # 최소 높이 설정
+        self.setMinimumWidth(1200)  # 최소 너비 설정
         
-    def init_ui(self):
-        """UI 초기화"""
-        # 날짜 설정
-        today = QDate.currentDate()
-        start_date = self.findChild(QWidget, "dateEdit_start")
-        if start_date:
-            start_date.setDate(today.addDays(-7))  # 일주일 전부터
-            
-        end_date = self.findChild(QWidget, "dateEdit_end")
-        if end_date:
-            end_date.setDate(today)  # 오늘까지
-            
+        # 날짜 위젯 초기화
+        self.setup_date_widgets()
+        
+        # 테이블 설정
+        self.setup_table()
+        
         # 버튼 이벤트 연결
-        apply_filter = self.findChild(QWidget, "pushButton_apply_filter")
-        if apply_filter:
-            apply_filter.clicked.connect(self.apply_filter)
-            
-        refresh_log = self.findChild(QWidget, "pushButton_refresh_log")
-        if refresh_log:
-            refresh_log.clicked.connect(self.refresh_logs)
-            
-        export_log = self.findChild(QWidget, "pushButton_export_log")
-        if export_log:
-            export_log.clicked.connect(self.export_logs)
-            
-        clear_log = self.findChild(QWidget, "pushButton_clear_log")
-        if clear_log:
-            clear_log.clicked.connect(self.clear_logs)
-            
-        # 초기 로그 로드
-        self.refresh_logs()
+        self.setup_controls()
         
-    def refresh_logs(self):
-        """로그 데이터 새로고침"""
-        # TODO: 실제 DB나 로그 파일에서 데이터 로드하는 코드 구현
-        # 샘플 로그 데이터 생성
-        self.log_data = self.generate_sample_logs()
+        # 초기 데이터 로드
+        self.refresh_log_table()
         
-        # 현재 필터 적용
-        self.apply_filter()
+    def sizeHint(self):
+        # 권장 크기 힌트 제공 (Qt 레이아웃 시스템에서 사용)
+        return QSize(1200, 600)
         
-    def apply_filter(self):
-        """로그 필터 적용"""
-        log_table = self.findChild(QWidget, "tableWidget_log")
-        if not log_table:
-            return
-            
-        # 필터 조건 가져오기
-        log_level_combo = self.findChild(QWidget, "comboBox_log_level")
-        start_date_edit = self.findChild(QWidget, "dateEdit_start")
-        end_date_edit = self.findChild(QWidget, "dateEdit_end")
+    def setup_date_widgets(self):
+        """날짜 위젯 초기화"""
+        # 오늘 날짜
+        today = QDate.currentDate()
         
-        log_level = log_level_combo.currentText() if log_level_combo else "모든 로그"
-        start_date = start_date_edit.date().toPyDate() if start_date_edit else None
-        end_date = end_date_edit.date().toPyDate() if end_date_edit else None
+        # 시작 날짜 (7일 전)
+        start_date = today.addDays(-7)
         
-        # 필터링된 로그 표시
-        filtered_logs = []
-        for log in self.log_data:
-            # 날짜 필터링
-            log_date = datetime.strptime(log["timestamp"].split()[0], "%Y-%m-%d").date()
-            if start_date and log_date < start_date:
-                continue
-            if end_date and log_date > end_date:
-                continue
-                
-            # 로그 레벨 필터링
-            if log_level != "모든 로그" and log["level"] != log_level:
-                continue
-                
-            filtered_logs.append(log)
-            
-        # 테이블에 로그 표시
-        log_table.setRowCount(0)
-        for log in filtered_logs:
-            row = log_table.rowCount()
-            log_table.insertRow(row)
-            
-            log_table.setItem(row, 0, QTableWidgetItem(log["timestamp"]))
-            log_table.setItem(row, 1, QTableWidgetItem(log["level"]))
-            log_table.setItem(row, 2, QTableWidgetItem(log["source"]))
-            log_table.setItem(row, 3, QTableWidgetItem(log["message"]))
+        # 날짜 설정
+        self.dateEdit_start.setDate(start_date)
+        self.dateEdit_end.setDate(today)
         
-        # 가장 최근 로그가 상단에 오도록 정렬
-        log_table.sortItems(0, Qt.SortOrder.DescendingOrder)  # 내림차순 정렬 (최신순)
+    def setup_table(self):
+        """테이블 위젯 초기화"""
+        table = self.tableWidget_log
         
-    def export_logs(self):
-        """로그 내보내기"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "로그 내보내기",
-            "",
-            "CSV 파일 (*.csv);;모든 파일 (*)"
-        )
+        # 테이블 헤더 설정 확인
+        if table.columnCount() != 4:
+            table.setColumnCount(4)
+            table.setHorizontalHeaderLabels(["시간", "로그 레벨", "소스", "메시지"])
         
-        if not file_path:
-            return
-            
-        # 로그 파일 저장
+        # 헤더 크기 조정
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # 시간
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # 로그 레벨
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # 소스
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)  # 메시지
+        
+        # 행 클릭 이벤트 연결
+        table.itemSelectionChanged.connect(self.show_selected_log_detail)
+        
+    def setup_controls(self):
+        """버튼 이벤트 연결"""
+        # 필터 적용 버튼
+        apply_filter_button = self.pushButton_apply_filter
+        if apply_filter_button:
+            apply_filter_button.clicked.connect(self.refresh_log_table)
+        
+        # 새로고침 버튼
+        refresh_button = self.pushButton_refresh_log
+        if refresh_button:
+            refresh_button.clicked.connect(self.refresh_log_table)
+        
+        # 내보내기 버튼
+        export_button = self.pushButton_export_log
+        if export_button:
+            export_button.clicked.connect(self.export_logs)
+        
+        # 로그 지우기 버튼
+        clear_button = self.pushButton_clear_log
+        if clear_button:
+            clear_button.clicked.connect(self.clear_logs)
+        
+    def refresh_log_table(self):
+        """로그 테이블 데이터 새로고침"""
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                # 헤더 작성
-                f.write("시간,로그 레벨,소스,메시지\n")
-                
-                # 로그 데이터 작성
-                for log in self.log_data:
-                    f.write(f"{log['timestamp']},{log['level']},{log['source']},{log['message']}\n")
-                    
-            print(f"[성공] 로그를 {file_path} 파일로 내보냈습니다.")
-        except Exception as e:
-            print(f"[오류] 로그 내보내기 실패: {e}")
+            # 필터 값 가져오기
+            start_date = self.dateEdit_start.date().toString(Qt.DateFormat.ISODate)
+            end_date = self.dateEdit_end.date().toString(Qt.DateFormat.ISODate)
             
-    def clear_logs(self):
-        """로그 지우기"""
-        log_table = self.findChild(QWidget, "tableWidget_log")
-        if log_table:
-            log_table.setRowCount(0)
+            # end_date에 하루를 더해서 해당 날짜까지 포함되도록 함
+            end_date_obj = datetime.fromisoformat(end_date)
+            end_date_obj = end_date_obj + timedelta(days=1)
+            end_date = end_date_obj.strftime("%Y-%m-%d")
+            
+            log_level = self.comboBox_log_level.currentText()
+            source = self.comboBox_source.currentText()
+            keyword = self.lineEdit_keyword.text()
+            
+            # 로그 레벨 맵핑
+            log_level_map = {
+                "모든 로그": None,
+                "정보": "INFO",
+                "경고": "WARNING",
+                "오류": "ERROR",
+                "긴급": "CRITICAL"
+            }
+            
+            # 소스 맵핑
+            source_map = {
+                "모든 소스": None,
+                "시스템": "SYSTEM",
+                "네트워크": "NETWORK",
+                "트럭 제어": "TRUCK_CONTROL",
+                "미션 관리": "MISSION_MANAGEMENT",
+                "사용자 인증": "USER_AUTH"
+            }
+            
+            # API 호출을 위한 필터 준비
+            filters = {
+                "start_date": start_date,
+                "end_date": end_date
+            }
+            
+            # 선택적 필터 추가
+            if log_level in log_level_map and log_level_map[log_level]:
+                filters["level"] = log_level_map[log_level]
+                
+            if source in source_map and source_map[source]:
+                filters["source"] = source_map[source]
+                
+            if keyword:
+                filters["keyword"] = keyword
+            
+            # API 호출
+            response = api_client.get_logs(filters)
+            
+            if not response.get("success", False):
+                print(f"[ERROR] 로그 데이터 가져오기 실패: {response.get('message', '알 수 없는 오류')}")
+                return
+            
+            # 테이블 초기화
+            table = self.tableWidget_log
+            table.setRowCount(0)
+            
+            # 로그 데이터 추가
+            logs = response.get("logs", [])
+            for log in logs:
+                self.add_log_to_table(log)
+            
+            # 로그 개수 표시
+            log_count = table.rowCount()
+            self.label_count.setText(f"총 {log_count}개의 로그")
+            
+        except Exception as e:
+            print(f"[ERROR] 로그 테이블 업데이트 실패: {e}")
+            QMessageBox.critical(self, "오류", f"로그 데이터 불러오기 실패: {e}")
+    
+    def add_log_to_table(self, log):
+        """테이블에 로그 데이터 추가"""
+        table = self.tableWidget_log
+        row = table.rowCount()
+        table.insertRow(row)
         
-        # 실제 DB에서도 로그를 지우는 로직이 필요하면 추가
-        # 현재는 메모리에서만 제거
-        self.log_data = []
+        # 데이터 매핑
+        timestamp = log.get("timestamp", "")
+        level = log.get("level", "")
+        source = log.get("source", "")
+        message = log.get("message", "")
         
-    def generate_sample_logs(self):
-        """샘플 로그 데이터 생성 (실제 구현 시 제거)"""
-        logs = []
-        sources = ["시스템", "네트워크", "트럭 제어", "미션 관리", "사용자 인증"]
-        levels = ["정보", "경고", "오류", "긴급"]
-        messages = [
-            "시스템이 시작되었습니다.",
-            "네트워크 연결이 불안정합니다.",
-            "트럭 연결이 해제되었습니다.",
-            "미션 완료: mission_230515_123456",
-            "사용자 로그인: admin",
-            "미션 실패: 시간 초과",
-            "트럭 배터리 부족 경고 (30% 이하)",
-            "DB 연결 오류",
-            "시스템 종료 요청",
-            "모든 미션이 완료되었습니다."
+        # 날짜 형식 변환
+        try:
+            timestamp_obj = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            timestamp_formatted = timestamp_obj.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, AttributeError):
+            timestamp_formatted = timestamp
+        
+        # 로그 레벨 한글화
+        level_text = {
+            "INFO": "정보",
+            "WARNING": "경고",
+            "ERROR": "오류",
+            "CRITICAL": "긴급"
+        }.get(level, level)
+        
+        # 소스 한글화
+        source_text = {
+            "SYSTEM": "시스템",
+            "NETWORK": "네트워크",
+            "TRUCK_CONTROL": "트럭 제어",
+            "MISSION_MANAGEMENT": "미션 관리",
+            "USER_AUTH": "사용자 인증"
+        }.get(source, source)
+        
+        # 테이블에 데이터 추가
+        items = [
+            timestamp_formatted,
+            level_text,
+            source_text,
+            message
         ]
         
-        # 현재 시간부터 30일 전까지의 로그 생성
-        now = datetime.now()
-        for i in range(100):  # 100개의 샘플 로그
-            # 랜덤 시간
-            random_time = now - timedelta(
-                days=i // 5,  # 20일 분량
-                hours=i % 24,
-                minutes=(i * 7) % 60
+        for col, text in enumerate(items):
+            item = QTableWidgetItem(str(text))
+            # 타임스탬프는 사용자 데이터로 원본 저장 (정렬용)
+            if col == 0:
+                item.setData(Qt.ItemDataRole.UserRole, timestamp)
+            table.setItem(row, col, item)
+            
+    def show_selected_log_detail(self):
+        """선택된 로그의 상세 정보 표시"""
+        table = self.tableWidget_log
+        selected_indexes = table.selectedIndexes()
+        
+        if not selected_indexes:
+            return
+            
+        # 동일한 행에서 선택된 항목 처리
+        row = selected_indexes[0].row()
+        
+        # 선택된 로그 데이터 가져오기
+        timestamp = table.item(row, 0).text()
+        level = table.item(row, 1).text()
+        source = table.item(row, 2).text()
+        message = table.item(row, 3).text()
+        
+        # 상세 정보 구성
+        detail_text = f"[{timestamp}] [{level}] [{source}]\n{message}"
+        
+        # 상세 정보를 label_count에 표시 (기존 UI에 존재하는 위젯 활용)
+        self.label_count.setText(f"선택된 로그: {timestamp} - {level} - {source}")
+    
+    def export_logs(self):
+        """로그 내보내기"""
+        try:
+            # 테이블에 표시된 로그 데이터 가져오기
+            table = self.tableWidget_log
+            row_count = table.rowCount()
+            
+            if row_count == 0:
+                QMessageBox.warning(self, "내보내기 실패", "내보낼 로그 데이터가 없습니다.")
+                return
+            
+            # 저장 파일 위치 선택
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "로그 파일 저장",
+                f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                "CSV 파일 (*.csv);;모든 파일 (*.*)"
             )
-            timestamp = random_time.strftime("%Y-%m-%d %H:%M:%S")
             
-            # 랜덤 로그 정보
-            import random
-            level = random.choice(levels)
-            source = random.choice(sources)
-            message = random.choice(messages)
+            if not file_path:
+                return
             
-            logs.append({
-                "timestamp": timestamp,
-                "level": level,
-                "source": source,
-                "message": message
-            })
+            # CSV 파일 작성
+            with open(file_path, 'w', encoding='utf-8') as f:
+                # 헤더 작성
+                headers = ["시간", "로그 레벨", "소스", "메시지"]
+                f.write(','.join(f'"{header}"' for header in headers) + '\n')
+                
+                # 데이터 작성
+                for row in range(row_count):
+                    row_data = []
+                    for col in range(table.columnCount()):
+                        text = table.item(row, col).text().replace('"', '""')  # CSV에서 큰따옴표 처리
+                        row_data.append(f'"{text}"')
+                    f.write(','.join(row_data) + '\n')
             
-        return logs 
+            QMessageBox.information(self, "내보내기 성공", f"로그가 {file_path}에 저장되었습니다.")
+            
+        except Exception as e:
+            print(f"[ERROR] 로그 내보내기 실패: {e}")
+            QMessageBox.critical(self, "내보내기 오류", f"로그 내보내기 중 오류 발생: {e}")
+    
+    def clear_logs(self):
+        """로그 지우기"""
+        try:
+            # 확인 대화상자
+            reply = QMessageBox.question(
+                self,
+                "로그 지우기",
+                "현재 필터에 표시된 모든 로그를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            
+            # 필터 값 가져오기
+            start_date = self.dateEdit_start.date().toString(Qt.DateFormat.ISODate)
+            end_date = self.dateEdit_end.date().toString(Qt.DateFormat.ISODate)
+            
+            # end_date에 하루를 더해서 해당 날짜까지 포함되도록 함
+            end_date_obj = datetime.fromisoformat(end_date)
+            end_date_obj = end_date_obj + timedelta(days=1)
+            end_date = end_date_obj.strftime("%Y-%m-%d")
+            
+            log_level = self.comboBox_log_level.currentText()
+            source = self.comboBox_source.currentText()
+            
+            # 로그 레벨 맵핑
+            log_level_map = {
+                "모든 로그": None,
+                "정보": "INFO",
+                "경고": "WARNING",
+                "오류": "ERROR",
+                "긴급": "CRITICAL"
+            }
+            
+            # 소스 맵핑
+            source_map = {
+                "모든 소스": None,
+                "시스템": "SYSTEM",
+                "네트워크": "NETWORK",
+                "트럭 제어": "TRUCK_CONTROL",
+                "미션 관리": "MISSION_MANAGEMENT",
+                "사용자 인증": "USER_AUTH"
+            }
+            
+            # API 호출을 위한 필터 준비
+            filters = {
+                "start_date": start_date,
+                "end_date": end_date
+            }
+            
+            # 선택적 필터 추가
+            if log_level in log_level_map and log_level_map[log_level]:
+                filters["level"] = log_level_map[log_level]
+                
+            if source in source_map and source_map[source]:
+                filters["source"] = source_map[source]
+            
+            # API 호출
+            response = api_client.clear_logs(filters)
+            
+            if response.get("success", False):
+                deleted_count = response.get("deleted_count", 0)
+                QMessageBox.information(self, "로그 삭제 성공", f"{deleted_count}개의 로그가 삭제되었습니다.")
+                # 테이블 새로고침
+                self.refresh_log_table()
+            else:
+                error_msg = response.get("message", "알 수 없는 오류")
+                QMessageBox.warning(self, "로그 삭제 실패", error_msg)
+                
+        except Exception as e:
+            print(f"[ERROR] 로그 삭제 실패: {e}")
+            QMessageBox.critical(self, "오류", f"로그 삭제 중 오류 발생: {e}") 

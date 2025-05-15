@@ -165,16 +165,53 @@ class APIClient:
         return self.post(f"trucks/{truck_id}/battery", data)
     
     # 미션 관련 API 메서드
-    def get_all_missions(self) -> List[Dict]:
+    def get_all_missions(self) -> Dict:
         """모든 미션 조회"""
-        return self.get("missions")
+        try:
+            return self.get("missions")
+        except Exception as e:
+            print(f"[ERROR] 모든 미션 조회 실패: {e}")
+            return {"success": False, "message": str(e), "missions": []}
+        
+    def get_missions(self, status=None, truck_id=None) -> Dict:
+        """미션 목록 조회 (필터링 가능)"""
+        try:
+            params = {}
+            if status:
+                params["status"] = status
+            if truck_id:
+                params["truck_id"] = truck_id
+            
+            response = self.get("missions", params)
+            
+            # 응답이 리스트인 경우 딕셔너리로 변환
+            if isinstance(response, list):
+                return {"success": True, "missions": response}
+            
+            return response
+        except Exception as e:
+            print(f"[ERROR] 미션 목록 조회 실패: {e}")
+            return {"success": False, "message": str(e), "missions": []}
     
     def get_mission(self, mission_id: str) -> Dict:
         """특정 미션 조회"""
         return self.get(f"missions/{mission_id}")
     
-    def create_mission(self, mission_data: Dict) -> Dict:
+    def create_mission(self, truck_id=None, source=None, destination=None, cargo_type=None, cargo_amount=None, mission_data=None) -> Dict:
         """미션 생성"""
+        if mission_data is None:
+            mission_data = {}
+            if truck_id:
+                mission_data["truck_id"] = truck_id
+            if source:
+                mission_data["source"] = source
+            if destination:
+                mission_data["destination"] = destination
+            if cargo_type:
+                mission_data["cargo_type"] = cargo_type
+            if cargo_amount is not None:
+                mission_data["cargo_amount"] = cargo_amount
+        
         return self.post("missions", mission_data)
     
     def complete_mission(self, mission_id: str) -> Dict:
@@ -184,6 +221,19 @@ class APIClient:
     def cancel_mission(self, mission_id: str) -> Dict:
         """미션 취소 처리"""
         return self.post(f"missions/{mission_id}/cancel", {})
+        
+    def cancel_current_mission(self, truck_id: str) -> Dict:
+        """트럭의 현재 미션 취소"""
+        return self.post(f"trucks/{truck_id}/cancel_mission", {})
+        
+    # 로그 관련 API 메서드
+    def get_logs(self, filters=None) -> Dict:
+        """로그 조회 (필터링 가능)"""
+        return self.get("logs", filters)
+        
+    def clear_logs(self, filters=None) -> Dict:
+        """로그 삭제"""
+        return self.post("logs/clear", filters or {})
     
     # 시설 관련 API 메서드
     def get_all_facilities(self) -> Dict:

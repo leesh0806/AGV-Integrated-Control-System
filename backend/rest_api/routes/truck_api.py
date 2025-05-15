@@ -214,4 +214,45 @@ def legacy_get_truck_battery():
 @truck_api.route("/truck_battery/<truck_id>", methods=["POST"])
 def legacy_update_truck_battery(truck_id):
     """하위 호환성을 위한 이전 엔드포인트"""
-    return update_truck_battery(truck_id) 
+    return update_truck_battery(truck_id)
+
+# 특정 트럭의 현재 미션 취소
+@truck_api.route("/trucks/<truck_id>/cancel_mission", methods=["POST"])
+def cancel_current_mission(truck_id):
+    """트럭의 현재 미션 취소"""
+    # 트럭 상태 매니저 가져오기
+    truck_manager = get_truck_status_manager()
+    
+    try:
+        # 트럭 FSM 상태 조회 (미션 중인지 확인)
+        truck_status = truck_manager.get_truck_status(truck_id)
+        if not truck_status:
+            return jsonify({"success": False, "message": f"트럭 {truck_id}를 찾을 수 없습니다."}), 404
+        
+        # 미션 매니저 가져오기
+        from backend.rest_api.managers import get_mission_manager
+        mission_manager = get_mission_manager()
+        
+        # 트럭에 할당된 미션 조회
+        missions = mission_manager.get_assigned_missions_by_truck(truck_id)
+        if not missions:
+            return jsonify({"success": False, "message": f"트럭 {truck_id}에 할당된 미션이 없습니다."}), 400
+        
+        # 가장 최근 미션 취소
+        mission = missions[0]  # 첫 번째 미션 취소 (가장 최근에 할당된 미션)
+        if mission_manager.cancel_mission(mission.mission_id):
+            # 트럭 FSM에 미션 취소 이벤트 전달 (필요시 구현)
+            
+            return jsonify({
+                "success": True, 
+                "message": f"트럭 {truck_id}의 미션 {mission.mission_id}이(가) 취소되었습니다."
+            }), 200
+        else:
+            return jsonify({
+                "success": False, 
+                "message": f"미션 취소 실패: 미션 매니저에서 취소가 실패했습니다."
+            }), 500
+    
+    except Exception as e:
+        print(f"[ERROR] 미션 취소 실패: {e}")
+        return jsonify({"success": False, "message": f"미션 취소 실패: {str(e)}"}), 500 

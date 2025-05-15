@@ -222,10 +222,17 @@ class MissionManager:
             print(f"  - 미션 ID: {mission.mission_id}, 출발지: {mission.source}")
         return waiting_missions
 
-    def get_assigned_and_waiting_missions(self) -> List[Mission]:
-        """할당 및 대기 중인 미션 조회"""
+    def get_assigned_and_waiting_missions(self) -> dict:
+        """할당 및 대기 중인 미션 조회 - 딕셔너리 형태로 반환"""
         mission_rows = self.db.get_assigned_and_waiting_missions()
-        return [Mission.from_row(row) for row in mission_rows]
+        missions = [Mission.from_row(row) for row in mission_rows]
+        
+        # 미션 ID를 키로 하는 딕셔너리로 변환
+        mission_dict = {}
+        for mission in missions:
+            mission_dict[mission.mission_id] = mission.to_dict()
+        
+        return mission_dict
 
     # ------------------ 미션 알림 ----------------------------
 

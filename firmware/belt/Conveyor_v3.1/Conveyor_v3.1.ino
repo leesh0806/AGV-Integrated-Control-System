@@ -7,8 +7,8 @@ const int SERVO_PIN = 9;
 const int SENSOR_PIN_A = A0;
 const int SENSOR_PIN_B = A1;
 
-const int CDS_THRESHOLD_LOW = 20;
-const int CDS_THRESHOLD_HIGH = 60;
+const int CDS_THRESHOLD_LOW = 70;
+const int CDS_THRESHOLD_HIGH = 120;
 const int MOTOR_SPEED =254;
 
 bool debugMode = false;
@@ -206,7 +206,9 @@ void startMotor(unsigned long duration) {
   motorStartTime = millis();
   motorEndTime = motorStartTime + duration;
   motorRunning = true;
-  Serial.print(duration);
+  
+  Serial.print("DURATION_MS:");
+  Serial.println(duration);
   Serial.println("BELT_RUNNING");
 }
 
