@@ -147,9 +147,9 @@ int unloading_stage = 0;
 
 // 서보모터 제어 관련 전역 변수
 Servo unloading_servo;
-const int SERVO_PIN = 17;
-const int SERVO_INIT_ANGLE = 175;
-const int SERVO_DROP_ANGLE = 90;
+const int SERVO_PIN = 5;
+const int SERVO_INIT_ANGLE = 0;
+const int SERVO_DROP_ANGLE = 70;
 
 unsigned long belt_arrival_time = 0;
 bool belt_waiting_to_unload = false;
@@ -199,7 +199,7 @@ bool battery_empty = false;  // 배터리 0% 상태 플래그
 /*--------------------------------PID 제어 변수--------------------------------*/
 
 double Kp = 0.1025;
-double Kd = 0.17;
+double Kd = 0.2;
 //double Ki = 0.00005;       
 //double integral = 0.0;  // 누적 적분값
 //const double integral_max = 500.0;
@@ -213,8 +213,9 @@ int l_sensor_val;
 int r_sensor_val;
 int ll_sensor_val;
 int rr_sensor_val;
-int avg_PWM = 190;
-int max_pwm = 250;
+int avg_PWM = 170;
+int max_pwm = 220;
+
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
 
@@ -295,18 +296,15 @@ void loop()
   // ✅ 서버로부터 수신 메시지 처리
   if (client && client.available() >= 4) 
   {
-    static uint8_t buffer[64];
+    static uint8_t buffer[16];
     int len = client.readBytes(buffer, sizeof(buffer));  // 프레임 길이 기준 수신
     if (len >= 4) 
     {
       receive_binary(buffer, len);
     }
   }
-
   // ✅ 현재 시간 갱신
   unsigned long current_time = millis();
-
-
 
   // ✅ 주기적인 미션 체크
   if (current_time - last_mission_check >= 2000) 
@@ -321,7 +319,7 @@ void loop()
   }
 
   // ✅ 최초 1회 지연 처리 (1초)
-  if (!initial_delay_done && (current_time - system_start_time < 1500)) 
+  if (!initial_delay_done && (current_time - system_start_time < 1000)) 
   {
     // Serial.printf("⏳ 시스템 부팅 후 대기 중... %.0fms 남음\n", 1000.0 - (current_time - system_start_time));
     return;  // 아직 1초 안 지났으므로 아무 작업도 하지 않음
@@ -354,29 +352,29 @@ void loop()
   }
   
 
-  // ✅ 적재 시작 지연 처리
-  if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
-  {
-    // Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
-    send_start_loading(current_position_id);
-    loading_in_progress = true;
-    loading_start_time = current_time;
-    wait_start_loading = false;
-  }
+  // // ✅ 적재 시작 지연 처리
+  // if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
+  // {
+  //   // Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
+  //   send_start_loading(current_position_id);
+  //   loading_in_progress = true;
+  //   loading_start_time = current_time;
+  //   wait_start_loading = false;
+  // }
 
-  // ✅ 적재 완료 로직 (5초 후 자동 전송)
-  if (loading_in_progress && (current_time - loading_start_time >= 5000)) 
-  {
-    // Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
-    send_finish_loading(current_position_id);
-    if (mission_target == current_position_id) 
-    {
-      // Serial.println("✅ [미션 완료] mission_target 초기화");
-      mission_target = 0;
-    }
-    loading_in_progress = false;
-    run_command = true;
-  }
+  // // ✅ 적재 완료 로직 (5초 후 자동 전송)
+  // if (loading_in_progress && (current_time - loading_start_time >= 5000)) 
+  // {
+  //   // Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
+  //   send_finish_loading(current_position_id);
+  //   if (mission_target == current_position_id) 
+  //   {
+  //     // Serial.println("✅ [미션 완료] mission_target 초기화");
+  //     mission_target = 0;
+  //   }
+  //   loading_in_progress = false;
+  //   run_command = true;
+  // }
 
   // ✅ 언로딩 시작 지연 처리 (BELT 도착 후 2초 후)
   if (wait_start_unloading) {
@@ -385,27 +383,26 @@ void loop()
     if (current_time - wait_start_unloading_time >= 2000) {
       // Serial.println("🕒 [START] 언로딩 시작 메시지 전송 (2초 지연 후)");
       // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
-      start_unloading();
-      //unloading_in_progress = true;
-      //unloading_start_time = current_time;
+
+      send_start_unloading(current_position_id);
+      unloading_in_progress = true;
+      unloading_start_time = current_time;
       wait_start_unloading = false;
     }
   }
 
-  handle_unloading(current_time);
-
-  // // ✅ 언로딩 완료 로직 (시작 후 5초 뒤)
-  // if (unloading_in_progress) {
-  //   // Serial.printf("[📦 언로딩 중] 완료까지 %.1f초 남음\n", (5000 - (current_time - unloading_start_time)) / 1000.0);
+  // ✅ 언로딩 완료 로직 (시작 후 5초 뒤)
+  if (unloading_in_progress) {
+    // Serial.printf("[📦 언로딩 중] 완료까지 %.1f초 남음\n", (5000 - (current_time - unloading_start_time)) / 1000.0);
     
-  //   if (current_time - unloading_start_time >= 5000) {
-  //     // Serial.println("✅ [FINISH] 언로딩 완료 메시지 전송 (5초 경과)");
-  //     // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
+    if (current_time - unloading_start_time >= 5000) {
+      // Serial.println("✅ [FINISH] 언로딩 완료 메시지 전송 (5초 경과)");
+      // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
 
-  //     send_finish_unloading(current_position_id);
-  //     unloading_in_progress = false;
-  //   }
-  // }
+      send_finish_unloading(current_position_id);
+      unloading_in_progress = false;
+    }
+  }
     
   // // ✅RFID 체크
   // if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
@@ -538,6 +535,25 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
       }
       break;
 
+    case START_LOADING:
+      if (current_position_id == LOAD_A || current_position_id == LOAD_B) 
+      {
+        Serial.println("📥 loading");
+        // 아무 행동 안 함
+      }
+      break;
+    
+    case FINISH_LOADING:
+      if (current_position_id == LOAD_A || current_position_id == LOAD_B) {
+        Serial.println("📥 [서버 명령] FINISH_LOADING 수신 → 주행 재개");
+        if (mission_target == current_position_id) {
+          mission_target = 0;
+        }
+        run_command = true;
+
+      }
+      break;
+
     case START_CHARGING:
       battery_level = 100;
       battery_empty = false;
@@ -563,7 +579,7 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
 //공통 바이너리 송신 함수
 void send_binary(uint8_t cmd_id, const uint8_t* payload, uint8_t payload_len) 
 {
-  uint8_t buffer[32];
+  uint8_t buffer[16];
   uint8_t sender_id = get_sender_id_from_truck_id(truck_id);  // 예: TRUCK_01 → 0x01
   const uint8_t receiver_id = SERVER;  // 0x10
 
@@ -618,18 +634,18 @@ void send_status_update(uint8_t battery_level, uint8_t position_id)
   send_binary(STATUS_UPDATE, payload, 2);
 }
 
-//로딩 메시지
-void send_start_loading(uint8_t position_id) 
-{
-  uint8_t payload[1] = { position_id };
-  send_binary(START_LOADING, payload, 1);
-}
+// //로딩 메시지
+// void send_start_loading(uint8_t position_id) 
+// {
+//   uint8_t payload[1] = { position_id };
+//   send_binary(START_LOADING, payload, 1);
+// }
 
-void send_finish_loading(uint8_t position_id) 
-{
-  uint8_t payload[1] = { position_id };
-  send_binary(FINISH_LOADING, payload, 1);
-}
+// void send_finish_loading(uint8_t position_id) 
+// {
+//   uint8_t payload[1] = { position_id };
+//   send_binary(FINISH_LOADING, payload, 1);
+// }
 
 //언로딩 메시지
 void send_start_unloading(uint8_t position_id) 
@@ -672,10 +688,11 @@ void line_trace() {
   ll_sensor_val = analogRead(LLEFT_SENSOR);
   rr_sensor_val = analogRead(RRIGHT_SENSOR);
 
-  Serial.print("L: "); Serial.print(l_sensor_val);
-  Serial.print(" R: "); Serial.println(r_sensor_val);
+  //Serial.print("L: "); Serial.print(l_sensor_val);
+  //Serial.print(" R: "); Serial.println(r_sensor_val);
 
-  error = (3 * ll_sensor_val) + (1 * l_sensor_val) + (-1 * r_sensor_val) + (-3 * rr_sensor_val);
+  error = (4 * ll_sensor_val) + (1 * l_sensor_val) + (-1 * r_sensor_val) + (-4 * rr_sensor_val);
+
 
 
   // ⬇ PID 제어 계산
@@ -774,8 +791,6 @@ void handle_unloading(unsigned long current_time) {
     unloading_in_progress = false;
     unloading_stage = 0;
   }
-  else
-    Serial.println("ERROR");
 }
 
 
@@ -809,37 +824,51 @@ bool checkAndPrintUID(byte* uid) {
       resume_with_prev_pwm = true;
       resume_start_time = millis();
 
-      if (pos_id == CHECKPOINT_A) {
+      if (pos_id == CHECKPOINT_A) 
+      {
         send_arrived(CHECKPOINT_A, GATE_A);
         run_command = false;
-      } else if (pos_id == CHECKPOINT_B) {
+      } 
+      else if (pos_id == CHECKPOINT_B) 
+      {
         send_arrived(CHECKPOINT_B, GATE_A);
-      } else if (pos_id == CHECKPOINT_C) {
+      } 
+      else if (pos_id == CHECKPOINT_C) 
+      {
         send_arrived(CHECKPOINT_C, GATE_B);
         run_command = false;
-      } else if (pos_id == CHECKPOINT_D) {
+      } 
+      else if (pos_id == CHECKPOINT_D) 
+      {
         send_arrived(CHECKPOINT_D, GATE_B);
-      } else if (pos_id == LOAD_A) {
+      } 
+      else if (pos_id == LOAD_A) {
         send_arrived(LOAD_A, GATE_A);
         if (mission_target == pos_id) {
-          wait_start_loading = true;
-          wait_start_loading_time = millis();
+          run_command = false;
+          stop_motors();  // 도착지일 경우에만 멈춤
         }
-      } else if (pos_id == LOAD_B) {
+      }
+      else if (pos_id == LOAD_B) {
         send_arrived(LOAD_B, GATE_B);
         if (mission_target == pos_id) {
-          wait_start_loading = true;
-          wait_start_loading_time = millis();
+          run_command = false;
+          stop_motors();
         }
-      } else if (pos_id == BELT) {
+      }
+      else if (pos_id == BELT) 
+      {
         send_arrived(BELT, 0x00);
         belt_arrival_time = millis();
         wait_start_unloading = true;
-      } else if (pos_id == STANDBY) {
+      } 
+      else if (pos_id == STANDBY) 
+      {
         send_arrived(STANDBY, 0x00);
         run_command = false;
         stop_motors();
-        if (mission_target == 0 || mission_target == 0xFF) {
+        if (mission_target == 0 || mission_target == 0xFF) 
+        {
           // Serial.println("📨 [STANDBY] 미션 없음 → 요청");
           send_assign_mission();
         }

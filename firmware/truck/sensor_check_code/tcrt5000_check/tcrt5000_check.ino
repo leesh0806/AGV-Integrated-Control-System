@@ -1,27 +1,32 @@
-const int sensorPin1 = 34;   // TCRT5000 센서 1번 핀 (D34)  왼쪽
-const int sensorPin2 = 35;   // TCRT5000 센서 2번 핀 (D35)  오른쪽
-const int ledPin = 2;        // 상태 확인용 LED (내장 LED는 보통 GPIO 2)
+const int sensorPin0 = 36;    // 왼쪽 끝 센서
+const int sensorPin1 = 34;   // 왼쪽 중간 센서
+const int sensorPin2 = 35;   // 오른쪽 중간 센서
+const int sensorPin3 = 4;    // 오른쪽 끝 센서
+
+const int ledPin = 2;        // 상태 확인용 LED
 
 void setup() {
   pinMode(ledPin, OUTPUT);
-  Serial.begin(115200);      // ESP는 속도 115200이 일반적
+  Serial.begin(115200);
 }
 
 void loop() {
-  int value1 = analogRead(sensorPin1);  // 센서 1값 읽기
-  int value2 = analogRead(sensorPin2);  // 센서 2값 읽기
+  int val0 = analogRead(sensorPin0);  // 왼쪽 끝
+  int val1 = analogRead(sensorPin1);  // 왼쪽 중간
+  int val2 = analogRead(sensorPin2);  // 오른쪽 중간
+  int val3 = analogRead(sensorPin3);  // 오른쪽 끝
 
-  Serial.print("Sensor1: ");
-  Serial.print(value1);
-  Serial.print("  |  Sensor2: ");
-  Serial.println(value2);
+  Serial.print("S0: "); Serial.print(val0);
+  Serial.print(" | S1: "); Serial.print(val1);
+  Serial.print(" | S2: "); Serial.print(val2);
+  Serial.print(" | S3: "); Serial.println(val3);
 
-  // 둘 중 하나라도 어두운 라인을 감지하면 LED ON
-  if (value1 < 500 || value2 < 500) {
+  // 어떤 센서라도 검은색 라인을 감지하면 LED ON
+  if (val0 < 500 || val1 < 500 || val2 < 500 || val3 < 500) {
     digitalWrite(ledPin, HIGH);
   } else {
     digitalWrite(ledPin, LOW);
   }
 
-  //delay(100);
+  // delay(100); // 필요시 활성화
 }
