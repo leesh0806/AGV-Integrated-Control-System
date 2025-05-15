@@ -8,7 +8,7 @@ import time
 import sys
 
 # 포트 설정
-PORT = "/dev/ttyACM0"  # 필요시 변경
+PORT = "/dev/ttyACM1"  # 필요시 변경
 BAUDRATE = 9600
 
 try:

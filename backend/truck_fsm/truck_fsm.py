@@ -4,10 +4,11 @@ import time
 
 
 class TruckFSM:
-    def __init__(self, command_sender=None, gate_controller=None, belt_controller=None, mission_manager=None):
+    def __init__(self, command_sender=None, gate_controller=None, belt_controller=None, dispenser_controller=None, mission_manager=None):
         self.command_sender = command_sender
         self.gate_controller = gate_controller
         self.belt_controller = belt_controller
+        self.dispenser_controller = dispenser_controller
         self.mission_manager = mission_manager
         self.contexts = {}
         self.transitions = self._init_transitions()
@@ -173,11 +174,31 @@ class TruckFSM:
                     action_fn(context, payload)
             else:
                 # 상태 전이가 없더라도 미션 단계 업데이트 및 RUN 명령 전송
-                print(f"[강제 처리] {truck_id}: FINISH_LOADING 이벤트이지만 상태 전이 없음, 강제 RUN 명령 전송")
+                print(f"[강제 처리] {truck_id}: FINISH_LOADING 이벤트이지만 상태 전이 없음, 디스펜서 닫기 및 강제 RUN 명령 전송")
+                
+                # 미션 단계 업데이트
                 context.mission_phase = MissionPhase.TO_UNLOADING
                 
-                # RUN 명령 전송
+                # 디스펜서 닫기 - 상태 전이가 없어도 디스펜서 닫기 수행
+                if self.dispenser_controller:
+                    try:
+                        print(f"[강제 디스펜서 닫기] {truck_id}: 디스펜서 닫기 명령 전송")
+                        success = self.dispenser_controller.send_command("DISPENSER", "CLOSE")
+                        print(f"[디스펜서 닫기 결과] {'성공' if success else '실패'}")
+                        
+                        # 디스펜서가 완전히 닫힐 때까지 충분히 대기
+                        wait_time = 3.0  # 3초 대기 시간
+                        print(f"[디스펜서 닫힘 대기] {truck_id}: {wait_time}초 대기 중...")
+                        time.sleep(wait_time)
+                        print(f"[디스펜서 닫힘 완료] {truck_id}: 대기 완료, 이동 준비됨")
+                    except Exception as e:
+                        print(f"[⚠️ 강제 디스펜서 닫기 오류] {e}")
+                        # 오류 발생 시에도 최소한의 대기 시간 제공
+                        time.sleep(2.0)
+                
+                # RUN 명령 전송 - 디스펜서 처리 후 마지막에 실행
                 if self.command_sender:
+                    print(f"[🚚 강제 이동 명령] {truck_id}: 디스펜서 닫기 완료 후 이동 시작")
                     self.command_sender.send(truck_id, "RUN", {})
             
             return True
@@ -445,6 +466,8 @@ class TruckFSM:
         direction = context.direction
         
         print(f"[도착 처리] {context.truck_id}: 위치 {position}, 방향 {direction.value}")
+        print(f"[⚙️ 디버그] 트럭 ARRIVED 현재 상태 - 현재 상태: {context.state}, 미션 단계: {context.mission_phase}")
+        print(f"[⚙️ payload 확인] {payload}")
         
         # 방향 전환점에 도착한 경우 방향 업데이트
         if position in self.direction_transition_points:
@@ -453,16 +476,19 @@ class TruckFSM:
                 old_direction = context.update_direction(new_direction)
                 print(f"[방향 전환] {context.truck_id}: {old_direction.value} → {new_direction.value}")
                 direction = new_direction
-        
-        # 체크포인트에 도착한 경우 게이트 제어
+
+        # 명확한 조건 분기 로그        
         if position.startswith("CHECKPOINT_"):
+            print(f"[⚙️ 체크포인트 도착 처리 시작] {position}")
             # 게이트 제어 로직 실행
             self._process_checkpoint_gate_control(context, position, direction)
-                
         # 작업 위치에 도착한 경우 처리
         elif position in ["LOAD_A", "LOAD_B"]:
+            print(f"[⚙️ 적재 위치 {position} 도착 처리 시작 - 명확한 분기]")
+            
             # 미션에 설정된 loading_target과 현재 위치 비교
             loading_target = getattr(context, 'loading_target', None)
+            print(f"[디버그] 트럭 {context.truck_id}, 설정된 로딩 타겟: {loading_target}, 현재 위치: {position}")
             
             if loading_target and position != loading_target:
                 # 미션에 설정된 적재 위치와 실제 도착한 위치가 다른 경우
@@ -479,8 +505,44 @@ class TruckFSM:
             
             # 정상적인 경우 - 올바른 적재 위치에 도착했거나 loading_target이 설정되지 않은 경우
             print(f"[✅ 적재 위치 도착] {context.truck_id}: {position}에 도착")
+            
+            # 먼저 트럭 정지 명령 전송
             if self.command_sender:
+                print(f"[🛑 STOP 명령 전송] {context.truck_id}에게 정지 명령 전송")
                 self.command_sender.send(context.truck_id, "STOP")
+                time.sleep(0.5)  # 잠시 대기하여 트럭이 정지할 시간 제공
+            
+            # 트럭이 적재 위치에 도착했을 때 자동으로 START_LOADING 명령 먼저 전송하고 상태 전환
+            print(f"[🔄 자동 적재 시작] {context.truck_id}: 적재 위치 {position} 도착 - 적재 작업 자동 시작")
+            
+            # 먼저 START_LOADING 명령을 트럭에게 명시적으로 전송
+            if self.command_sender:
+                print(f"[📤 중요! START_LOADING 명령 전송] {context.truck_id}에게 적재 시작 명령 전송")
+                try:
+                    success = self.command_sender.send(context.truck_id, "START_LOADING", {"position": position})
+                    print(f"[📤 START_LOADING 명령 전송 결과] {'성공' if success else '실패'}")
+                except Exception as e:
+                    print(f"[⚠️ START_LOADING 명령 전송 오류] {e}")
+                
+                # 짧은 대기 시간을 통해 트럭이 명령을 처리할 시간 제공
+                time.sleep(1.0)
+            
+            # FSM 상태 변경을 위해 START_LOADING 이벤트 처리
+            try:
+                print(f"[FSM 상태 변경] {context.truck_id}: START_LOADING 이벤트 처리 시작")
+                state_changed = self.handle_event(context.truck_id, "START_LOADING", {"position": position})
+                print(f"[FSM 상태 변경 결과] {'성공' if state_changed else '실패'}")
+                
+                # 상태 변경 실패 시 직접 디스펜서 제어
+                if not state_changed and self.dispenser_controller:
+                    print(f"[⚠️ 강제 디스펜서 제어] {context.truck_id}: FSM 상태 변경 실패로 직접 디스펜서 제어")
+                    self._start_loading(context, {"position": position})
+            except Exception as e:
+                print(f"[⚠️ START_LOADING 이벤트 처리 오류] {e}")
+                # 오류 발생 시 직접 디스펜서 제어 시도
+                if self.dispenser_controller:
+                    print(f"[⚠️ 예외 상황 강제 디스펜서 제어] {context.truck_id}: 오류로 인한 직접 디스펜서 제어")
+                    self._start_loading(context, {"position": position})
         
         # 하차 위치(BELT)에 도착한 경우
         elif position == "BELT":
@@ -567,11 +629,9 @@ class TruckFSM:
             # 2초 대기하여 게이트 닫힘 동작 완료 확인
             time.sleep(2)
             
-            # 게이트 닫힌 후에 이동 명령 전송
-            if self.command_sender:
-                print(f"[🔄 게이트 제어 후 이동] {context.truck_id}: GATE_A 닫은 후 이동")
-                self.command_sender.send(context.truck_id, "RUN", {})
-                
+            # 게이트 닫힌 후에는 이동 명령을 보내지 않음 (트럭이 이미 이동 중일 것이므로)
+            print(f"[ℹ️ 자동 이동 유지] {context.truck_id}: GATE_A 닫은 후 별도 RUN 명령 없이 자동 이동 진행")
+            
             return
             
         # 특수 처리: CHECKPOINT_C에서 직접 GATE_B 열기
@@ -584,8 +644,9 @@ class TruckFSM:
             # 2초 대기하여 게이트 열림 동작 완료 확인
             time.sleep(2)
             
-            # 게이트 열림 후에 이동 명령 전송 안 함 (게이트 열림 이벤트 처리에서 자동으로 이동)
-            # 트럭은 이후 GATE_OPENED 메시지를 수신하면 자동으로 이동
+            # 게이트 열림 후에는 반드시 RUN 명령을 전송 (멈춤→이동 필요)
+            print(f"[�� 게이트 열림 후 RUN 명령] {context.truck_id}: 게이트가 열렸으므로 이동 명령 전송")
+            self.command_sender.send(context.truck_id, "RUN", {})
                 
             return
         
@@ -631,8 +692,13 @@ class TruckFSM:
                 print(f"[게이트 제어 없음] {context.truck_id}: 체크포인트 {checkpoint}에서 게이트 제어가 필요 없습니다.")
                 # 바로 RUN 명령 전송
                 if self.command_sender:
-                    print(f"[자동 이동] {context.truck_id}: 게이트 제어 없이 바로 다음 위치로 이동")
-                    self.command_sender.send(context.truck_id, "RUN", {})
+                    # CHECKPOINT_D에서 게이트 닫기 후에는 별도로 RUN 명령 보내지 않음 (이미 이동 중)
+                    if checkpoint == "CHECKPOINT_D" and direction == Direction.CLOCKWISE:
+                        print(f"[ℹ️ RUN 명령 생략] {context.truck_id}: CHECKPOINT_D에서는 게이트 닫힘 이후 별도 RUN 명령 없이 이동 계속")
+                    else:
+                        print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
+                        # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
+                        self.command_sender.send(context.truck_id, "RUN", {})
         else:
             print(f"[알 수 없는 체크포인트] {checkpoint}에 대한 게이트 제어 정의가 없습니다.")
         
@@ -640,9 +706,13 @@ class TruckFSM:
         if not has_gate_action and checkpoint not in ["CHECKPOINT_A", "CHECKPOINT_C"]:  # CHECKPOINT_A, CHECKPOINT_C는 게이트 열기 후 이동
             # 다음 목표로 자동 이동 (체크포인트에서 경로 계속)
             if self.command_sender:
-                print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
-                # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
-                self.command_sender.send(context.truck_id, "RUN", {})
+                # CHECKPOINT_D에서 게이트 닫기 후에는 별도로 RUN 명령 보내지 않음 (이미 이동 중)
+                if checkpoint == "CHECKPOINT_D" and direction == Direction.CLOCKWISE:
+                    print(f"[ℹ️ RUN 명령 생략] {context.truck_id}: CHECKPOINT_D에서는 게이트 닫힘 이후 별도 RUN 명령 없이 이동 계속")
+                else:
+                    print(f"[자동 이동] {context.truck_id}: {context.position}에서 다음 위치로 이동")
+                    # 단순 RUN 명령 - 트럭이 자체적으로 다음 위치 결정
+                    self.command_sender.send(context.truck_id, "RUN", {})
     
     # -------------------------------------------------------------------------------   
 
@@ -660,25 +730,82 @@ class TruckFSM:
 
     # 적재 작업 시작 처리
     def _start_loading(self, context, payload):
-        """적재 작업 시작 처리"""
-        print(f"[적재 시작] {context.truck_id}: 위치 {context.position}에서 적재 작업 시작")
-        # 필요한 경우 추가 액션 수행
-
+        print(f"[적재 시작] {context.truck_id}: 적재 작업 시작")
+        print(f"[적재 디버그] 트럭 상태: {context.state}, 위치: {context.position}, 디스펜서 존재: {self.dispenser_controller is not None}")
+        
+        # 디스펜서 컨트롤러가 있는 경우, 디스펜서 제어 명령 전송
+        if self.dispenser_controller:
+            position = context.position
+            print(f"[디스펜서 제어] {context.truck_id}가 {position}에 있어 디스펜서 제어 시작")
+            
+            if position == "LOAD_A":
+                # LOAD_A 위치인 경우 디스펜서 A 경로로 설정 (ROUTE_A)
+                print(f"[디스펜서 제어] {context.truck_id}가 LOAD_A에 도착 - 디스펜서 A 경로로 설정")
+                try:
+                    success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_A")
+                    print(f"[디스펜서 경로 설정 결과] ROUTE_A: {'성공' if success else '실패'}")
+                except Exception as e:
+                    print(f"[⚠️ 디스펜서 경로 설정 오류] {e}")
+            elif position == "LOAD_B":
+                # LOAD_B 위치인 경우 디스펜서 B 경로로 설정 (ROUTE_B)
+                print(f"[디스펜서 제어] {context.truck_id}가 LOAD_B에 도착 - 디스펜서 B 경로로 설정")
+                try:
+                    success = self.dispenser_controller.send_command("DISPENSER", "LOC_ROUTE_B")
+                    print(f"[디스펜서 경로 설정 결과] ROUTE_B: {'성공' if success else '실패'}")
+                except Exception as e:
+                    print(f"[⚠️ 디스펜서 경로 설정 오류] {e}")
+            
+            # 1초 대기 후 디스펜서 열기
+            print(f"[디스펜서 준비] 1초 대기 후 디스펜서 열기 시작")
+            time.sleep(1)
+            
+            # 디스펜서 열기
+            try:
+                print(f"[디스펜서 열기 시작] DISPENSER OPEN 명령 전송")
+                success = self.dispenser_controller.send_command("DISPENSER", "OPEN")
+                print(f"[디스펜서 열기 결과] {'성공' if success else '실패'}")
+            except Exception as e:
+                print(f"[⚠️ 디스펜서 열기 오류] {e}")
+            
+            # 로그 메시지 추가
+            print(f"[디스펜서 LOADED 이벤트 대기] 디스펜서에서 LOADED 상태가 되면 트럭에 DISPENSER_LOADED 메시지가 전송됩니다.")
+            print(f"[디스펜서 적재 완료 흐름] dispenser_controller → facility_status_manager → truck_command_sender → 트럭으로 전달")
+        else:
+            print(f"[⚠️ 디스펜서 없음] {context.truck_id}: 디스펜서 컨트롤러가 없어 제어할 수 없습니다.")
+    
     # -------------------------------------------------------------------------------   
 
     # 적재 완료 및 이동 처리
     def _finish_loading_and_move(self, context, payload):
-        """적재 완료 및 이동 처리"""
-        print(f"[적재 완료] {context.truck_id}: 적재 작업 완료, 다음 위치로 이동")
+        print(f"[적재 완료] {context.truck_id}: 적재 완료, 이동 시작")
         
-        # 방향 유지 (시계방향 - 정상 흐름)
-        # 이미 Direction.CLOCKWISE로 설정되어 있으므로 변경 필요 없음
+        # 시작 시 잠시 지연 - 트럭이 명령을 처리할 시간 제공
+        time.sleep(1.0)
         
-        # 다음 단계 업데이트
+        # 디스펜서 닫기
+        if self.dispenser_controller:
+            try:
+                print(f"[디스펜서 닫기 시작] {context.truck_id}: 디스펜서 닫기 명령 전송")
+                success = self.dispenser_controller.send_command("DISPENSER", "CLOSE")
+                print(f"[디스펜서 닫기 결과] {'성공' if success else '실패'}")
+                
+                # 디스펜서가 완전히 닫힐 때까지 충분히 대기
+                wait_time = 3.0  # 3초 대기 시간
+                print(f"[디스펜서 닫힘 대기] {context.truck_id}: {wait_time}초 대기 중...")
+                time.sleep(wait_time)
+                print(f"[디스펜서 닫힘 완료] {context.truck_id}: 대기 완료, 이동 준비됨")
+            except Exception as e:
+                print(f"[⚠️ 디스펜서 닫기 오류] {e}")
+                # 오류 발생 시에도 최소한의 대기 시간 제공
+                time.sleep(2.0)
+        
+        # 단계 업데이트
         context.mission_phase = MissionPhase.TO_UNLOADING
+        self._update_target_position(context)  # 다음 목표 업데이트
         
-        # 이동 명령 전송 - 트럭이 자체적으로 다음 위치 결정
+        # 적재 완료 후 이동 명령 전송 (마지막에 실행)
         if self.command_sender:
+            print(f"[🚚 이동 명령 전송] {context.truck_id}: 적재 완료 후 이동 시작")
             self.command_sender.send(context.truck_id, "RUN", {})
     
     # -------------------------------------------------------------------------------   
@@ -879,6 +1006,13 @@ class TruckFSM:
         if self.command_sender:
             print(f"[📤 게이트 열림 알림] {truck_id}에게 GATE_OPENED 메시지 전송 (gate_id: {gate_id})")
             self.command_sender.send(truck_id, "GATE_OPENED", {"gate_id": gate_id})
+            
+            # 게이트 열림 후 잠시 대기 (트럭이 열림 메시지를 처리할 시간 제공)
+            time.sleep(0.5)
+            
+            # 게이트 열림 후에는 반드시 RUN 명령을 전송 (멈춤→이동 필요)
+            print(f"[📤 게이트 열림 후 RUN 명령] {truck_id}: 게이트가 열렸으므로 이동 명령 전송")
+            self.command_sender.send(truck_id, "RUN", {})
         else:
             print(f"[⚠️ 경고] command_sender가 없어 GATE_OPENED 메시지를 전송할 수 없습니다.")
             
@@ -906,12 +1040,9 @@ class TruckFSM:
         # else:
         #     print(f"[⚠️ 경고] command_sender가 없어 GATE_CLOSED 메시지를 전송할 수 없습니다.")
             
-        # 게이트 닫힘 후 자동으로 트럭에게 RUN 명령 전송
+        # 게이트 닫힘 후에는 RUN 명령을 전송하지 않음 (이미 이동 중인 상태일 것이므로)
         if success and self.command_sender:
-            print(f"[🔄 게이트 닫힘 후 자동 이동] {truck_id}: 게이트가 닫혔으므로 자동으로 이동 명령 전송")
-            # 짧은 대기 후 실행 (게이트가 완전히 닫힌 후)
-            time.sleep(1.0)
-            self.command_sender.send(truck_id, "RUN", {})
+            print(f"[ℹ️ 게이트 닫힘 완료] {truck_id}: 게이트가 닫혔습니다 (이미 이동 중이므로 RUN 명령 전송 안 함)")
             
         return success
     

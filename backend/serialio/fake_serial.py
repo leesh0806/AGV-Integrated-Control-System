@@ -19,6 +19,11 @@ class FakeSerial:
         self.polling_thread = threading.Thread(target=self._polling_loop)
         self.polling_thread.daemon = True  # 메인 스레드 종료 시 자동 종료
         self.polling_thread.start()
+        
+        # 디스펜서 상태 추가
+        self.dispenser_state = "CLOSED"  # 초기 상태: 닫힘
+        self.dispenser_position = "ROUTE_A"  # 초기 위치: A 경로
+        
         if self.debug:
             print(f"[FakeSerial] {name} 인스턴스 생성됨")
 
@@ -57,12 +62,177 @@ class FakeSerial:
                     print(f"[FakeSerial:{self.name}] 응답 읽기: {response.decode().strip()}")
                 return response
             else:
-                # 버퍼가 비어있음을 로그로 기록
-                if self.debug:
-                    print(f"[FakeSerial:{self.name}] 버퍼가 비어있음 - 빈 응답 반환")
+                # 버퍼가 비어있음을 로그로 기록 - 디버그 출력 제거
+                # if self.debug:
+                #     print(f"[FakeSerial:{self.name}] 버퍼가 비어있음 - 빈 응답 반환")
                 return b""
 
     def _simulate_response(self, msg: str):
+        # ✅ 디스펜서 명령 시뮬레이션
+        dispenser_pattern = re.compile(r'DISPENSER_(DI_\w+)', re.IGNORECASE)
+        dispenser_match = dispenser_pattern.match(msg)
+        
+        if dispenser_match or "DI_" in msg:
+            # 'DISPENSER_' 프리픽스가 없더라도 'DI_' 포함 명령은 디스펜서 명령으로 처리
+            command = dispenser_match.group(1) if dispenser_match else msg
+            
+            if self.debug:
+                print(f"[FakeSerial:{self.name}] 디스펜서 명령 감지: {command}")
+            
+            # 디스펜서 열기
+            if "DI_OPEN" in command:
+                self.dispenser_state = "OPENED"
+                print(f"[FakeSerial:{self.name}] 디스펜서 열림 작업 시작")
+                
+                # 디스펜서 열린 후 LOADED 상태 보고 - 방식 변경: 즉시 큐에 추가
+                print(f"[FakeSerial:{self.name}] 디스펜서 열림 -> LOADED 상태 즉시 큐에 추가 (지연 응답 대신)")
+                
+                # 즉시 응답 큐에 메시지 추가 - 지연된 응답 대신
+                with self.lock:
+                    self.buffer.append("ACK:DI_OPENED:OK\n".encode())
+                    # LOADED 상태도 바로 큐에 추가 - 안정성을 위해 여러 번 추가
+                    self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                    self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                    self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                    self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                    self.in_waiting = len(self.buffer)
+                    print(f"[FakeSerial:{self.name}] 응답 큐에 LOADED 상태 즉시 추가됨 (큐 크기: {len(self.buffer)})")
+                
+                # 1초 후에도 LOADED 상태 메시지 추가 (중복 전송으로 안정성 보장)
+                def add_delayed_loaded():
+                    import time  # 지역 범위에서 time 모듈 임포트
+                    time.sleep(1.0)
+                    with self.lock:
+                        if self.running:  # 실행 중인지 확인
+                            self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                            self.in_waiting = len(self.buffer)
+                            print(f"[FakeSerial:{self.name}] 1초 후 LOADED 상태 추가 완료 (큐 크기: {len(self.buffer)})")
+                            
+                            # 1.1초 후에 외부 컨트롤러에게 직접 알림
+                            time.sleep(0.1)
+                            try:
+                                # main_controller 직접 임포트 대신 모듈에서 MainController 사용
+                                from backend.main_controller.main_controller import MainController
+                                import sys
+                                
+                                # sys.modules에서 main_controller 인스턴스 찾기
+                                main_controller = None
+                                for module in sys.modules.values():
+                                    if hasattr(module, 'main_controller') and isinstance(getattr(module, 'main_controller'), MainController):
+                                        main_controller = getattr(module, 'main_controller')
+                                        break
+                                
+                                if main_controller and main_controller.dispenser_controller:
+                                    print(f"[FakeSerial:{self.name}] DispenserController에 직접 LOADED 메시지 처리 요청")
+                                    main_controller.dispenser_controller.handle_message("STATUS:DISPENSER:LOADED")
+                                else:
+                                    print(f"[FakeSerial:{self.name}] main_controller 인스턴스를 찾지 못했거나 dispenser_controller가 없습니다.")
+                            except Exception as e:
+                                print(f"[FakeSerial:{self.name}] DispenserController 직접 호출 오류: {e}")
+                                import traceback
+                                traceback.print_exc()
+                
+                # 2초 후에도 LOADED 상태 메시지 추가 (최종 안전장치)
+                def add_final_loaded():
+                    import time  # 지역 범위에서 time 모듈 임포트
+                    time.sleep(2.0)
+                    with self.lock:
+                        if self.running:  # 실행 중인지 확인
+                            self.buffer.append("STATUS:DISPENSER:LOADED\n".encode())
+                            self.in_waiting = len(self.buffer)
+                            print(f"[FakeSerial:{self.name}] 2초 후 최종 LOADED 상태 추가 완료 (큐 크기: {len(self.buffer)})")
+                            
+                            # 2.1초 후에 FSM에 직접 DISPENSER_LOADED 이벤트 전달 (최후의 수단)
+                            time.sleep(0.1)
+                            try:
+                                # main_controller 직접 임포트 대신 모듈에서 MainController 사용
+                                from backend.main_controller.main_controller import MainController
+                                import sys
+                                
+                                # sys.modules에서 main_controller 인스턴스 찾기
+                                main_controller = None
+                                for module in sys.modules.values():
+                                    if hasattr(module, 'main_controller') and isinstance(getattr(module, 'main_controller'), MainController):
+                                        main_controller = getattr(module, 'main_controller')
+                                        break
+                                
+                                if main_controller and main_controller.truck_fsm_manager:
+                                    truck_id = "TRUCK_01"  # 기본값
+                                    if main_controller.dispenser_controller:
+                                        truck_id = main_controller.dispenser_controller.current_truck_id or truck_id
+                                    
+                                    position = "ROUTE_A"  # 기본값
+                                    if main_controller.dispenser_controller:
+                                        position = main_controller.dispenser_controller.dispenser_position.get("DISPENSER", position)
+                                    
+                                    print(f"[FakeSerial:{self.name}] FSM에 직접 DISPENSER_LOADED 이벤트 전달 (트럭: {truck_id}, 위치: {position})")
+                                    main_controller.truck_fsm_manager.handle_trigger(truck_id, "DISPENSER_LOADED", {
+                                        "dispenser_id": "DISPENSER",
+                                        "position": position
+                                    })
+                                else:
+                                    print(f"[FakeSerial:{self.name}] main_controller 인스턴스를 찾지 못했거나 truck_fsm_manager가 없습니다.")
+                            except Exception as e:
+                                print(f"[FakeSerial:{self.name}] FSM 직접 호출 오류: {e}")
+                                import traceback
+                                traceback.print_exc()
+                
+                # 백그라운드에서 지연된 LOADED 메시지 추가
+                threading.Thread(target=add_delayed_loaded, daemon=True).start()
+                threading.Thread(target=add_final_loaded, daemon=True).start()
+                
+                # 기존의 지연된 응답은 제거하고 즉시 응답 사용
+                return None  # 즉시 응답을 위해 None 반환 (이미 큐에 추가했으므로)
+            
+            # 디스펜서 닫기
+            elif "DI_CLOSE" in command:
+                self.dispenser_state = "CLOSED"
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 닫힘 작업 시작")
+                return "ACK:DI_CLOSED:OK"
+                
+            # 왼쪽 회전
+            elif "DI_LEFT_TURN" in command:
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 왼쪽 회전")
+                return "ACK:DI_LEFT_TURN:OK"
+                
+            # 오른쪽 회전
+            elif "DI_RIGHT_TURN" in command:
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 오른쪽 회전")
+                return "ACK:DI_RIGHT_TURN:OK"
+                
+            # 회전 정지
+            elif "DI_STOP_TURN" in command:
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 회전 정지")
+                return "ACK:DI_STOP_TURN:OK"
+                
+            # A 경로 위치 이동
+            elif "DI_LOC_ROUTE_A" in command:
+                self.dispenser_position = "ROUTE_A"
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 A 경로로 이동")
+                
+                # 적재 완료 메시지 예약 (A 경로로 이동 3초 후)
+                print(f"[FakeSerial:{self.name}] 디스펜서 A 경로 이동 -> LOADED 상태 전송 예약 없음 (OPEN 시 전송)")
+                # self._schedule_delayed_response(3.0, "STATUS:DISPENSER:LOADED")
+                
+                return "ACK:DI_LOC_A:OK"
+                
+            # B 경로 위치 이동
+            elif "DI_LOC_ROUTE_B" in command:
+                self.dispenser_position = "ROUTE_B"
+                if self.debug:
+                    print(f"[FakeSerial:{self.name}] 디스펜서 B 경로로 이동")
+                
+                # 적재 완료 메시지 예약 (B 경로로 이동 3초 후)
+                print(f"[FakeSerial:{self.name}] 디스펜서 B 경로 이동 -> LOADED 상태 전송 예약 없음 (OPEN 시 전송)")
+                # self._schedule_delayed_response(3.0, "STATUS:DISPENSER:LOADED")
+                
+                return "ACK:DI_LOC_B:OK"
+        
         # ✅ 게이트 명령 시뮬레이션 - 정규식으로 더 유연하게 처리
         gate_pattern = re.compile(r'(GATE_[ABC])_(\w+)', re.IGNORECASE)
         gate_match = gate_pattern.match(msg)
@@ -169,6 +339,10 @@ class FakeSerial:
         # 포트 이름에 "GATE_"가 있는 경우
         if "GATE_" in self.name:
             return self.name
+            
+        # 포트 이름에 "DISPENSER"가 있는 경우
+        if "DISPENSER" in self.name:
+            return "DISPENSER"
         
         # 마지막으로 사용된 게이트 ID 사용
         if FakeSerial.last_gate_id:
@@ -181,6 +355,12 @@ class FakeSerial:
             port_num = int(match.group(1))
             if port_num == 1:  # 예: 여러 게이트가 포트를 공유하는 경우
                 return "GATE_A"  # 기본값으로 GATE_A 반환
+            elif port_num == 2:
+                return "GATE_B"
+            elif port_num == 3:
+                return "BELT"
+            elif port_num == 4:
+                return "DISPENSER"
             else:
                 return "BELT"  # 다른 포트는 벨트로 가정
         

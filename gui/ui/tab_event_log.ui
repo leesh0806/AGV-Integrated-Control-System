@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1304</width>
+    <height>675</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QGroupBox" name="groupBox_filter">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>1281</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>로그 필터</string>
+   </property>
+   <widget class="QLabel" name="label_start_date">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>80</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>시작 일자:</string>
+    </property>
+   </widget>
+   <widget class="QDateEdit" name="dateEdit_start">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>30</y>
+      <width>150</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="displayFormat">
+     <string>yyyy-MM-dd</string>
+    </property>
+    <property name="calendarPopup">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_end_date">
+    <property name="geometry">
+     <rect>
+      <x>240</x>
+      <y>30</y>
+      <width>80</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>종료 일자:</string>
+    </property>
+   </widget>
+   <widget class="QDateEdit" name="dateEdit_end">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>30</y>
+      <width>150</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="dateTime">
+     <datetime>
+      <hour>0</hour>
+      <minute>0</minute>
+      <second>0</second>
+      <year>2026</year>
+      <month>1</month>
+      <day>2</day>
+     </datetime>
+    </property>
+    <property name="displayFormat">
+     <string>yyyy-MM-dd</string>
+    </property>
+    <property name="calendarPopup">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_log_level">
+    <property name="geometry">
+     <rect>
+      <x>670</x>
+      <y>30</y>
+      <width>80</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>로그 레벨:</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox_log_level">
+    <property name="geometry">
+     <rect>
+      <x>740</x>
+      <y>30</y>
+      <width>150</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>모든 로그</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>정보</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>경고</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>오류</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>긴급</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLabel" name="label_source">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>30</y>
+      <width>80</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>소스:</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox_source">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>30</y>
+      <width>150</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>모든 소스</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>시스템</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>네트워크</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>트럭 제어</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>미션 관리</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>사용자 인증</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_keyword">
+    <property name="geometry">
+     <rect>
+      <x>899</x>
+      <y>30</y>
+      <width>231</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="placeholderText">
+     <string>검색 키워드...</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_apply_filter">
+    <property name="geometry">
+     <rect>
+      <x>1140</x>
+      <y>30</y>
+      <width>131</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>필터 적용</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QTableWidget" name="tableWidget_log">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>80</y>
+     <width>1281</width>
+     <height>531</height>
+    </rect>
+   </property>
+   <property name="editTriggers">
+    <set>QAbstractItemView::NoEditTriggers</set>
+   </property>
+   <property name="alternatingRowColors">
+    <bool>true</bool>
+   </property>
+   <property name="selectionBehavior">
+    <enum>QAbstractItemView::SelectRows</enum>
+   </property>
+   <property name="sortingEnabled">
+    <bool>true</bool>
+   </property>
+   <column>
+    <property name="text">
+     <string>시간</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>로그 레벨</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>소스</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>메시지</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QLabel" name="label_count">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>620</y>
+     <width>200</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>총 0개의 로그</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_export_log">
+   <property name="geometry">
+    <rect>
+     <x>1000</x>
+     <y>620</y>
+     <width>140</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>로그 내보내기</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_clear_log">
+   <property name="geometry">
+    <rect>
+     <x>1150</x>
+     <y>620</y>
+     <width>140</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>로그 지우기</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_refresh_log">
+   <property name="geometry">
+    <rect>
+     <x>850</x>
+     <y>620</y>
+     <width>141</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>새로고침</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

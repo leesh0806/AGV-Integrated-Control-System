@@ -18,6 +18,14 @@ class TCPServer:
 
         # MainController 초기화 및 트럭 소켓 맵 설정
         self.app = app_controller if app_controller else MainController(port_map={})
+        
+        # MainController에 tcp_server 참조 설정 (순환 참조 방지를 위해 명시적으로 설정)
+        if hasattr(self.app, 'set_tcp_server'):
+            self.app.set_tcp_server(self)
+        else:
+            setattr(self.app, 'tcp_server', self)
+            print("[✅ TCP 서버 참조 설정] MainController에 tcp_server 참조가 설정되었습니다.")
+        
         self.app.set_truck_commander(self.truck_sockets)
 
     @staticmethod
@@ -133,7 +141,16 @@ class TCPServer:
         try:
             temp_truck_id = f"TEMP_{addr[1]}"
             self.truck_sockets[temp_truck_id] = client_sock
-            self.app.set_truck_commander(self.truck_sockets)
+            
+            # 예외 처리 추가 - 안전하게 처리
+            try:
+                self.app.set_truck_commander(self.truck_sockets)
+            except Exception as e:
+                print(f"[⚠️ 명령 전송자 설정 오류] {e}")
+                print("[🔄 오류 복구] 명령 전송자 설정 오류를 무시하고 계속 진행합니다.")
+                # 스택 추적 출력
+                import traceback
+                traceback.print_exc()
 
             # 소켓 설정 개선
             try:
@@ -198,11 +215,15 @@ class TCPServer:
                     raw_data = header_data + payload_data
                     print(f"[📩 수신 원문] {raw_data.hex()}")
                     
-                    # 메시지 파싱
-                    message = TCPProtocol.parse_message(raw_data)
-                    if "type" in message and message["type"] == "INVALID":
-                        print(f"[⚠️ 메시지 파싱 실패] {message.get('error', '알 수 없는 오류')}")
-                        continue
+                    # 메시지 파싱 - 예외 처리 추가
+                    try:
+                        message = TCPProtocol.parse_message(raw_data)
+                        if "type" in message and message["type"] == "INVALID":
+                            print(f"[⚠️ 메시지 파싱 실패] {message.get('error', '알 수 없는 오류')}")
+                            continue
+                    except Exception as e:
+                        print(f"[⚠️ 메시지 파싱 오류] {e}, 데이터: {raw_data.hex()}")
+                        continue  # 연결은 유지
                     
                     # ✅ 여기에서 무조건 truck_id 등록
                     truck_id = message.get("sender")
@@ -213,24 +234,38 @@ class TCPServer:
                             if temp_truck_id in self.truck_sockets:
                                 del self.truck_sockets[temp_truck_id]
                         self.truck_sockets[truck_id] = client_sock
-                        # ✅ AppController의 TruckCommandSender 업데이트
-                        self.app.set_truck_commander(self.truck_sockets)
+                        
+                        # ✅ AppController의 TruckCommandSender 업데이트 - 예외 처리 추가
+                        try:
+                            self.app.set_truck_commander(self.truck_sockets)
+                        except Exception as e:
+                            print(f"[⚠️ 명령 전송자 설정 오류] {e}")
+                            # 오류는 무시하고 진행
 
                     # 하트비트 메시지 특별 처리
                     if message.get("cmd") == "HELLO":
                         print(f"[💓 하트비트] 트럭 {truck_id}에서 하트비트 수신")
                         # 하트비트 응답 메시지 전송
-                        response = TCPProtocol.build_message(
-                            sender="SERVER",
-                            receiver=truck_id,
-                            cmd="HEARTBEAT_ACK",
-                            payload={}
-                        )
-                        client_sock.sendall(response)
+                        try:
+                            response = TCPProtocol.build_message(
+                                sender="SERVER",
+                                receiver=truck_id,
+                                cmd="HEARTBEAT_ACK",
+                                payload={}
+                            )
+                            client_sock.sendall(response)
+                        except Exception as e:
+                            print(f"[⚠️ 하트비트 응답 오류] {e}")
                         continue
 
-                    # ✅ 메시지 처리 위임
-                    self.app.handle_message(message)
+                    # ✅ 메시지 처리 위임 - 예외 처리 추가
+                    try:
+                        self.app.handle_message(message)
+                    except Exception as e:
+                        print(f"[⚠️ 메시지 처리 오류] {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # 처리 오류가 발생해도 연결은 유지
 
                 except ConnectionResetError:
                     print(f"[⚠️ 연결 재설정] {addr}")
@@ -271,7 +306,8 @@ class TCPServer:
                     print(f"[⚠️ 에러] {addr} → {e}")
                     import traceback
                     traceback.print_exc()
-                    break
+                    # 치명적이지 않은 오류는 무시하고 계속 진행 (연결 유지)
+                    continue  # 연결을 유지하기 위해 continue 사용
 
         finally:
             # 여기서 클라이언트 소켓을 닫고 정리합니다
@@ -289,8 +325,11 @@ class TCPServer:
                 if addr in self.clients:
                     del self.clients[addr]
                     
-                # AppController의 TruckCommandSender 업데이트
-                self.app.set_truck_commander(self.truck_sockets)
+                # AppController의 TruckCommandSender 업데이트 - 예외 처리 추가
+                try:
+                    self.app.set_truck_commander(self.truck_sockets)
+                except Exception as e:
+                    print(f"[⚠️ 명령 전송자 설정 오류 (정리 중)] {e}")
             except Exception as e:
                 print(f"[⚠️ 소켓 정리 오류] {addr} → {e}")
 

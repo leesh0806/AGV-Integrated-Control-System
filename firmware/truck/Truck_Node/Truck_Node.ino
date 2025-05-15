@@ -148,7 +148,7 @@ int unloading_stage = 0;
 // 서보모터 제어 관련 전역 변수
 Servo unloading_servo;
 const int SERVO_PIN = 17;
-const int SERVO_INIT_ANGLE = 170;
+const int SERVO_INIT_ANGLE = 175;
 const int SERVO_DROP_ANGLE = 90;
 
 unsigned long belt_arrival_time = 0;
@@ -193,6 +193,8 @@ bool battery_empty = false;  // 배터리 0% 상태 플래그
 /*--------------------------------적외선 센서 핀--------------------------------*/
 #define LEFT_SENSOR 34
 #define RIGHT_SENSOR 35
+#define LLEFT_SENSOR 36
+#define RRIGHT_SENSOR 4
 
 /*--------------------------------PID 제어 변수--------------------------------*/
 
@@ -209,6 +211,8 @@ int prev_l_pwm, prev_r_pwm;
 int error;
 int l_sensor_val;
 int r_sensor_val;
+int ll_sensor_val;
+int rr_sensor_val;
 int avg_PWM = 190;
 int max_pwm = 250;
 
@@ -381,26 +385,27 @@ void loop()
     if (current_time - wait_start_unloading_time >= 2000) {
       // Serial.println("🕒 [START] 언로딩 시작 메시지 전송 (2초 지연 후)");
       // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
-
-      send_start_unloading(current_position_id);
-      unloading_in_progress = true;
-      unloading_start_time = current_time;
+      start_unloading();
+      //unloading_in_progress = true;
+      //unloading_start_time = current_time;
       wait_start_unloading = false;
     }
   }
 
-  // ✅ 언로딩 완료 로직 (시작 후 5초 뒤)
-  if (unloading_in_progress) {
-    // Serial.printf("[📦 언로딩 중] 완료까지 %.1f초 남음\n", (5000 - (current_time - unloading_start_time)) / 1000.0);
-    
-    if (current_time - unloading_start_time >= 5000) {
-      // Serial.println("✅ [FINISH] 언로딩 완료 메시지 전송 (5초 경과)");
-      // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
+  handle_unloading(current_time);
 
-      send_finish_unloading(current_position_id);
-      unloading_in_progress = false;
-    }
-  }
+  // // ✅ 언로딩 완료 로직 (시작 후 5초 뒤)
+  // if (unloading_in_progress) {
+  //   // Serial.printf("[📦 언로딩 중] 완료까지 %.1f초 남음\n", (5000 - (current_time - unloading_start_time)) / 1000.0);
+    
+  //   if (current_time - unloading_start_time >= 5000) {
+  //     // Serial.println("✅ [FINISH] 언로딩 완료 메시지 전송 (5초 경과)");
+  //     // Serial.printf("👉 current_position_id = 0x%02X (%s)\n", current_position_id, current_position.c_str());
+
+  //     send_finish_unloading(current_position_id);
+  //     unloading_in_progress = false;
+  //   }
+  // }
     
   // // ✅RFID 체크
   // if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
@@ -664,11 +669,13 @@ void send_finish_charging(uint8_t battery_level)
 void line_trace() {
   l_sensor_val = analogRead(LEFT_SENSOR);
   r_sensor_val = analogRead(RIGHT_SENSOR);
+  ll_sensor_val = analogRead(LLEFT_SENSOR);
+  rr_sensor_val = analogRead(RRIGHT_SENSOR);
 
   Serial.print("L: "); Serial.print(l_sensor_val);
   Serial.print(" R: "); Serial.println(r_sensor_val);
 
-  error = l_sensor_val - r_sensor_val;
+  error = (3 * ll_sensor_val) + (1 * l_sensor_val) + (-1 * r_sensor_val) + (-3 * rr_sensor_val);
 
 
   // ⬇ PID 제어 계산
@@ -767,6 +774,8 @@ void handle_unloading(unsigned long current_time) {
     unloading_in_progress = false;
     unloading_stage = 0;
   }
+  else
+    Serial.println("ERROR");
 }
 
 

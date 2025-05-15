@@ -43,6 +43,18 @@ class FacilityStatusDB:
                 ) ENGINE=InnoDB;
             """)
             
+            # 디스펜서 상태 테이블
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dispenser_status (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    dispenser_id VARCHAR(50),
+                    state VARCHAR(50),
+                    position VARCHAR(50),
+                    operation VARCHAR(50),
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB;
+            """)
+            
             # 초기 상태 데이터 생성
             cursor.execute("""
                 INSERT IGNORE INTO gate_status (gate_id, state, operation)
@@ -57,6 +69,11 @@ class FacilityStatusDB:
             cursor.execute("""
                 INSERT IGNORE INTO belt_status (belt_id, state, operation, container_state)
                 VALUES ('BELT', 'STOPPED', 'IDLE', 'EMPTY')
+            """)
+            
+            cursor.execute("""
+                INSERT IGNORE INTO dispenser_status (dispenser_id, state, position, operation)
+                VALUES ('DISPENSER', 'CLOSED', 'ROUTE_A', 'IDLE')
             """)
             
             conn.commit()
@@ -74,6 +91,7 @@ class FacilityStatusDB:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM gate_status")
             cursor.execute("DELETE FROM belt_status")
+            cursor.execute("DELETE FROM dispenser_status")
             conn.commit()
             cursor.close()
             conn.close()
@@ -112,6 +130,22 @@ class FacilityStatusDB:
             print(f"[DEBUG] 벨트 상태 로깅 완료: {belt_id} - state={state}, operation={operation}, container={container_state}")
         except mysql.connector.Error as err:
             print(f"[ERROR] 벨트 상태 로깅 실패: {err}")
+            
+    # 디스펜서 상태 로깅
+    def log_dispenser_status(self, dispenser_id: str, state: str, position: str, operation: str):
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO dispenser_status (dispenser_id, state, position, operation)
+                VALUES (%s, %s, %s, %s)
+            """, (dispenser_id, state, position, operation))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print(f"[DEBUG] 디스펜서 상태 로깅 완료: {dispenser_id} - state={state}, position={position}, operation={operation}")
+        except mysql.connector.Error as err:
+            print(f"[ERROR] 디스펜서 상태 로깅 실패: {err}")
 
     # 게이트 최신 상태 조회
     def get_latest_gate_status(self, gate_id: str) -> Optional[Dict]:
@@ -152,6 +186,26 @@ class FacilityStatusDB:
         except mysql.connector.Error as err:
             print(f"[ERROR] 벨트 상태 조회 실패: {err}")
             return None
+            
+    # 디스펜서 최신 상태 조회
+    def get_latest_dispenser_status(self, dispenser_id: str) -> Optional[Dict]:
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT dispenser_id, state, position, operation, timestamp
+                FROM dispenser_status
+                WHERE dispenser_id = %s
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (dispenser_id,))
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            return row if row else None
+        except mysql.connector.Error as err:
+            print(f"[ERROR] 디스펜서 상태 조회 실패: {err}")
+            return None
 
     # 게이트 상태 히스토리 조회
     def get_gate_history(self, gate_id: str, limit: int = 100) -> List[Dict]:
@@ -191,6 +245,26 @@ class FacilityStatusDB:
             return result
         except mysql.connector.Error as err:
             print(f"[ERROR] 벨트 히스토리 조회 실패: {err}")
+            return []
+            
+    # 디스펜서 상태 히스토리 조회
+    def get_dispenser_history(self, dispenser_id: str, limit: int = 100) -> List[Dict]:
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT dispenser_id, state, position, operation, timestamp
+                FROM dispenser_status
+                WHERE dispenser_id = %s
+                ORDER BY timestamp DESC
+                LIMIT %s
+            """, (dispenser_id, limit))
+            result = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return result
+        except mysql.connector.Error as err:
+            print(f"[ERROR] 디스펜서 히스토리 조회 실패: {err}")
             return []
 
     def close(self):

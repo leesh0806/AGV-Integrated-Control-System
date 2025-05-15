@@ -4,6 +4,7 @@ from backend.rest_api.routes.truck_api import truck_api
 from backend.rest_api.routes.mission_api import mission_api 
 from backend.rest_api.routes.facility_api import facility_api
 from backend.rest_api.routes.system_api import system_api, set_tcp_server_instance
+from backend.rest_api.routes.log_api import log_api
 from backend.rest_api.managers import cleanup_managers
 
 # Flask 웹 서버 인스턴스 생성
@@ -18,6 +19,7 @@ flask_server.register_blueprint(truck_api, url_prefix='/api')
 flask_server.register_blueprint(mission_api, url_prefix='/api')
 flask_server.register_blueprint(facility_api, url_prefix='/api')
 flask_server.register_blueprint(system_api, url_prefix='/api/system')
+flask_server.register_blueprint(log_api, url_prefix='/api')
 
 # 디버깅용 경로 출력 함수 추가
 def print_registered_routes():
