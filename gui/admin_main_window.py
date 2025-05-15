@@ -4,7 +4,6 @@ from PyQt6 import uic
 
 from gui.tabs.monitoring_tab import MonitoringTab
 from gui.tabs.mission_tab import MissionTab
-from gui.tabs.facility_tab import FacilityTab
 from gui.tabs.event_log_tab import EventLogTab
 from gui.tabs.settings_tab import SettingsTab
 
@@ -20,7 +19,7 @@ class AdminMainWindow(QMainWindow):
         self.setWindowTitle("지능형 운송관제 시스템 D.U.S.T. - 관리자 모드")
         
         # 메인 윈도우 크기 설정
-        self.setMinimumSize(1220, 680)
+        self.setMinimumSize(1350, 750)
         
         # 탭 위젯 참조
         self.tabWidget = self.findChild(QTabWidget, "tabWidget")
@@ -40,7 +39,7 @@ class AdminMainWindow(QMainWindow):
             return
         
         # 탭 위젯 크기 설정
-        self.tabWidget.setMinimumSize(1200, 635)
+        self.tabWidget.setMinimumSize(1300, 700)
         
         # 기존 탭 모두 제거
         while self.tabWidget.count() > 0:
@@ -53,10 +52,6 @@ class AdminMainWindow(QMainWindow):
         # 미션 관리 탭
         self.mission_tab = MissionTab()
         self.tabWidget.addTab(self.mission_tab, "Mission Management")
-        
-        # 시설 제어 탭
-        self.facility_tab = FacilityTab()
-        self.tabWidget.addTab(self.facility_tab, "Facility Control")
         
         # 이벤트 로그 탭
         self.event_log_tab = EventLogTab()

@@ -2,6 +2,7 @@
 
 from .belt_controller import BeltController
 from .gate_controller import GateController
+from .dispenser_controller import DispenserController
 from .serial_interface import SerialInterface
 from typing import Dict, Type, Any, Optional, List
 import serial
@@ -105,6 +106,9 @@ class DeviceManager:
             controller = GateController(device_interface, self.facility_status_manager)
             controller.current_gate_id = device_id  # 현재 게이트 ID 설정
             return controller
+        elif "DISPENSER" in device_id.upper():
+            print(f"[DeviceManager] 디스펜서 컨트롤러 생성: {device_id}")
+            return DispenserController(device_interface, self.facility_status_manager)
         else:
             print(f"[DeviceManager ⚠️] 알 수 없는 장치 유형: {device_id}")
             return None

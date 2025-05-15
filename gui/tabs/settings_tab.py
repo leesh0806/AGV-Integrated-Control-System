@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QMessageBox
+from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QMessageBox, QHeaderView
 from PyQt6 import uic
 import os
 import mysql.connector
@@ -72,6 +72,11 @@ class SettingsTab(QWidget):
         delete_user_button = self.findChild(QWidget, "pushButton_delete_user")
         if delete_user_button:
             delete_user_button.clicked.connect(self.delete_user)
+        
+        # 리사이즈 이벤트 연결
+        users_table = self.findChild(QWidget, "tableWidget_users")
+        if users_table:
+            self.resizeEvent = lambda event: self.adjust_table_columns(event, users_table)
             
         # 사용자 테이블 로드
         self.load_users()
@@ -209,6 +214,16 @@ class SettingsTab(QWidget):
         auto_update_check = self.findChild(QWidget, "checkBox_auto_update")
         if auto_update_check and 'auto_update' in self.settings:
             auto_update_check.setChecked(self.settings['auto_update'])
+        
+        # 배터리 부족 경고 임계값
+        battery_warning_spin = self.findChild(QWidget, "spinBox_battery_warning")
+        if battery_warning_spin and 'battery_warning_threshold' in self.settings:
+            battery_warning_spin.setValue(self.settings['battery_warning_threshold'])
+            
+        # 시설 가동 시간 제한
+        facility_time_limit_spin = self.findChild(QWidget, "spinBox_facility_time_limit")
+        if facility_time_limit_spin and 'facility_time_limit' in self.settings:
+            facility_time_limit_spin.setValue(self.settings['facility_time_limit'])
             
         # 네트워크 설정
         if 'network' in self.settings:
@@ -252,22 +267,24 @@ class SettingsTab(QWidget):
                 db_password.setText("●●●●●●●●●●")
             
     def get_default_settings(self):
-        """기본 설정값 반환"""
+        """기본 설정값"""
         return {
-            "theme": "라이트 모드",
-            "language": "한국어",
-            "auto_update": True,
-            "network": {
-                "server_address": "localhost",
-                "api_port": 5001,
-                "tcp_port": 9000
+            'theme': '라이트 모드',
+            'language': '한국어',
+            'auto_update': True,
+            'battery_warning_threshold': 20,  # 배터리 20% 미만일 때 경고
+            'facility_time_limit': 8,  # 시설 가동 시간 제한 8시간
+            'network': {
+                'server_address': 'localhost',
+                'api_port': 8000,
+                'tcp_port': 9000
             },
-            "database": {
-                "host": "localhost",
-                "port": 3306,
-                "user": "root",
-                "password": "jinhyuk2dacibul",
-                "database": "dust"
+            'database': {
+                'host': 'localhost',
+                'port': 3306,
+                'user': 'root',
+                'password': '',
+                'database': 'dust'
             }
         }
         
@@ -287,57 +304,69 @@ class SettingsTab(QWidget):
         auto_update_check = self.findChild(QWidget, "checkBox_auto_update")
         if auto_update_check:
             settings['auto_update'] = auto_update_check.isChecked()
+        
+        # 배터리 부족 경고 임계값
+        battery_warning_spin = self.findChild(QWidget, "spinBox_battery_warning")
+        if battery_warning_spin:
+            settings['battery_warning_threshold'] = battery_warning_spin.value()
+            
+        # 시설 가동 시간 제한
+        facility_time_limit_spin = self.findChild(QWidget, "spinBox_facility_time_limit")
+        if facility_time_limit_spin:
+            settings['facility_time_limit'] = facility_time_limit_spin.value()
             
         # 네트워크 설정
-        settings['network'] = {}
+        network = {}
         
         server_address = self.findChild(QWidget, "lineEdit_server_address")
         if server_address:
-            settings['network']['server_address'] = server_address.text()
+            network['server_address'] = server_address.text()
             
         api_port = self.findChild(QWidget, "lineEdit_api_port")
         if api_port:
             try:
-                settings['network']['api_port'] = int(api_port.text())
+                network['api_port'] = int(api_port.text())
             except ValueError:
-                settings['network']['api_port'] = 5001
+                network['api_port'] = 8000  # 기본값
                 
         tcp_port = self.findChild(QWidget, "lineEdit_tcp_port")
         if tcp_port:
             try:
-                settings['network']['tcp_port'] = int(tcp_port.text())
+                network['tcp_port'] = int(tcp_port.text())
             except ValueError:
-                settings['network']['tcp_port'] = 9000
+                network['tcp_port'] = 9000  # 기본값
                 
+        if network:
+            settings['network'] = network
+            
         # DB 설정
-        settings['database'] = {}
+        database = {}
         
         db_host = self.findChild(QWidget, "lineEdit_db_host")
         if db_host:
-            settings['database']['host'] = db_host.text()
+            database['host'] = db_host.text()
             
         db_port = self.findChild(QWidget, "lineEdit_db_port")
         if db_port:
             try:
-                settings['database']['port'] = int(db_port.text())
+                database['port'] = int(db_port.text())
             except ValueError:
-                settings['database']['port'] = 3306
+                database['port'] = 3306  # 기본값
                 
         db_user = self.findChild(QWidget, "lineEdit_db_user")
         if db_user:
-            settings['database']['user'] = db_user.text()
+            database['user'] = db_user.text()
             
         db_password = self.findChild(QWidget, "lineEdit_db_password")
-        if db_password and not db_password.text().startswith("●"):
-            # 비밀번호가 변경된 경우만 저장
-            settings['database']['password'] = db_password.text()
-        elif 'database' in self.settings and 'password' in self.settings['database']:
-            # 기존 비밀번호 유지
-            settings['database']['password'] = self.settings['database']['password']
+        if db_password and db_password.text():
+            database['password'] = db_password.text()
             
         db_name = self.findChild(QWidget, "lineEdit_db_name")
         if db_name:
-            settings['database']['database'] = db_name.text()
+            database['database'] = db_name.text()
+            
+        if database:
+            settings['database'] = database
             
         return settings
         
@@ -522,6 +551,19 @@ class SettingsTab(QWidget):
         # 테이블 초기화
         users_table.setRowCount(0)
         
+        # 테이블 헤더 설정 - 컬럼이 테이블을 가득 채우도록 설정
+        header = users_table.horizontalHeader()
+        
+        # 헤더 크기 조정
+        header.setStretchLastSection(True)  # 마지막 컬럼이 남은 공간을 차지하도록 설정
+        
+        # 컬럼 너비 설정 - 컬럼 내용에 맞게 자동 조정
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)  # 사용자 ID
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)      # 권한
+        
+        # 초기 컬럼 너비 설정
+        users_table.setColumnWidth(0, 300)  # 사용자 ID
+        
         try:
             # DB에서 사용자 로드
             conn = self.get_db_connection()
@@ -547,9 +589,9 @@ class SettingsTab(QWidget):
                 self.load_sample_users(users_table)
                 return
             
-            # 사용자 로드 - name 칼럼이 없으므로 username을 대신 사용하고, last_login도 제거
+            # 사용자 로드 - 사용자명과 권한만 가져옴
             cursor.execute("""
-                SELECT id, username, role
+                SELECT username, role
                 FROM users
                 ORDER BY id DESC
             """)
@@ -564,9 +606,7 @@ class SettingsTab(QWidget):
                 users_table.insertRow(row)
                 
                 users_table.setItem(row, 0, QTableWidgetItem(user["username"]))
-                users_table.setItem(row, 1, QTableWidgetItem(user["username"]))  # name 대신 username 사용
-                users_table.setItem(row, 2, QTableWidgetItem(user["role"]))
-                users_table.setItem(row, 3, QTableWidgetItem("-"))  # last_login 정보 없음
+                users_table.setItem(row, 1, QTableWidgetItem(user["role"]))
                 
         except mysql.connector.Error as err:
             print(f"[ERROR] 사용자 로드 실패: {err}")
@@ -576,9 +616,9 @@ class SettingsTab(QWidget):
         """샘플 사용자 정보 로드"""
         # 샘플 사용자 정보
         sample_users = [
-            {"username": "admin", "name": "관리자", "role": "admin", "last_login": "2023-05-15 09:30:22"},
-            {"username": "operator1", "name": "운영자1", "role": "operator", "last_login": "2023-05-15 08:45:10"},
-            {"username": "operator2", "name": "운영자2", "role": "operator", "last_login": "2023-05-14 17:22:05"}
+            {"username": "admin", "role": "관리자"},
+            {"username": "operator1", "role": "운영자"},
+            {"username": "operator2", "role": "운영자"}
         ]
         
         # 테이블에 사용자 정보 표시
@@ -587,9 +627,7 @@ class SettingsTab(QWidget):
             users_table.insertRow(row)
             
             users_table.setItem(row, 0, QTableWidgetItem(user["username"]))
-            users_table.setItem(row, 1, QTableWidgetItem(user["name"]))
-            users_table.setItem(row, 2, QTableWidgetItem(user["role"]))
-            users_table.setItem(row, 3, QTableWidgetItem(user["last_login"]))
+            users_table.setItem(row, 1, QTableWidgetItem(user["role"]))
             
     def add_user(self):
         """사용자 추가"""
@@ -608,8 +646,10 @@ class SettingsTab(QWidget):
             return
             
         username = users_table.item(selected_row, 0).text()
+        role = users_table.item(selected_row, 1).text()
+        
         # TODO: 사용자 편집 대화상자 구현
-        QMessageBox.information(self, "사용자 편집", f"사용자 '{username}' 편집 기능은 아직 구현되지 않았습니다.")
+        QMessageBox.information(self, "사용자 편집", f"사용자 '{username}' (권한: {role}) 편집 기능은 아직 구현되지 않았습니다.")
         
     def delete_user(self):
         """사용자 삭제"""
@@ -648,4 +688,15 @@ class SettingsTab(QWidget):
                 QMessageBox.information(self, "사용자 삭제", f"사용자 '{username}'이(가) 삭제되었습니다.")
             except mysql.connector.Error as err:
                 print(f"[ERROR] 사용자 삭제 실패: {err}")
-                QMessageBox.critical(self, "오류", f"사용자 삭제 중 오류가 발생했습니다: {err}") 
+                QMessageBox.critical(self, "오류", f"사용자 삭제 중 오류가 발생했습니다: {err}")
+
+    def adjust_table_columns(self, event, table):
+        """테이블 컬럼 너비 조정"""
+        # 헤더 설정 확인
+        header = table.horizontalHeader()
+        if header:
+            # ID는 컬럼 내용에 맞게 크기 조정
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)  # 사용자 ID
+            
+            # 권한 컬럼은 남은 공간을 모두 차지하게 설정
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch) 

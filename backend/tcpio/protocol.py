@@ -189,14 +189,14 @@ class TCPProtocol:
             
         # GATE_OPENED
         elif cmd_code == TCPProtocol.CMD_GATE_OPENED:
-            gate = payload.get("gate", "GATE_A")
-            gate_code = TCPProtocol._get_pos_code(gate)
+            gate_id = payload.get("gate_id", "GATE_A")
+            gate_code = TCPProtocol._get_pos_code(gate_id)
             payload_bytes = bytes([gate_code])
             
         # GATE_CLOSED
         elif cmd_code == TCPProtocol.CMD_GATE_CLOSED:
-            gate = payload.get("gate_id", "GATE_A")
-            gate_code = TCPProtocol._get_pos_code(gate)
+            gate_id = payload.get("gate_id", "GATE_A")
+            gate_code = TCPProtocol._get_pos_code(gate_id)
             payload_bytes = bytes([gate_code])
         
         # ARRIVED
@@ -259,10 +259,25 @@ class TCPProtocol:
                           TCPProtocol.CMD_FINISH_LOADING,
                           TCPProtocol.CMD_START_UNLOADING,
                           TCPProtocol.CMD_FINISH_UNLOADING]:
-            if "position" in payload:
-                position = payload.get("position")
-                position_code = TCPProtocol._get_pos_code(position)
-                payload_bytes = bytes([position_code])
+            # 확장된 위치 검증 - FINISH_LOADING은 특히 중요
+            position = "UNKNOWN"
+            
+            if "position" in payload and payload["position"]:
+                position = payload["position"]
+                if position == "UNKNOWN" and cmd_code == TCPProtocol.CMD_FINISH_LOADING:
+                    position = "LOAD_A"  # FINISH_LOADING이고 위치가 UNKNOWN이면 LOAD_A 사용
+            # FINISH_LOADING에 대한 추가 검증
+            elif cmd_code == TCPProtocol.CMD_FINISH_LOADING:
+                position = "LOAD_A"  # 위치 정보가 없으면 기본값 사용
+                print(f"[⚠️ 프로토콜 위치 보정] FINISH_LOADING에 position 필드가 없어 기본값 LOAD_A로 설정")
+            
+            # 최종 위치 값이 적재 위치인지 확인 (FINISH_LOADING)
+            if cmd_code == TCPProtocol.CMD_FINISH_LOADING and position not in ["LOAD_A", "LOAD_B"]:
+                print(f"[⚠️ 프로토콜 위치 강제 변경] FINISH_LOADING의 위치가 '{position}'로 부적절하여 'LOAD_A'로 강제 설정")
+                position = "LOAD_A"
+                
+            position_code = TCPProtocol._get_pos_code(position)
+            payload_bytes = bytes([position_code])
         
         # CANCEL_MISSION
         elif cmd_code == TCPProtocol.CMD_CANCEL_MISSION:
@@ -311,7 +326,7 @@ class TCPProtocol:
         elif cmd_code == TCPProtocol.CMD_GATE_OPENED and len(payload_bytes) >= 1:
             gate_code = payload_bytes[0]
             gate = TCPProtocol._get_pos_str(gate_code)
-            payload["gate"] = gate
+            payload["gate_id"] = gate
             
         # GATE_CLOSED
         elif cmd_code == TCPProtocol.CMD_GATE_CLOSED and len(payload_bytes) >= 1:
