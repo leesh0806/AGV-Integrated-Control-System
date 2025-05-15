@@ -58,6 +58,11 @@ class TruckSimulator:
         self.mission_id = None  # 현재 수행 중인 미션 ID
         self.target_position = None  # 현재 이동 목표 위치
         
+        # 미션 요청 관련 변수 추가
+        self.last_mission_request_time = 0  # 0으로 설정하여 즉시 미션 요청 가능하게 함
+        self.mission_request_interval = 5  # 5초마다 자동으로 미션 요청 (30초에서 변경)
+        self.mission_request_in_progress = False  # 미션 요청 중복 방지 플래그
+        
         # 명령 추적을 위한 변수
         self.processed_messages = set()  # 처리한 메시지 ID를 추적
         self.last_command = None  # 마지막으로 수신한 명령
@@ -241,7 +246,7 @@ class TruckSimulator:
         return self.send("STATUS_UPDATE", status_payload, wait=False)
     
     # 정기적인 상태 업데이트 타이머
-    def status_update_timer(self, interval=3):
+    def status_update_timer(self, interval=1):
         """정기적으로 상태 업데이트 전송"""
         consecutive_errors = 0
         max_consecutive_errors = 5
@@ -262,7 +267,7 @@ class TruckSimulator:
                 if self.charging:
                     # 충전 중일 때 (서버가 START_CHARGING 명령을 보낸 경우)
                     old_level = self.battery_level
-                    self.battery_level = min(100, self.battery_level + 10)  # 10%씩 증가
+                    self.battery_level = min(100, self.battery_level + 20)  # 20%씩 증가 (10%에서 변경)
                     print(f"[DEBUG] 배터리 충전 중: {old_level}% -> {self.battery_level}%")
                     
                     # 배터리가 100%에 도달하면 충전 완료 알림
@@ -274,10 +279,17 @@ class TruckSimulator:
                         # 잠시 대기 후 미션 요청
                         time.sleep(1)
                         print(f"[🔄 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                        self.last_mission_request_time = time.time()  # 요청 타이머 갱신
                         self.send("ASSIGN_MISSION", {}, wait=False)
                 elif self.current_position == "STANDBY":
                     # STANDBY에서는 배터리 유지
                     print(f"[DEBUG] STANDBY 상태: 배터리 유지 {self.battery_level}%")
+                    
+                    # STANDBY 상태에서 일정 시간(5초) 경과 시 자동으로 미션 요청
+                    current_time = time.time()
+                    if not self.mission_id and not self.mission_request_in_progress and current_time - self.last_mission_request_time >= self.mission_request_interval:
+                        print(f"[🔄 자동 미션 요청] STANDBY 상태에서 {self.mission_request_interval}초 경과, 새 미션을 요청합니다.")
+                        self.assign_mission_request()  # 미션 요청
                 else:
                     # 이동 중에는 배터리 소모 (3%씩 감소)
                     if self.run_state == "RUNNING":
@@ -354,7 +366,7 @@ class TruckSimulator:
                 print(f"[⚠️ 작업 타이머 오류] {e}")
                 time.sleep(1.0)  # 오류 발생 시 잠시 대기
 
-    def process_server_commands(self, timeout=0.2):  # 타임아웃 짧게 설정 (더 자주 체크)
+    def process_server_commands(self, timeout=0.1):  # 타임아웃 더 짧게 설정 (더 자주 체크)
         """서버에서 오는 명령을 처리"""
         self.client.settimeout(timeout)
         try:
@@ -518,7 +530,8 @@ class TruckSimulator:
                             # 잠시 대기 후 새 미션 요청
                             time.sleep(2)
                             print(f"[🔄 새 미션 요청] STANDBY 위치에서 자동으로 새 미션을 요청합니다.")
-                            self.assign_mission_request()
+                            self.last_mission_request_time = time.time()  # 요청 타이머 갱신
+                            self.assign_mission_request()  # 미션 요청
                 else:
                     print(f"[⚠️ 경로 오류] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
                     print(f"[⚠️ 경고] 현재 위치({self.current_position})에서 다음 이동할 위치를 결정할 수 없습니다.")
@@ -636,6 +649,10 @@ class TruckSimulator:
                 self.mission_id = mission_id
                 self.run_state = "ASSIGNED"
                 
+                # 미션 요청 타이머 갱신 및 플래그 초기화
+                self.last_mission_request_time = time.time()
+                self.mission_request_in_progress = False
+                
                 print(f"[✅ 미션 수신] → 미션 ID: {mission_id}, source = {self.source}")
                 print(f"[📝 미션 할당 확인] 미션 ID가 성공적으로 설정됨: {self.mission_id}, source = {self.source}")
                 
@@ -663,12 +680,16 @@ class TruckSimulator:
                     # 잠시 대기 후 미션 요청
                     time.sleep(1)
                     print(f"[🔄 충전 후 미션 요청] 배터리 충전 완료 후 새 미션을 요청합니다.")
+                    self.last_mission_request_time = time.time()  # 요청 타이머 갱신
                     self.send("ASSIGN_MISSION", {}, wait=False)
                 else:
                     # 충전 시작
-                    self.charging = True
+                    self.charging = True  # 이 부분이 중요합니다. 무조건 충전 상태로 설정
                     print(f"[🔋 충전 중] 현재 배터리: {self.battery_level}%. 충전이 시작되었습니다.")
                     print(f"[ℹ️ 정보] 충전 완료 후 자동으로 새 미션을 요청합니다.")
+                    
+                # 명령에 대한 응답 추가
+                self.send("ACK", {"cmd": "START_CHARGING", "status": "SUCCESS"}, wait=False)
             
             # NO_MISSION 응답 처리
             elif cmd == "NO_MISSION":
@@ -676,6 +697,10 @@ class TruckSimulator:
                 wait_time = payload.get("wait_time", 10)
                 print(f"[ℹ️ 미션 없음] 이유: {reason}")
                 print(f"[ℹ️ 대기] {wait_time}초 후 다시 미션을 요청합니다.")
+                
+                # 미션 요청 타이머 갱신 및 플래그 초기화
+                self.last_mission_request_time = time.time()
+                self.mission_request_in_progress = False
                 
                 # 대기 시간 동안 하트비트 전송 (연결 유지)
                 for i in range(wait_time, 0, -2):
@@ -742,12 +767,28 @@ class TruckSimulator:
 
     def assign_mission_request(self):
         """미션 할당 요청"""
+        # 이미 미션 요청 중이면 중복 요청 방지
+        if self.mission_request_in_progress:
+            print("[⚠️ 미션 요청 중복] 이미 미션 요청이 진행 중입니다.")
+            return False
+            
         print("[🔍 미션 요청] 서버에 새로운 미션을 요청합니다...")
+        self.mission_request_in_progress = True  # 요청 시작 플래그 설정
+        
         if self.send("ASSIGN_MISSION", {}, wait=False):
+            self.last_mission_request_time = time.time()  # 요청 타임스탬프 갱신
+            # 요청 완료 플래그는 5초 후 자동 해제 (응답 대기 위해)
+            threading.Timer(5.0, self._reset_mission_request_flag).start()
             return True
         else:
             print("[❌ 미션 요청 실패] 서버에 미션을 요청할 수 없습니다.")
+            self.mission_request_in_progress = False  # 실패 시 즉시 플래그 해제
             return False
+            
+    def _reset_mission_request_flag(self):
+        """미션 요청 중복 방지 플래그 초기화"""
+        self.mission_request_in_progress = False
+        print("[ℹ️ 미션 요청 상태 초기화] 다음 미션 요청이 가능합니다.")
 
     def run_simulation(self):
         """서버 명령에 따라 시뮬레이션 실행"""
@@ -768,7 +809,17 @@ class TruckSimulator:
             if self.current_position == "STANDBY":
                 print("[ℹ️ 초기 위치] STANDBY에서 시작")
                 # 미션 요청
+                print("[🚀 초기화] 미션 요청을 즉시 시작합니다.")
+                time.sleep(1)  # 연결 안정화를 위한 짧은 대기
                 self.assign_mission_request()
+                
+                # 서버가 응답할 시간을 주기 위해 잠시 대기
+                time.sleep(2)
+                
+                # 미션을 받지 못했다면 중복 방지 플래그 초기화 (즉시 다시 요청 가능하도록)
+                if not self.mission_id:
+                    print("[⚠️ 미션 수신 안됨] 미션 요청 플래그를 초기화하여 다시 요청할 수 있도록 합니다.")
+                    self.mission_request_in_progress = False
             else:
                 # 현재 위치 보고
                 print(f"[ℹ️ 현재 위치] {self.current_position}에서 시작")
