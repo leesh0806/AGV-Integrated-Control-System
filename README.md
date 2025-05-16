@@ -40,21 +40,6 @@
   </thead>
   <tbody>
     <tr>
-      <td><strong>장진혁</strong></td>
-      <td>
-        <a href="https://github.com/jinhyuk2me">
-          <img src="https://img.shields.io/badge/github-jinhyuk2me-181717?style=flat-square&logo=github&logoColor=white">
-        </a>
-      </td>
-      <td>
-        FSM 제어 흐름 및 상태 전이 구현<br>
-        트럭 TCP 통신 구조 설계 및 명령 송수신 구현<br>
-        설비 시리얼 제어 모듈 개발 (게이트, 벨트, 적재소)<br>
-        GUI 시스템 개발 (PyQt6 기반, 탭별 기능 구현)<br>
-        DB 테이블 설계 및 상태 로그 저장 시스템 구축<br>
-      </td>
-    </tr>
-    <tr>
       <td><strong>김대인</strong></td>
       <td>
         <a href="https://github.com/Daeinism">
@@ -79,8 +64,24 @@
         (작성 예정)
       </td>
     </tr>
+    <tr>
+      <td><strong>장진혁</strong></td>
+      <td>
+        <a href="https://github.com/jinhyuk2me">
+          <img src="https://img.shields.io/badge/github-jinhyuk2me-181717?style=flat-square&logo=github&logoColor=white">
+        </a>
+      </td>
+      <td>
+        FSM 제어 흐름 및 상태 전이 구현<br>
+        트럭 TCP 통신 구조 설계 및 명령 송수신 구현<br>
+        설비 시리얼 제어 모듈 개발 (게이트, 벨트, 적재소)<br>
+        GUI 시스템 개발 (PyQt6 기반, 탭별 기능 구현)<br>
+        DB 테이블 설계 및 상태 로그 저장 시스템 구축<br>
+      </td>
+    </tr>
   </tbody>
 </table>
+
 
 
 ## 📦 2. 프로젝트 개요
