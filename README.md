@@ -1,110 +1,126 @@
-# iot-repo-4
-IoT 프로젝트 4조 저장소. 스마트 운송 관제 시스템 (with 희토류)
+![배너](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/banner.png?raw=true)
 
-## hello world
-## Introduction
-![image](https://github.com/user-attachments/assets/5e2d5fe0-94d9-42e6-b76e-825557a285cc)
+---
 
-### 주제
-| 주제 | 스마트 운송 관제 시스템 |
-|:---|:---|
-| 서비스 명 | D.U.S.T|
-| 배경 | 
-| 서비스 | 
+## 📚 목차
 
-### 기술 스택
-|분류|기술|
-|---|---|
-|개발환경|<img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=white"/> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=Ubuntu&logoColor=white"/>|
-|언어| ![image](https://github.com/user-attachments/assets/bbe4f6ae-9385-48db-b091-61309c29f707) <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=Python&logoColor=white"/>|
-|하드웨어|![image](https://github.com/user-attachments/assets/4065f635-0427-452b-90ec-39ffccc53d3a) <img src="https://img.shields.io/badge/Platform-ESP32-informational?style=flat&logo=Arduino&logoColor=white&color=00979D"/>|
-|GUI|![image](https://github.com/user-attachments/assets/9cc06401-21cb-48fc-8e7b-0e78c9f76e2c)|
-|데이터베이스|<img src="https://img.shields.io/badge/MYSQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white"/>|
-|협업 툴|<img src="https://img.shields.io/badge/confluence-172B4D?style=for-the-badge&logo=confluence&logoColor=white"/> <img src="https://img.shields.io/badge/slack-4A154B?style=for-the-badge&logo=slack&logoColor=white"/> <img src="https://img.shields.io/badge/Jira-0052CC?style=for-the-badge&logo=Jira&logoColor=white"/>
+1. [프로젝트 개요](#1-프로젝트-개요)  
+2. [기술 스택](#2-기술-스택)  
+3. [프로젝트 목적 / 필요성](#3-프로젝트-목적--필요성)  
+4. [요구사항 정의 (UR / SR)](#4-요구사항-정의)  
+5. [데이터베이스 구성 및 출처](#5-데이터베이스-구성-및-출처)  
+6. [기능 설명](#6-기능-설명)  
+7. [한계점](#7-한계점)  
+8. [디렉토리 구조](#8-디렉토리-구조)  
+
+---
+
+# 🚚 IoT 기반 운송로봇 관제 시스템
+
+## 📦 1. 프로젝트 개요
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%">
+</p>
+
+> ⏰ **프로젝트 기간**: 2025.05.12 ~ 2025.05.15
+
+**D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력 → 서버 제어 → 트럭 주행 → 설비 제어 → GUI 반영**까지 운송 시스템의 제어 흐름 전체를 통합하여 구현한 **IoT 기반 관제 시스템**입니다.
+
+트럭은 RFID 태그를 인식하며 지정된 경로를 따라 주행하고, 서버는 FSM 로직을 통해 상태에 따른 제어 명령을 전송합니다. 관제자는 GUI를 통해 전체 상태를 확인하고, 필요한 시설 및 트럭 제어를 직접 수행할 수 있습니다.
+
+---
+
+## 🛠️ 2. 기술 스택
+
+| 분류 | 기술 구성 | 배지 |
+|------|-----------|------|
+| **MCU 및 펌웨어** | ESP32-WROOM, Arduino IDE | ![ESP32](https://img.shields.io/badge/ESP32-WROOM-E7352C?style=for-the-badge&logo=espressif&logoColor=white) ![Arduino](https://img.shields.io/badge/Arduino-00979D?style=for-the-badge&logo=arduino&logoColor=white) |
+| **센서** | RFID, 초음파 센서, IR 라인트레이서 | ![RFID](https://img.shields.io/badge/RFID-0052CC?style=for-the-badge) ![Ultrasonic](https://img.shields.io/badge/Ultrasonic-8E44AD?style=for-the-badge) ![Infrared](https://img.shields.io/badge/IR%20Sensor-E67E22?style=for-the-badge) |
+| **통신** | TCP 소켓 통신 (JSON / Byte 프로토콜) | ![TCP](https://img.shields.io/badge/TCP%20Socket-0052CC?style=for-the-badge&logo=protocols&logoColor=white) ![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white) |
+| **제어 로직** | 상태기반 FSM (Finite State Machine) | ![FSM](https://img.shields.io/badge/FSM%20Control-008080?style=for-the-badge) |
+| **프로그래밍 언어** | Python 3.12 | ![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white) |
+| **관제 UI** | PyQt6 (QTabWidget 기반) | ![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white) |
+| **DB 연동** | MySQL, PyMySQL | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white) ![PyMySQL](https://img.shields.io/badge/PyMySQL-3776AB?style=for-the-badge&logo=python&logoColor=white) |
+| **버전 관리** | Git, GitHub | ![Git](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white) |
+
+---
+
+## 🎯 3. 프로젝트 목적 / 필요성
+
+본 프로젝트는 **경로 기반 운송 로봇을 제어하고 전체 시스템 흐름을 일관되게 구성하는 데 중점**을 두었습니다. 단순한 주행 제어나 UI가 아닌, **센서 입력부터 서버 FSM 처리, 설비 제어, GUI 반영까지 전 영역을 아우르는 구현**을 목표로 했습니다.
+
+### 🔍 추진 배경
+
+- 물류 현장에는 **일정한 경로를 반복 이동하며 상호작용하는 소형 로봇 시스템**의 수요가 많으며, 이를 실제로 구현하려면 **센서, 통신, 판단, 제어, UI**가 모두 유기적으로 연결되어야 합니다.
+- 본 시스템은 이러한 연결 구조를 **단일 통합 흐름으로 구성**하였고, 복잡하지 않지만 명확하게 작동하는 시스템을 직접 설계/개발했습니다.
+
+---
+
+### ⚙️ 구현 범위
+
+- **FSM 기반 상태 전이 제어 시스템** 구축 (서버 측 상태 판단 및 명령 송신)
+- **ESP32 기반 트럭 제어 및 센서 통합 (RFID + 초음파 등)**
+- **TCP 기반 메시지 송수신 구조 설계 및 바이트 프로토콜 구현**
+- **PyQt 기반 관제 UI 구성 (지도 시각화 + 제어 패널 통합)**
+- **MySQL 기반 미션/상태/로그 관리 연동**
+
+> 본 시스템은 각 요소가 독립적으로 기능하는 것이 아닌, **서버와 로봇, 설비와 GUI가 실시간으로 연결되어 동작하는 구조**에 초점을 맞췄습니다.
+
+---
+
+## 🧾 4. 요구사항 정의 (UR / SR)
+
+본 시스템의 기능은 사용자 관점에서의 요구사항(**User Requirement, UR**)과  이를 만족시키기 위한 시스템 관점의 요구사항(**System Requirement, SR**)으로 나뉘며, 각 항목은 구현된 기능 기준으로 우선순위(Priority)를 함께 정의하였습니다.
+
+### ✅ User Requirement (UR)
+
+| ID | 요구사항 내용 | 우선순위 |
+|----|----------------|---------|
+| UR_01 | 차량은 특정 장소로 이동할 수 있어야 한다. | R |
+| UR_02 | 이동에 사용되는 차량은 무인 주행이 가능해야 한다. | O |
+| UR_03 | 권한 있는 사용자만 시스템에 접속할 수 있어야 한다. | R |
+| UR_04 | 차량 이동 단계별 상태를 실시간으로 모니터링할 수 있어야 한다. | R |
+| UR_05 | 차량의 상태 기록을 저장하고 조회할 수 있어야 한다. | R |
+| UR_06 | 각 시설의 상태를 모니터링할 수 있어야 한다. | R |
+| UR_07 | 차량 출입은 허가된 차량에 한해 이루어져야 한다. | R |
+| UR_08 | 자동화된 적재 시설이 존재해야 한다. | R |
+| UR_09 | 적재 시설은 수동 제어도 가능해야 한다. | O |
+| UR_10 | 차량은 자동으로 화물을 적하할 수 있어야 한다. | R |
+| UR_11 | 화물 저장소가 자동화되어 있어야 한다. | R |
+| UR_12 | 저장소는 가용성을 고려해 자동으로 선택되어야 한다. | O |
+| UR_13 | 저장소는 상황에 따라 동작을 정지할 수 있어야 한다. | R |
+
+### ✅ System Requirement (SR)
+
+| ID | 기능명 | 설명 |
+|-----|--------|------|
+| SR_01 | 차량 모니터링 기능 | 트럭의 위치, 상태, 미션 진행 상황을 실시간 확인 |
+| SR_02 | 시설 모니터링 기능 | 게이트, 벨트, 적재소 등 주요 시설 상태 시각화 |
+| SR_03 | 사용자 권한 관리 기능 | 로그인, 접근 권한 설정 및 사용자 정보 관리 |
+| SR_04 | 작업 관리 기능 | 미션 등록, 실행, 로그 기록 및 조회 기능 |
+| SR_05 | 중앙 통제 기능 | 트럭과 시설을 통합 제어하는 FSM 기반 중앙 서버 |
+| SR_06 | 차량 자동 주행 기능 | 지정 경로에 따라 무인 주행 및 장애물 정지 |
+| SR_07 | 적하 기능 | 적재 완료 후 화물을 자동으로 하역 |
+| SR_08 | 위치 인식 기능 | RFID 기반으로 트럭 위치 판단 및 상태 연동 |
+| SR_09 | 상태 보고 기능 | 미션, 위치, 배터리 등의 상태를 서버에 실시간 송신 |
+| SR_10 | 출입 제어 기능 | 차량 출입 여부를 게이트에서 확인 및 제한 |
+| SR_11 | 게이트 자동 제어 기능 | 차량 통과 여부에 따라 자동 개폐 수행 |
+| SR_12 | 적재소 차량 감지 기능 | 트럭 도착 여부 인식 및 응답 처리 |
+| SR_13 | 적재소 자동 제어 기능 | 서버 명령에 따라 화물 적하 자동 제어 |
+| SR_14 | 적재소 수동 제어 기능 | 수동으로 자원 투하 명령 가능 (GUI에서 제어 가능) |
+| SR_15 | 벨트 이송 제어 기능 | 중앙 서버 명령에 따라 벨트 작동 및 정지 |
+| SR_16 | 저장소 적재량 감지 기능 | 컨테이너의 실시간 적재 상태 모니터링 |
+| SR_17 | 저장소 선택 자동화 기능 | 저장소 가용성에 따라 자동으로 저장 대상 결정 |
+| SR_18 | 자동 정지 기능 | 중앙 명령 또는 저장소 포화 시 운반 시스템 정지 |
+| SR_19 | 충전소 기능 | 배터리 상태에 따라 자동 충전 및 대기 전환 |
+
+> 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며,  
+> 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
 
 
+---
 
-### 팀명 : D.U.S.T
-| 이름 | 주요 역할 | 상세 |
-|:---:|---|---|
-| 김대인 (팀장) | **아이디어 구축 및 기구 설계**  | 전체 핵심적 스케줄 정리 및 적재소 모듈 설계 |
-| 이건우 (팀원) | **기구 설계 및 업무 문서화** | 컨베이어 벨트 설계 및 업무 계획 문서화|
-| 이승훈 (팀원) | **기구 설계 및 주행 제어**   | 트럭 설계 및 라인주행 제어 |
-| 장진혁 (팀원) | **서버 구축 및 GUI제작**  | 서버통신과 백엔드 및 PyQt를 이용한 서비스화 |
-
-## 0. Research Background
-
-### 0-1. 
-
-
-
-### 0-2. 
-
-
-
-### 0-3. 
-
-
-
-### 0-결론
-
-
-
-## 1. 서비스를 위한 필요 데이터 수집
-
-### 1-1. 사용자 요구사항 정의 (USER REQUIREMENTS)
-
-
-| No. | 요구사항 |
-|:---:|---|
-|UR_01|
-|UR_02| 
-|UR_03|
-|UR_04|
-|UR_05|
-|UR_06|
-|UR_07|
-|UR_08|
-
-### 1-2. 시스템 요구사항 정의 (SYSTEM REQUIREMENTS)
-
-
-
-| No. | 기능 이름 | 기능 설명 |
-|:---:|---|---|
-|SR_01| | |
-|SR_02| | |
-|SR_03| | |
-|SR_04||
-|SR_05|||
-
-### 1-3. 필요 데이터 다이어그램 만들기 (ER DIAGRAM)
-
-
-
-### 1-4. 수집 데이터 정리 (COLLECT)
-
-| SR No. | 기능 | 데이터 | DB 테이블 or 파일명 |
-|:---:|---|---|---|
-|SR_02_01|  | | |
-|SR_02_02| | |  |
-|        |         |  |  |
-|SR_02_03|  |  |  |
-|SR_02_04|  | |  |
-|SR_03_01|  |  |  |
-|SR_04_01|  |  |  |
-|SR_05_01|  |  |  |
-|        |         |  |  |
-
-
-## 2. 서비스 기획 (STORYBOARD)
-
-## Review
-| 이름   | 역할   | 소감 |
-|--------|--------|------|
-| 김대인  | 팀장 |  |
-| 이건우  | 팀원 |  |
-| 이승훈  | 팀원 |  |
-| 장진혁  | 팀원 |  |
 
 
