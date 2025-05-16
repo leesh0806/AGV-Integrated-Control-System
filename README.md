@@ -50,14 +50,14 @@
 
 ## 🎯 3. 프로젝트 목적 / 필요성
 
-본 프로젝트는 **경로 기반 운송 로봇을 제어하고 전체 시스템 흐름을 일관되게 구성하는 데 중점**을 두었습니다. 단순한 주행 제어나 UI가 아닌, **센서 입력부터 서버 FSM 처리, 설비 제어, GUI 반영까지 전 영역을 아우르는 구현**을 목표로 했습니다.
+본 프로젝트는 **경로 기반 운송 로봇을 제어하고 전체 시스템 흐름을 일관되게 구성하는 데 중점**을 두었습니다. 
+
+단순한 주행 제어나 UI가 아닌, **센서 입력부터 서버 FSM 처리, 설비 제어, GUI 반영까지 전 영역을 아우르는 구현**을 목표로 했습니다.
 
 ### 🔍 추진 배경
 
 - 물류 현장에는 **일정한 경로를 반복 이동하며 상호작용하는 소형 로봇 시스템**의 수요가 많으며, 이를 실제로 구현하려면 **센서, 통신, 판단, 제어, UI**가 모두 유기적으로 연결되어야 합니다.
 - 본 시스템은 이러한 연결 구조를 **단일 통합 흐름으로 구성**하였고, 복잡하지 않지만 명확하게 작동하는 시스템을 직접 설계/개발했습니다.
-
----
 
 ### ⚙️ 구현 범위
 
@@ -71,7 +71,56 @@
 
 ---
 
-## 🧾 4. 요구사항 정의 (UR / SR)
+## 🧩 4. 시스템 아키텍처
+
+본 프로젝트는 **트럭 디바이스, 관제 서버, 설비 컨트롤러, 사용자 인터페이스**로 구성된 IoT 기반 분산 제어 시스템입니다. 
+
+각 구성요소는 다음과 같은 통신 구조로 연결됩니다:
+
+- **TCP 통신**: 트럭 ↔ 중앙 서버 간 양방향 명령/상태 전송
+- **시리얼 통신**: 서버 ↔ 설비 컨트롤러(벨트, 게이트, 디스펜서) 간 유선 명령 전송
+- **HTTP 통신**: 관제 UI ↔ 서버 내 서비스 레이어 간 RESTful API 호출
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/system.png?raw=true" width="85%">
+</p>
+
+---
+
+### 🧠 서버 중심 구조 및 소프트웨어 계층
+
+서버는 FSM 기반 제어 흐름을 중심으로, 다음과 같은 구성 요소로 설계되어 있습니다:
+
+- **Main Controller**: 트럭 및 설비를 제어하는 중앙 FSM / 명령 관리자
+- **TruckFSM**: 트럭 상태 전이 및 이벤트 처리 로직
+- **FacilityManager**: Gate, Belt, Dispenser 제어 라우팅
+- **StatusManager**: 각 장치의 상태를 실시간 수집 및 DB 반영
+- **MissionManager**: 미션 등록, 상태 변경, 로그 기록 처리
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/sw.png?raw=true" width="70%">
+</p>
+
+---
+
+### 🏗 하드웨어 구성 및 연결 구조
+
+각 요소는 물리적으로 다음과 같은 장치 및 통신 방식으로 구성되어 있습니다:
+
+- **트럭**: ESP32 기반 주행 제어, RFID/초음파 센서 장착, DC 모터 구동
+- **시설**: Arduino 기반 컨트롤러 (게이트/벨트/적재소), Servo 및 Step Motor 제어
+- **충전소**: 배터리 상태 감지 및 충전 명령 응답
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/hw.png?raw=true" width="70%">
+</p>
+
+> 이와 같은 아키텍처 구성은 **현실 환경의 제어 흐름을 소형화·모듈화**한 구조로,  
+> 각 장치 간 통신 및 상태 연계를 실제 작동 가능한 수준까지 구현하였습니다.
+
+---
+
+## 🧾 5. 요구사항 정의 (UR / SR)
 
 본 시스템의 기능은 사용자 관점에서의 요구사항(**User Requirement, UR**)과  이를 만족시키기 위한 시스템 관점의 요구사항(**System Requirement, SR**)으로 나뉘며, 각 항목은 구현된 기능 기준으로 우선순위(Priority)를 함께 정의하였습니다.
 
@@ -119,53 +168,3 @@
 
 > 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며,  
 > 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
-
-
----
-
-## 🧩 4. 시스템 아키텍처
-
-본 프로젝트는 **트럭 디바이스, 관제 서버, 설비 컨트롤러, 사용자 인터페이스**로 구성된  
-IoT 기반 분산 제어 시스템입니다. 각 구성요소는 다음과 같은 통신 구조로 연결됩니다:
-
-- **TCP 통신**: 트럭 ↔ 중앙 서버 간 양방향 명령/상태 전송
-- **시리얼 통신**: 서버 ↔ 설비 컨트롤러(벨트, 게이트, 디스펜서) 간 유선 명령 전송
-- **HTTP 통신**: 관제 UI ↔ 서버 내 서비스 레이어 간 RESTful API 호출
-
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/system.png?raw=true" width="85%">
-</p>
-
----
-
-### 🧠 서버 중심 구조 및 소프트웨어 계층
-
-서버는 FSM 기반 제어 흐름을 중심으로, 다음과 같은 구성 요소로 설계되어 있습니다:
-
-- **Main Controller**: 트럭 및 설비를 제어하는 중앙 FSM / 명령 관리자
-- **TruckFSM**: 트럭 상태 전이 및 이벤트 처리 로직
-- **FacilityManager**: Gate, Belt, Dispenser 제어 라우팅
-- **StatusManager**: 각 장치의 상태를 실시간 수집 및 DB 반영
-- **MissionManager**: 미션 등록, 상태 변경, 로그 기록 처리
-
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/sw.png?raw=true" width="70%">
-</p>
-
----
-
-### 🏗 하드웨어 구성 및 연결 구조
-
-각 요소는 물리적으로 다음과 같은 장치 및 통신 방식으로 구성되어 있습니다:
-
-- **트럭**: ESP32 기반 주행 제어, RFID/초음파 센서 장착, DC 모터 구동
-- **시설**: Arduino 기반 컨트롤러 (게이트/벨트/적재소), Servo 및 Step Motor 제어
-- **충전소**: 배터리 상태 감지 및 충전 명령 응답
-
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/hw.png?raw=true" width="70%">
-</p>
-
-> 이와 같은 아키텍처 구성은 **현실 환경의 제어 흐름을 소형화·모듈화**한 구조로,  
-> 각 장치 간 통신 및 상태 연계를 실제 작동 가능한 수준까지 구현하였습니다.
-
