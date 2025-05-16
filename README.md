@@ -4,21 +4,19 @@
 
 ## 📚 목차
 
-```
-1. 팀 구성
-2. 프로젝트 개요
-3. 기술 스택
-4. 프로젝트 목적 / 필요성
-5. 시스템 아키텍처
-6. 기술적 문제 및 해결
-7. 요구사항 정의 (UR / SR)
-8. 데이터베이스 구성 및 출처
-9. 기능 설명
-10. 통신 구조
-11. 한계점
-12. 디렉토리 구조
-13. 실행 방법
-```
+1. [팀 구성](#1-팀-구성)  
+2. [프로젝트 개요](#2-프로젝트-개요)  
+3. [기술 스택](#3-기술-스택)  
+4. [프로젝트 목적 / 필요성](#4-프로젝트-목적--필요성)  
+5. [시스템 아키텍처](#5-시스템-아키텍처)  
+6. [기술적 문제 및 해결](#6-기술적-문제-및-해결)  
+7. [요구사항 정의 (UR / SR)](#7-요구사항-정의-ur--sr)  
+8. [데이터베이스 구성 및 출처](#8-데이터베이스-구성-및-출처)  
+9. [기능 설명](#9-기능-설명)  
+10. [통신 구조](#10-통신-구조)  
+11. [한계점](#11-한계점)  
+12. [디렉토리 구조](#12-디렉토리-구조)  
+13. [실행 방법](#13-실행-방법)
 
 ---
 
@@ -149,7 +147,7 @@
 - **HTTP 통신**: 관제 UI ↔ 서버 내 서비스 레이어 간 RESTful API 호출
 
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/system.png?raw=true" width="85%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
 </p>
 
 ### 🧠 서버 중심 구조 및 소프트웨어 계층
@@ -163,7 +161,7 @@
 - **MissionManager**: 미션 등록, 상태 변경, 로그 기록 처리
 
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/sw.png?raw=true" width="70%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/sw.png?raw=true" width="70%">
 </p>
 
 ### 🏗 하드웨어 구성 및 연결 구조
@@ -175,7 +173,7 @@
 - **충전소**: 배터리 상태 감지 및 충전 명령 응답
 
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/hw.png?raw=true" width="70%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/hw.png?raw=true" width="70%">
 </p>
 
 > 이 시스템은 트럭 주행, 센서 인식, 서버 제어, 설비 제어, 사용자 인터페이스까지 하나의 통합 제어 흐름으로 구현되었으며, 소형 물류 로봇 시스템의 전체 작동 흐름을 담고 있습니다.
