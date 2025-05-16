@@ -7,11 +7,12 @@
 1. [프로젝트 개요](#1-프로젝트-개요)  
 2. [기술 스택](#2-기술-스택)  
 3. [프로젝트 목적 / 필요성](#3-프로젝트-목적--필요성)  
-4. [요구사항 정의 (UR / SR)](#4-요구사항-정의)  
-5. [데이터베이스 구성 및 출처](#5-데이터베이스-구성-및-출처)  
-6. [기능 설명](#6-기능-설명)  
-7. [한계점](#7-한계점)  
-8. [디렉토리 구조](#8-디렉토리-구조)  
+4. [시스템 아키텍처](#4-시스템-아키텍처)  
+5. [요구사항 정의 (UR / SR)](#5-요구사항-정의)  
+6. [데이터베이스 구성 및 출처](#6-데이터베이스-구성-및-출처)  
+7. [기능 설명](#7-기능-설명)  
+8. [한계점](#8-한계점)  
+9. [디렉토리 구조](#9-디렉토리-구조)
 
 ---
 
@@ -122,5 +123,49 @@
 
 ---
 
+## 🧩 4. 시스템 아키텍처
 
+본 프로젝트는 **트럭 디바이스, 관제 서버, 설비 컨트롤러, 사용자 인터페이스**로 구성된  
+IoT 기반 분산 제어 시스템입니다. 각 구성요소는 다음과 같은 통신 구조로 연결됩니다:
+
+- **TCP 통신**: 트럭 ↔ 중앙 서버 간 양방향 명령/상태 전송
+- **시리얼 통신**: 서버 ↔ 설비 컨트롤러(벨트, 게이트, 디스펜서) 간 유선 명령 전송
+- **HTTP 통신**: 관제 UI ↔ 서버 내 서비스 레이어 간 RESTful API 호출
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/system.png?raw=true" width="85%">
+</p>
+
+---
+
+### 🧠 서버 중심 구조 및 소프트웨어 계층
+
+서버는 FSM 기반 제어 흐름을 중심으로, 다음과 같은 구성 요소로 설계되어 있습니다:
+
+- **Main Controller**: 트럭 및 설비를 제어하는 중앙 FSM / 명령 관리자
+- **TruckFSM**: 트럭 상태 전이 및 이벤트 처리 로직
+- **FacilityManager**: Gate, Belt, Dispenser 제어 라우팅
+- **StatusManager**: 각 장치의 상태를 실시간 수집 및 DB 반영
+- **MissionManager**: 미션 등록, 상태 변경, 로그 기록 처리
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/sw.png?raw=true" width="70%">
+</p>
+
+---
+
+### 🏗 하드웨어 구성 및 연결 구조
+
+각 요소는 물리적으로 다음과 같은 장치 및 통신 방식으로 구성되어 있습니다:
+
+- **트럭**: ESP32 기반 주행 제어, RFID/초음파 센서 장착, DC 모터 구동
+- **시설**: Arduino 기반 컨트롤러 (게이트/벨트/적재소), Servo 및 Step Motor 제어
+- **충전소**: 배터리 상태 감지 및 충전 명령 응답
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system%20architecture/hw.png?raw=true" width="70%">
+</p>
+
+> 이와 같은 아키텍처 구성은 **현실 환경의 제어 흐름을 소형화·모듈화**한 구조로,  
+> 각 장치 간 통신 및 상태 연계를 실제 작동 가능한 수준까지 구현하였습니다.
 
