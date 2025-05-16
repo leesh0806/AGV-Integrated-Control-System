@@ -86,8 +86,6 @@
 
 ## 📦 2. 프로젝트 개요
 
-[![Demo](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/videos/total_1.mp4?raw=true)
-
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%">
