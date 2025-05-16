@@ -147,7 +147,7 @@ int unloading_stage = 0;
 
 // 서보모터 제어 관련 전역 변수
 Servo unloading_servo;
-const int SERVO_PIN = 5;
+const int SERVO_PIN = 17;
 const int SERVO_INIT_ANGLE = 0;
 const int SERVO_DROP_ANGLE = 70;
 
@@ -213,8 +213,8 @@ int l_sensor_val;
 int r_sensor_val;
 int ll_sensor_val;
 int rr_sensor_val;
-int avg_PWM = 170;
-int max_pwm = 220;
+int avg_PWM = 190;
+int max_pwm = 250;
 
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
@@ -350,31 +350,6 @@ void loop()
     send_obstacle(current_position_id, true, (uint16_t)last_distance_cm);
     //integral = 0;
   }
-  
-
-  // // ✅ 적재 시작 지연 처리
-  // if (wait_start_loading && (current_time - wait_start_loading_time >= 2000)) 
-  // {
-  //   // Serial.println("🕒 적재 시작 메시지 전송 (2초 지연 후)");
-  //   send_start_loading(current_position_id);
-  //   loading_in_progress = true;
-  //   loading_start_time = current_time;
-  //   wait_start_loading = false;
-  // }
-
-  // // ✅ 적재 완료 로직 (5초 후 자동 전송)
-  // if (loading_in_progress && (current_time - loading_start_time >= 5000)) 
-  // {
-  //   // Serial.println("✅ 적재 완료 메시지 전송 (5초 경과)");
-  //   send_finish_loading(current_position_id);
-  //   if (mission_target == current_position_id) 
-  //   {
-  //     // Serial.println("✅ [미션 완료] mission_target 초기화");
-  //     mission_target = 0;
-  //   }
-  //   loading_in_progress = false;
-  //   run_command = true;
-  // }
 
   // ✅ 언로딩 시작 지연 처리 (BELT 도착 후 2초 후)
   if (wait_start_unloading) {
@@ -403,14 +378,6 @@ void loop()
       unloading_in_progress = false;
     }
   }
-    
-  // // ✅RFID 체크
-  // if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) 
-  // {
-  //   return;
-  // }
-
-  // // UID 확인 및 서버 전송
   // checkAndPrintUID(rfid.uid.uidByte);
     // ✅RFID 체크 (쿨타임 1초 적용)
   if (current_time - last_rfid_check >= 1000)  // 1초 쿨타임
@@ -461,11 +428,7 @@ void loop()
     send_status_update(battery_level, current_position_id);
   }
 
-  // rfid.PICC_HaltA();
-  // rfid.PCD_StopCrypto1();
 }
-
-
 /*------------------------------- 수신 처리--------------------------------*/
 
 void receive_binary(const uint8_t* buffer, uint8_t len) {

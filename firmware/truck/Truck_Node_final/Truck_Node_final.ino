@@ -212,8 +212,8 @@ int l_sensor_val;
 int r_sensor_val;
 int ll_sensor_val;
 int rr_sensor_val;
-int avg_PWM = 170;
-int max_pwm = 220;
+int avg_PWM = 190;
+int max_pwm = 255;
 
 
 /*--------------------------------rfid 객체 생성--------------------------------*/
@@ -257,6 +257,8 @@ void setup()
   //서보모터 초기 설정
   unloading_servo.attach(SERVO_PIN);
   unloading_servo.write(SERVO_INIT_ANGLE);  // 초기 위치
+  delay(500);  // 위치 유지용 (중요!)
+  unloading_servo.detach();  // ✨ 이 위치에 추가하세요
 
   // WiFi 연결
   WiFi.begin(ssid, password);
@@ -349,7 +351,7 @@ void loop()
     //integral = 0;
   }
     // ✅RFID 체크 (쿨타임 1초 적용)
-  if (current_time - last_rfid_check >= 1000)  // 1초 쿨타임
+  if (current_time - last_rfid_check >= 2000)  // 1초 쿨타임
   {
     if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) 
     {
@@ -368,7 +370,7 @@ void loop()
     // STANDBY일 때는 배터리 유지
     if (current_position_id != STANDBY && battery_level > 0) 
     {
-      battery_level -= 5;
+      battery_level -= 2;
       if (battery_level <= 0) 
       {
         battery_level = 0;
@@ -386,11 +388,11 @@ void loop()
   }
 
   // ✅ 상태 전송 (STATUS_UPDATE)
-  if (current_time - last_battery_report >= STATUS_REPORT_INTERVAL) 
-  {
-    last_battery_report = current_time;
-    send_status_update(battery_level, current_position_id);
-  }
+  // if (current_time - last_battery_report >= STATUS_REPORT_INTERVAL) 
+  // {
+  //   last_battery_report = current_time;
+  //   send_status_update(battery_level, current_position_id);
+  // }
 
 }
 
@@ -441,7 +443,7 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
 
     case RUN:
       run_command = true;
-      // Serial.println("🏃‍♂️ [명령] 주행 시작");
+      Serial.println("🏃‍♂️ [명령] 주행 시작");
       break;
 
     case STOP:
@@ -464,7 +466,9 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
       if (current_position_id == LOAD_A || current_position_id == LOAD_B) 
       {
         Serial.println("📥 loading");
-        // 아무 행동 안 함
+        // delay(10000);
+        // run_command = true;
+
       }
       break;
     
@@ -475,7 +479,7 @@ void receive_binary(const uint8_t* buffer, uint8_t len) {
           mission_target = 0;
         }
         run_command = true;
-
+        line_trace();
       }
       break;
 
@@ -713,6 +717,7 @@ void handle_unloading()
   unsigned long current_time = millis();
 
   Serial.println("🕒 언로딩 시작");
+  unloading_servo.attach(SERVO_PIN);
 
   // ✅ 1. 언로딩 시작 메시지 전송
   send_start_unloading(current_position_id);
@@ -728,10 +733,17 @@ void handle_unloading()
   unloading_servo.write(SERVO_INIT_ANGLE);
   delay(1000);  // 1초 기다림
 
-  // ✅ 4. 언로딩 완료 메시지 전송
+  // ✅ 4. PWM 유지 후 detach()
+  delay(1000);  // 위치 유지용 (중요!)
+  unloading_servo.detach();  // ✨ 이 위치에 추가하세요
+  Serial.println("🛑 서보 detach() 실행 → PWM 신호 차단");
+
+  // ✅ 5. 언로딩 완료 메시지 전송
   Serial.println("✅ 언로딩 완료 메시지 전송");
   send_finish_unloading(current_position_id);
-
+  delay(1000);
+  run_command = true;
+  line_trace();
   Serial.println("✅ 언로딩 종료");
 }
 
@@ -789,23 +801,34 @@ bool checkAndPrintUID(byte* uid) {
         send_arrived(LOAD_A, GATE_A);
         if (mission_target == pos_id) 
         {
+          Serial.println("Debug222");
           run_command = false;
           stop_motors();  // 도착지일 경우에만 멈춤
+          delay(10000);
+          line_trace();
+          Serial.println("44444444444");
         }
+
       }
       else if (pos_id == LOAD_B) 
       {
         send_arrived(LOAD_B, GATE_B);
         if (mission_target == pos_id) 
         {
+          Serial.println("3333333333");
           run_command = false;
           stop_motors();
+          delay(10000);
+          line_trace();
+          Serial.println("55555555555555");
         }
       }
       else if (pos_id == BELT) 
       {
         send_arrived(BELT, 0x00);
+        stop_motors();
         handle_unloading();  // 한 번에 언로딩 전체 수행
+        //line_trace();
       }
       else if (pos_id == STANDBY) 
       {
