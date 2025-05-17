@@ -210,31 +210,21 @@
 
 ![시스템 전체 흐름](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/system.png?raw=true)
 
-**시스템의 주요 동작 흐름**입니다. 트럭과 설비, 서버 간의 상호작용을 시간 순으로 보여줍니다.
-
 ### 2. 배터리 상태 변화
 
 ![배터리 상태 변화 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/battery.png?raw=true)
-
-배터리 상태가 변화하면서 시스템이 **어떻게 반응**하는지 보여줍니다. 이 시나리오는 트럭의 배터리 상태에 따라 미션 진행 여부가 결정되는 과정을 설명합니다.
 
 ### 3. **로그인 & 미션 등록**
 
 ![로그인 및 미션 등록 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/login.png?raw=true)
 
-이 시나리오는 **사용자 로그인** 및 **미션 등록** 과정의 흐름을 보여줍니다. 시스템은 사용자가 로그인하고 미션 정보를 입력할 때, 해당 정보를 서버에서 확인 후 미션을 트럭에 할당하는 과정을 설명합니다.
-
 ### 4. **장애물 감지 및 비상 중단**
 
 ![장애물 감지 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/obstacle.png?raw=true)
 
-트럭이 **장애물을 감지**하고, 그에 따라 **비상 중단**을 수행하는 과정을 보여줍니다. 장애물 감지 후, 시스템은 트럭을 안전한 상태로 정지시키고 비상 중단을 실시합니다.
-
 ### 5. **벨트 제어 및 경로 관리**
 
 ![벨트 및 경로 관리 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/belt.png?raw=true)
-
-이 다이어그램은 **벨트**와 **경로 관리**의 상호작용을 보여줍니다. 트럭의 경로가 이전 경로와 일치하는지 확인하고, **벨트가 활성화**된 상태에서 **컨테이너 상태**를 체크하여 **벨트 모터**를 제어하는 흐름을 설명합니다.
 
 ---
 
