@@ -1,5 +1,7 @@
 ![배너](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/banner.png?raw=true)
 
+> 본 프로젝트는 IoT 기반 소형 운송로봇 관제 시스템으로, 트럭 주행부터 설비 제어, GUI 모니터링까지 전체 흐름을 하나의 서버 FSM으로 통합했습니다. ESP32 트럭은 센서를 통해 경로를 따라 주행하고, 중앙 서버는 TCP/Serial 통신으로 실시간 제어 및 상태 기록을 수행합니다. 모든 기능은 실제 구현을 바탕으로 설계되었으며, 구조적으로 다중 트럭, 센서 기반 BMS, FSM 시각화 등 다양한 확장 가능성을 고려하여 개발되었습니다.
+
 ---
 
 ## 📚 목차
