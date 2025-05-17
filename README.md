@@ -93,7 +93,12 @@
 
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%">
+</p>
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%">
 </p>
 
 > ⏰ **프로젝트 기간**: 2025.05.12 ~ 2025.05.15
