@@ -3,6 +3,10 @@
 > **이 프로젝트는 RFID 태그를 따라 주행하는 소형 AGV(Automated Guided Vehicle)를 중심으로, 설비와 통신하여 미션을 수행하는 IoT 기반 통합 관제 시스템입니다.**  
 > **트럭(AGV)은 ESP32로 제어되며, 게이트/벨트/적재소 등 설비와 FSM 기반 서버를 통해 실시간 통합 제어됩니다. GUI 시스템은 운송 흐름을 시각적으로 모니터링하고 제어할 수 있도록 구현되었습니다.**
 
+[시스템 소개 영상](https://youtu.be/AI76I9BiS1k?si=EfL9UZIdROXblnkd)
+
+[전체 구동 영상](https://youtu.be/LJ2RT1eQdgk)
+
 ---
 
 ## 📚 목차
@@ -27,9 +31,6 @@
 
 # 🚚 IoT 기반 소형 AGV 통합 관제 시스템
 
-[시스템 소개 영상](https://youtu.be/AI76I9BiS1k?si=EfL9UZIdROXblnkd)
-
-[전체 구동 영상](https://youtu.be/LJ2RT1eQdgk)
 
 ## 👥 1. 팀 구성
 
@@ -105,16 +106,12 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
 
 이 시스템은 FSM(Finite State Machine) 기반의 서버 제어 흐름과 TCP/Serial 통신, 그리고 PyQt 기반 GUI 관제 화면을 통합하여, 운송 흐름을 일관되게 제어하고 시각화할 수 있도록 설계되었습니다.
 
----
-
 ### 🧭 주요 특징
 
 - AGV는 RFID 태그를 인식하며 지정된 경로를 자동 주행
 - 설비(게이트/벨트/적재소)는 서버 명령에 따라 자동 응답 및 작동
 - FSM 기반 서버가 AGV 상태와 설비 동작을 실시간으로 판단하고 명령 전송
 - PyQt GUI를 통해 전체 흐름을 시각적으로 관제하고 수동 제어 가능
-
----
 
 ### 🎯 구현 범위
 
@@ -129,15 +126,15 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
 
 ## 🛠️ 3. 기술 스택
 
-| 분류 | 기술 구성 | 배지 |
+| 분류 | 기술 구성 |  |
 |------|-----------|------|
 | **MCU 및 펌웨어** | ESP32-WROOM, Arduino IDE | ![ESP32](https://img.shields.io/badge/ESP32-WROOM-E7352C?style=for-the-badge&logo=espressif&logoColor=white) ![Arduino](https://img.shields.io/badge/Arduino-00979D?style=for-the-badge&logo=arduino&logoColor=white) |
-| **센서** | RFID, 초음파 센서, IR 라인트레이서 | ![RFID](https://img.shields.io/badge/RFID-0052CC?style=for-the-badge) ![Ultrasonic](https://img.shields.io/badge/Ultrasonic-8E44AD?style=for-the-badge) ![Infrared](https://img.shields.io/badge/IR%20Sensor-E67E22?style=for-the-badge) |
-| **통신** | TCP 소켓 통신 (JSON / Byte 프로토콜) | ![TCP](https://img.shields.io/badge/TCP%20Socket-0052CC?style=for-the-badge&logo=protocols&logoColor=white) ![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white) |
-| **제어 로직** | 상태기반 FSM (Finite State Machine) | ![FSM](https://img.shields.io/badge/FSM%20Control-008080?style=for-the-badge) |
-| **프로그래밍 언어** | Python 3.12 | ![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white) |
-| **관제 UI** | PyQt6 (QTabWidget 기반) | ![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white) |
-| **DB 연동** | MySQL, PyMySQL | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white) ![PyMySQL](https://img.shields.io/badge/PyMySQL-3776AB?style=for-the-badge&logo=python&logoColor=white) |
+| **센서** | RFID, 초음파 센서, IR 라인트레이서 |  |
+| **통신** | TCP 소켓 통신 (JSON / Byte 프로토콜) | ![TCP](https://img.shields.io/badge/TCP%20Socket-0052CC?style=for-the-badge&logo=protocols&logoColor=white) |
+| **제어 로직** | 상태기반 FSM (Finite State Machine) | |
+| **프로그래밍 언어** | Python 3.12, C++ | ![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white) |
+| **관제 UI** | PyQt6 | ![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white) |
+| **DB 연동** | MySQL | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white) |
 | **버전 관리** | Git, GitHub | ![Git](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white) |
 
 ---
@@ -518,8 +515,6 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
 
 각 통신 방식은 독립적이지만, **중앙 서버의 FSM 제어 흐름에 따라 긴밀히 연결**되어 작동합니다.
 
----
-
 ### 🛰 1. 트럭 ↔ 중앙 서버: **TCP 통신**
 
 #### ✅ 메시지 포맷
@@ -568,8 +563,6 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
 
 > FSM 상태 전이는 이 메시지 흐름에 따라 자동 수행됩니다.
 
----
-
 ### ⚙️ 2. 설비 ↔ 중앙 서버: **Serial 통신**
 
 #### ✅ 설비 구성
@@ -590,8 +583,6 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
 | `GATE_A_OPEN`    | 게이트 A 개방     |
 | `BELT_RUN`   | 벨트 작동 시작    |
 | `DISPENSER_OPEN` | 자원 투하 실행 |
-
----
 
 ### 🌐 3. GUI ↔ 중앙 서버: **HTTP REST API**
 
@@ -634,8 +625,6 @@ D.U.S.T. (Dynamic Unified Smart Transport) 는 RFID 기반 위치 인식을 통�
   }
 }
 ```
-
----
 
 ### ✅ 통신 방식 비교 요약
 
