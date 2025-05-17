@@ -366,29 +366,19 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **배터리 상태 모니터링** | 배터리 잔량 및 FSM 상태를 서버에 주기적으로 보고하며, 충전 필요 여부를 판단합니다. |
 | **미션 수행** | 서버로부터 미션을 할당받고, 상태에 따라 FSM 전이 및 도착 후 하역을 자동 수행합니다. |
 | **충돌 방지** | 초음파 센서를 통해 장애물을 감지하고 정지하도록 구현되어 있습니다. |
+| **트럭 소켓 자동 등록** | 미등록 상태의 트럭도 TEMP 소켓으로 임시 등록되며, 정상적인 ID로 자동 재매핑됩니다. |
+| **FSM 상태 회복 처리** | 트럭 FSM은 상태 불일치 시에도 강제로 상태를 보정하여 정상 흐름을 유지합니다. |
+| **비상 정지/복귀 기능** | EMERGENCY 상태를 통한 정지 및 RESET을 통한 복귀 기능이 구현되어 있습니다. |
 
 ---
 
 ### 🏗 시설 제어 기능
 
-#### Gate
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_2.gif?raw=true" width="45%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
 </p>
-
-#### Dispenser
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_2.gif?raw=true" width="45%">
-</p>
-
-#### Conveyor Belt
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%">
-</p>
-
 
 | 기능 | 설명 |
 |------|------|
@@ -397,6 +387,8 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **화물 적하 기능** | 트럭 도착 시 적재소가 감지하여 자동 투하 명령을 수행하며, GUI에서 수동 전환도 가능합니다. |
 | **저장소 상태 감지** | 센서를 통해 저장소의 포화 여부를 감지하고, 서버에 상태를 보고합니다. |
 | **저장소 자동 선택** | 컨테이너 A/B 중 가용 공간이 있는 저장소를 자동으로 선택하여 적하를 수행합니다. |
+| **벨트 안전 제어 로직** | 컨테이너가 포화 상태일 경우, 벨트는 자동으로 작동을 거부하며 안전 상태를 유지합니다. |
+| **설비 테스트 모드(FakeSerial)** | 실제 장비 없이도 가상 시리얼 환경을 통해 테스트를 수행할 수 있습니다. |
 
 ---
 
@@ -412,6 +404,8 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **미션 관리 시스템** | 미션 생성, 할당, 상태 변경, 완료 여부 등을 종합 관리합니다. |
 | **상태 수집 및 기록** | 모든 트럭/설비의 실시간 상태를 주기적으로 수집하여 DB에 기록합니다. |
 | **비상 정지 및 우선 제어** | 서버에서 수동 명령으로 트럭/설비에 즉시 제어 명령을 내릴 수 있습니다. |
+| **디스펜서 위치 보정** | DISPENSER_LOADED 이벤트 시, 트럭 위치 누락을 디스펜서 상태로 자동 보정합니다. |
+| **시리얼 응답 파싱 구조화** | 문자열 응답(예: `ACK:GATE_A_OPENED`)을 구조화된 JSON으로 파싱해 처리합니다. |
 
 ---
 
@@ -433,6 +427,7 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 #### Settings 탭
 ![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
 
+
 | 기능 | 설명 |
 |------|------|
 | **메인 모니터링 탭** | 전체 맵에서 트럭 위치 및 진행 상황을 실시간으로 시각화합니다. |
@@ -441,12 +436,13 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **Setting 탭** | 트럭/시설 등록, 통신 설정, 시스템 초기화 등 운영 환경 설정 기능을 제공합니다. |
 | **로그인 기능** | 사용자 로그인, 권한 구분(관리자/오퍼레이터) 기능이 구현되어 있습니다. |
 
+
 ---
 
 ## 📡 10. 통신 구조
 
-본 시스템은 트럭, 설비, GUI 간의 실시간 상호작용을 위해  
-**TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다.  
+본 시스템은 트럭, 설비, GUI 간의 실시간 상호작용을 위해 **TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다.
+
 각 통신 방식은 독립적이지만, **중앙 서버의 FSM 제어 흐름에 따라 긴밀히 연결**되어 작동합니다.
 
 ---
@@ -576,8 +572,7 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | 설비 ↔ 서버   | Serial         | 명령 기반 제어 및 상태 회신             |
 | GUI ↔ 서버    | HTTP API       | 미션 등록, 상태 조회, 수동 제어 기능     |
 
-> 모든 통신 구조는 실시간 FSM 기반 상태 흐름에 통합되어 있으며,  
-> 각 요소는 독립적으로 작동하면서도 **중앙 서버를 통해 동기화**됩니다.
+> 모든 통신 구조는 실시간 FSM 기반 상태 흐름에 통합되어 있으며, 각 요소는 독립적으로 작동하면서도 **중앙 서버를 통해 동기화**됩니다.
 
 ---
 
