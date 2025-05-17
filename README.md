@@ -246,8 +246,7 @@
 | UR_12 | 저장소는 가용성을 고려해 자동으로 선택되어야 한다. | O |
 | UR_13 | 저장소는 상황에 따라 동작을 정지할 수 있어야 한다. | R |
 
-> 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며,  
-> 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
+> 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며, 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
 
 ---
 
@@ -416,8 +415,8 @@
 
 ### 🖥 중앙 제어 서버 기능
 
-![FSM](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/state_diagram/states_1.png?raw=true)
-![Module](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/module/controllers.png?raw=true)
+![서버 FSM 설명 슬라이드](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/state_diagram/states_1.png?raw=true)
+![컨트롤러 모듈화 설명 슬라이드](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/module/controllers.png?raw=true)
 
 | 기능 | 설명 |
 |------|------|
@@ -434,20 +433,20 @@
 ### 🧑‍💼 사용자 인터페이스
 
 #### Login Window
-![Login](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
+![로그인 화면](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
 
 #### Main Monitoring 탭
-![MM](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true)
-![MM2](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true)
+![메인 모니터링 탭 (1)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true)
+![메인 모니터링 탭 (2)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true)
 
 #### Mission Management 탭
-![Mission](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true)
+![미션 관리 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true)
 
 #### Event Log 탭
-![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true)
+![이벤트 로그 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true)
 
 #### Settings 탭
-![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
+![설정 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
 
 
 | 기능 | 설명 |
@@ -653,33 +652,37 @@
 
 ```
 iot_dust/
-├── backend/ # 서버 로직 및 기능별 Python 모듈
-│ ├── auth/ # 사용자 인증 모듈 (로그인, 권한)
-│ ├── mission/ # 미션 등록 및 상태 관리 기능
-│ ├── truck_fsm/ # 트럭 FSM, 상태 전이, 제어 로직
-│ ├── tcpio/ # 트럭과의 TCP 통신 처리
-│ ├── serialio/ # 설비(Gate, Belt 등) 시리얼 통신 제어
-│ ├── rest_api/ # GUI와 연결되는 API 서버 (Flask 기반)
-│ ├── main_controller/ # 서버 전체 제어 흐름 통합 모듈
-│ ├── truck_status/ # 트럭 배터리, 위치 기록 및 상태 관리
-│ └── facility_status/ # 설비 상태 기록용 모듈
+├── backend/                 # 💡 서버 로직 및 기능별 Python 모듈
+│   ├── auth/               # 사용자 인증 기능 (로그인/권한)
+│   ├── mission/            # 미션 등록 및 상태 관리
+│   ├── truck_fsm/          # 트럭 FSM, 상태 전이 및 제어 로직
+│   ├── tcpio/              # 트럭과의 TCP 통신 수신/응답 처리
+│   ├── serialio/           # 설비(Gate, Belt 등) 제어용 시리얼 통신 모듈
+│   ├── rest_api/           # Flask 기반 GUI API 서버
+│   ├── main_controller/    # 🚀 전체 FSM 흐름 및 제어 통합 (진입점)
+│   ├── truck_status/       # 트럭 상태 기록 (배터리, 위치 등)
+│   └── facility_status/    # 설비 상태 기록 모듈
 │
-├── gui/ # PyQt6 기반 관제 인터페이스
-│ ├── tabs/ # 각 탭별 UI 및 동작 (모니터링, 미션, 로그 등)
-│ ├── ui/ # Qt Designer로 제작한 .ui 파일
-│ └── main windows/ # 관리자/오퍼레이터 전용 메인 창
+├── gui/                    # 🖥 PyQt6 기반 관제 인터페이스
+│   ├── tabs/               # 각 탭별 UI 및 동작 구현
+│   ├── ui/                 # Qt Designer로 제작한 .ui 파일들
+│   └── main_windows/       # GUI 진입점 (관리자/오퍼레이터 전용 메인 창)
 │
-├── firmware/ # 아두이노 기반 펌웨어 (ESP32, 아두이노)
-│ ├── truck/ # 트럭 주행, 센서, RFID 코드
-│ ├── gate/ # 게이트 제어 펌웨어
-│ ├── belt/ # 컨베이어 벨트 제어 펌웨어
-│ └── dispenser/ # 적재소(디스펜서) 펌웨어
+├── firmware/               # 🔌 MCU 기반 펌웨어 코드 (Arduino/ESP32)
+│   ├── truck/              # 트럭 센서/주행/RFID 관련 펌웨어
+│   ├── gate/               # 게이트 개폐 펌웨어
+│   ├── belt/               # 컨베이어 벨트 제어 펌웨어
+│   └── dispenser/          # 적재소(디스펜서) 제어 펌웨어
 │
-├── run/ # 실행 스크립트 (서버, GUI 진입점)
-├── tests/ # 주요 기능 테스트 코드 모음 (FSM, 벨트, 게이트 등)
-├── assets/ # 시연 GIF, 시스템 구조도, GUI 캡처, ERD 등 이미지/영상 자료
-├── documents/ # 발표 자료, 설계 문서, 통신 명세서, UML 다이어그램 등
-└── README.md # 프로젝트 소개 문서
+├── run/                    # ▶️ 실행 스크립트 디렉토리
+│   ├── run_main_server.py  # 서버 실행 진입점
+│   └── run_gui.py          # GUI 실행 진입점
+│
+├── tests/                  # 🧪 주요 기능 단위 테스트 코드 모음
+├── assets/                 # 📷 시연 GIF, 시스템 구조도, ERD, GUI 캡처 등
+├── documents/              # 📄 발표자료, 설계 문서, 통신 명세서 등 문서
+└── README.md               # 📘 프로젝트 소개 문서
+
 ```
 
 ---
