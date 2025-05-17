@@ -4,21 +4,24 @@
 
 ## 📚 목차
 
-```
-1. 팀 구성
-2. 프로젝트 개요
+1. 팀 구성  
+2. 프로젝트 개요  
 3. 기술 스택
 4. 프로젝트 목적 / 필요성
 5. 시스템 아키텍처
-6. 기술적 문제 및 해결
+6. 기술적 문제 및 해결  
 7. 요구사항 정의 (UR / SR)
-8. 데이터베이스 구성 및 출처
-9. 기능 설명
-10. 통신 구조
-11. 한계점
-12. 디렉토리 구조
-13. 실행 방법
-```
+8. 데이터베이스 구성
+9. 기능 설명  
+   - [🚚 차량 관련 기능](#-차량-관련-기능)  
+   - [🏗 시설 제어 기능](#-시설-제어-기능)  
+   - [🖥 중앙 제어 서버 기능](#-중앙-제어-서버-기능)  
+   - [🧑‍💼 사용자 인터페이스](#-사용자-인터페이스)  
+10. 통신 구조  
+11. 한계점  
+12. 디렉토리 구조  
+13. 실행 방법  
+
 
 ---
 
@@ -82,7 +85,7 @@
   </tbody>
 </table>
 
-
+---
 
 ## 📦 2. 프로젝트 개요
 
@@ -93,9 +96,26 @@
 
 > ⏰ **프로젝트 기간**: 2025.05.12 ~ 2025.05.15
 
-**D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력 → 서버 제어 → 트럭 주행 → 설비 제어 → GUI 반영**까지 운송 시스템의 제어 흐름 전체를 통합하여 구현한 **IoT 기반 관제 시스템**입니다.
+**D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력 → 서버 제어 → 트럭 주행 → 설비 제어 → GUI 반영**까지 운송 시스템 전체를 통합 제어 흐름으로 구성한 **IoT 기반 관제 시스템**입니다.
 
-트럭은 RFID 태그를 인식하며 지정된 경로를 따라 주행하고, 서버는 FSM 로직을 통해 상태에 따른 제어 명령을 전송합니다. 관제자는 GUI를 통해 전체 상태를 확인하고, 필요한 시설 및 트럭 제어를 직접 수행할 수 있습니다.
+---
+
+### 🧭 주요 특징
+
+- 트럭은 RFID 태그를 인식하여 지정 경로를 자동 주행
+- 서버는 FSM 제어를 통해 트럭 및 설비에 명령을 실시간 전송
+- 관제자는 GUI를 통해 상태를 시각적으로 확인하고 제어 가능
+
+---
+
+### 🎯 구현 범위
+
+- FSM 기반 상태 전이 제어 시스템 (서버 FSM)
+- ESP32 기반 트럭 제어 및 센서 통합 (RFID + 초음파)
+- TCP 기반 메시지 송수신 (JSON / Byte 프로토콜)
+- PyQt 기반 GUI 시스템 구현 (탭별 기능 분리)
+- MySQL 기반 상태/미션/로그 데이터 연동
+
 
 ---
 
@@ -139,65 +159,69 @@
 
 ## 🧩 5. 시스템 아키텍처
 
-본 프로젝트는 **트럭 디바이스, 관제 서버, 설비 컨트롤러, 사용자 인터페이스**로 구성된 IoT 기반 분산 제어 시스템입니다. 
+본 시스템은 **트럭, 서버, 설비, GUI**로 구성된 **IoT 기반 분산 제어 시스템**입니다.
 
-각 구성요소는 다음과 같은 통신 구조로 연결됩니다:
+### 🧱 통신 구조
 
-- **TCP 통신**: 트럭 ↔ 중앙 서버 간 양방향 명령/상태 전송
-- **시리얼 통신**: 서버 ↔ 설비 컨트롤러(벨트, 게이트, 디스펜서) 간 유선 명령 전송
-- **HTTP 통신**: 관제 UI ↔ 서버 내 서비스 레이어 간 RESTful API 호출
+- **TCP 통신**: 트럭 ↔ 서버 (양방향 실시간 명령/상태 보고)
+- **시리얼 통신**: 서버 ↔ 설비 컨트롤러 (게이트/벨트/적재소)
+- **HTTP API**: GUI ↔ 서버 API 서버 (Flask 기반 REST 호출)
 
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
 </p>
 
-### 🧠 서버 중심 구조 및 소프트웨어 계층
+### 🧠 서버 소프트웨어 계층
 
-서버는 FSM 기반 제어 흐름을 중심으로, 다음과 같은 구성 요소로 설계되어 있습니다:
-
-- **Main Controller**: 트럭 및 설비를 제어하는 중앙 FSM / 명령 관리자
-- **TruckFSM**: 트럭 상태 전이 및 이벤트 처리 로직
-- **FacilityManager**: Gate, Belt, Dispenser 제어 라우팅
-- **StatusManager**: 각 장치의 상태를 실시간 수집 및 DB 반영
-- **MissionManager**: 미션 등록, 상태 변경, 로그 기록 처리
+| 구성 요소 | 역할 |
+|-----------|------|
+| **MainController** | 전체 FSM 흐름 제어 및 명령 분배 |
+| **TruckFSM** | 트럭 상태 전이 FSM 처리 |
+| **FacilityManager** | 설비 명령 라우팅 및 제어 |
+| **StatusManager** | 상태 수집 및 DB 반영 |
+| **MissionManager** | 미션 등록/변경/기록 처리 |
 
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/sw.png?raw=true" width="70%">
 </p>
 
-### 🏗 하드웨어 구성 및 연결 구조
+### 🏗 하드웨어 구성
 
-각 요소는 물리적으로 다음과 같은 장치 및 통신 방식으로 구성되어 있습니다:
-
-- **트럭**: ESP32 기반 주행 제어, RFID/초음파 센서 장착, DC 모터 구동
-- **시설**: Arduino 기반 컨트롤러 (게이트/벨트/적재소), Servo 및 Step Motor 제어
-- **충전소**: 배터리 상태 감지 및 충전 명령 응답
+- 트럭: ESP32 제어, 센서 장착, DC 모터 구동
+- 설비: 아두이노 기반 (게이트/벨트/디스펜서)
+- 충전소: 배터리 상태 감지 및 응답용 구성
 
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/hw.png?raw=true" width="70%">
 </p>
 
-> 이 시스템은 트럭 주행, 센서 인식, 서버 제어, 설비 제어, 사용자 인터페이스까지 하나의 통합 제어 흐름으로 구현되었으며, 소형 물류 로봇 시스템의 전체 작동 흐름을 담고 있습니다.
-
 ---
 
 ## 🧪 6. 기술적 문제 및 해결
-본 프로젝트에서는 실제 구현 과정에서 다양한 기술적 문제가 발생했으며, 이를 직접 해결해나가는 과정을 통해 시스템의 안정성과 성능을 향상시켰습니다.
+
+본 프로젝트에서는 실제 구현 과정에서 다양한 기술적 문제가 발생했으며, 이를 직접 해결해나가는 과정을 통해 시스템의 안정성과 응답 속도를 향상시켰습니다.
 
 ### 🧠 1. 통신 지연 및 처리 속도 문제
-#### 문제:
-초기에는 트럭 ↔ 서버 간 TCP 통신을 JSON 기반으로 설계했으나, 문자열 파싱 과정에서 loop 처리 시간이 길어지고, 정밀한 주행 타이밍을 방해하는 문제가 발생했습니다.
 
-#### 해결:
-주요 명령에 대해서는 커스텀 바이트 메시지 프로토콜로 전환하여 메시지 크기 최소화 및 loop 속도 향상 → 주행 제어 응답 속도 개선.
+- **문제**:  
+  트럭 ↔ 서버 간 TCP 통신을 JSON 기반으로 설계했으나, 문자열 파싱 시간이 길어지고 `loop()` 처리 속도가 느려져 정밀한 주행 타이밍을 방해하는 문제가 발생했습니다.
+
+- **해결**:  
+  주요 명령에 대해서는 커스텀 바이트 메시지 프로토콜로 전환하여 메시지 크기를 줄이고 파싱 시간을 단축함으로써 주행 제어 명령에 대한 응답 속도를 크게 향상시켰습니다.
+  
+> ✅ 실제 통신 구조는 JSON + Byte 혼합 구조로 설계되어 유연성과 실시간성을 동시에 확보하였습니다.
+
 
 ### 🚗 2. RFID 리딩 중 PWM 불안정 문제
-#### 문제:
-RFID 태그 인식 시 센서 리딩 연산이 길어져, PID 루프에서 PWM 출력이 급격히 튀는 현상 발생.
 
-#### 해결:
-RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
-이전 PWM 출력을 그대로 유지하는 방식으로 구현 → 주행 안정성 확보.
+- **문제**:  
+  RFID 태그 인식 시 센서 리딩 연산이 길어져 PID 루프 내 PWM 출력이 급격히 튀는 문제가 발생했습니다. 이는 주행 안정성을 해치고, 직선 주행 시 궤도가 흔들리는 현상을 유발했습니다.
+
+- **해결**:  
+  RFID 인식 직전 약 0.5초간 PID 제어를 일시 중단하고 이전에 출력되던 PWM 값을 그대로 유지하는 방식으로 구현하여 주행 안정성을 확보했습니다.
+  
+> ✅ RFID 기반 위치 인식과 주행 제어를 충돌 없이 병행하기 위한 타이밍 제어 기법을 적용하였습니다.
+
 
 ---
 ## 🧾 7. 요구사항 정의 (UR / SR)
@@ -364,29 +388,19 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **배터리 상태 모니터링** | 배터리 잔량 및 FSM 상태를 서버에 주기적으로 보고하며, 충전 필요 여부를 판단합니다. |
 | **미션 수행** | 서버로부터 미션을 할당받고, 상태에 따라 FSM 전이 및 도착 후 하역을 자동 수행합니다. |
 | **충돌 방지** | 초음파 센서를 통해 장애물을 감지하고 정지하도록 구현되어 있습니다. |
+| **트럭 소켓 자동 등록** | 미등록 상태의 트럭도 TEMP 소켓으로 임시 등록되며, 정상적인 ID로 자동 재매핑됩니다. |
+| **FSM 상태 회복 처리** | 트럭 FSM은 상태 불일치 시에도 강제로 상태를 보정하여 정상 흐름을 유지합니다. |
+| **비상 정지/복귀 기능** | EMERGENCY 상태를 통한 정지 및 RESET을 통한 복귀 기능이 구현되어 있습니다. |
 
 ---
 
 ### 🏗 시설 제어 기능
 
-#### Gate
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_2.gif?raw=true" width="45%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
 </p>
-
-#### Dispenser
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_2.gif?raw=true" width="45%">
-</p>
-
-#### Conveyor Belt
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%">
-</p>
-
 
 | 기능 | 설명 |
 |------|------|
@@ -395,6 +409,8 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **화물 적하 기능** | 트럭 도착 시 적재소가 감지하여 자동 투하 명령을 수행하며, GUI에서 수동 전환도 가능합니다. |
 | **저장소 상태 감지** | 센서를 통해 저장소의 포화 여부를 감지하고, 서버에 상태를 보고합니다. |
 | **저장소 자동 선택** | 컨테이너 A/B 중 가용 공간이 있는 저장소를 자동으로 선택하여 적하를 수행합니다. |
+| **벨트 안전 제어 로직** | 컨테이너가 포화 상태일 경우, 벨트는 자동으로 작동을 거부하며 안전 상태를 유지합니다. |
+| **설비 테스트 모드(FakeSerial)** | 실제 장비 없이도 가상 시리얼 환경을 통해 테스트를 수행할 수 있습니다. |
 
 ---
 
@@ -410,10 +426,12 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **미션 관리 시스템** | 미션 생성, 할당, 상태 변경, 완료 여부 등을 종합 관리합니다. |
 | **상태 수집 및 기록** | 모든 트럭/설비의 실시간 상태를 주기적으로 수집하여 DB에 기록합니다. |
 | **비상 정지 및 우선 제어** | 서버에서 수동 명령으로 트럭/설비에 즉시 제어 명령을 내릴 수 있습니다. |
+| **디스펜서 위치 보정** | DISPENSER_LOADED 이벤트 시, 트럭 위치 누락을 디스펜서 상태로 자동 보정합니다. |
+| **시리얼 응답 파싱 구조화** | 문자열 응답(예: `ACK:GATE_A_OPENED`)을 구조화된 JSON으로 파싱해 처리합니다. |
 
 ---
 
-### 🧑‍💼 사용자 인터페이스 (GUI)
+### 🧑‍💼 사용자 인터페이스
 
 #### Login Window
 ![Login](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
@@ -431,6 +449,7 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 #### Settings 탭
 ![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
 
+
 | 기능 | 설명 |
 |------|------|
 | **메인 모니터링 탭** | 전체 맵에서 트럭 위치 및 진행 상황을 실시간으로 시각화합니다. |
@@ -439,11 +458,12 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 | **Setting 탭** | 트럭/시설 등록, 통신 설정, 시스템 초기화 등 운영 환경 설정 기능을 제공합니다. |
 | **로그인 기능** | 사용자 로그인, 권한 구분(관리자/오퍼레이터) 기능이 구현되어 있습니다. |
 
+
 ---
 
 ## 📡 10. 통신 구조
 
-본 시스템은 트럭, 설비, GUI 간의 실시간 상호작용을 위해 **TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다. 
+본 시스템은 트럭, 설비, GUI 간의 실시간 상호작용을 위해 **TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다.
 
 각 통신 방식은 독립적이지만, **중앙 서버의 FSM 제어 흐름에 따라 긴밀히 연결**되어 작동합니다.
 
@@ -588,6 +608,14 @@ RFID 리딩 구간에서는 약 0.5초간 PID 제어를 일시 중단하고,
 
 - 현재 구조는 1대의 트럭 기준으로 설계되어 있으며, 모든 상태 관리, 미션 분배, GUI 시각화 등이 단일 트럭 흐름에 맞춰 구성되어 있음
 - 다수의 트럭을 동시에 운용하는 경우, **미션 큐 처리 방식 및 FSM 병렬 제어 구조 확장**이 필요함
+  > ✅ 구조적으로는 다중 트럭 운용을 지원할 수 있도록 FSM 및 상태 관리가 구현되어 있음
+
+현재 시스템은 1대의 트럭 운용을 기준으로 구성되어 있으나, FSM 로직은 트럭 ID 기반 컨텍스트(`fsm.contexts[truck_id]`)로 분리되어 있으며,  
+`TruckFSMManager`와 `TruckStatusManager`는 다수의 트럭을 병렬로 처리할 수 있도록 구현되어 있습니다.
+
+예를 들어, `get_all_truck_statuses()` 및 `get_all_truck_contexts()` 함수를 통해 복수 트럭의 상태 조회 및 FSM 흐름을 통합 관리할 수 있으며, `TRUCK_01 ~ TRUCK_03` 등 복수 트럭을 초기화 단계에서 등록하는 방식도 반영되어 있습니다.
+
+→ 향후 미션 큐 구조 및 GUI에서 다중 FSM 시각화/스케줄링 로직만 확장하면 **완전한 다중 트럭 동시 운용 시스템으로 고도화가 가능합니다.**
 
 ### 📡 설비 제어 단방향 구조
 
