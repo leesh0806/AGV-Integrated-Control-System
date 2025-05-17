@@ -1,5 +1,7 @@
 ![배너](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/banner.png?raw=true)
 
+> **이 프로젝트는 센서가 장착된 소형 운송로봇을 제어하는 IoT 기반 시스템입니다. 트럭(ESP32)과 설비(게이트, 벨트 등)는 TCP 및 시리얼 통신으로 연결되어 있으며, 이를 FSM 기반 서버와 GUI를 통해 실시간으로 통합 제어할 수 있도록 구현했습니다.**
+
 ---
 
 ## 📚 목차
@@ -18,7 +20,7 @@
    - [🖥 중앙 제어 서버 기능](#-중앙-제어-서버-기능)  
    - [🧑‍💼 사용자 인터페이스](#-사용자-인터페이스)  
 10. 통신 구조  
-11. 한계점  
+11. 구현 제약 및 확장 가능성
 12. 디렉토리 구조  
 13. 실행 방법  
 
@@ -91,12 +93,17 @@
 
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%">
+</p>
+
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%">
 </p>
 
 > ⏰ **프로젝트 기간**: 2025.05.12 ~ 2025.05.15
 
-**D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력 → 서버 제어 → 트럭 주행 → 설비 제어 → GUI 반영**까지 운송 시스템 전체를 통합 제어 흐름으로 구성한 **IoT 기반 관제 시스템**입니다.
+**D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력부터 서버 FSM 제어, 트럭 주행과 설비 동작, 그리고 GUI 시각화**까지 하나의 제어 흐름으로 연결한 **IoT 기반 통합 운송 관제 시스템**입니다.
 
 ---
 
@@ -136,9 +143,9 @@
 
 ## 🎯 4. 프로젝트 목적 / 필요성
 
-본 프로젝트는 **경로 기반 운송 로봇을 제어하고 전체 시스템 흐름을 일관되게 구성하는 데 중점**을 두었습니다. 
+본 프로젝트는 **경로 기반 운송 로봇을 제어하고 트럭부터 설비까지 전 과정을 하나의 흐름으로 연결하는 데 중점**을 두었습니다. 
 
-단순한 주행 제어나 UI가 아닌, **센서 입력부터 서버 FSM 처리, 설비 제어, GUI 반영까지 전 영역을 아우르는 구현**을 목표로 했습니다.
+단순한 주행 제어나 UI 수준을 넘어서, **센서 입력부터 서버 FSM 처리, 설비 제어, GUI 반영**까지 전체 흐름이 하나로 이어지도록 구현하는 것을 목표로 했습니다.
 
 ### 🔍 추진 배경
 
@@ -159,7 +166,7 @@
 
 ## 🧩 5. 시스템 아키텍처
 
-본 시스템은 **트럭, 서버, 설비, GUI**로 구성된 **IoT 기반 분산 제어 시스템**입니다.
+이 시스템은 트럭, 서버, 설비, GUI가 서로 연결된 **IoT 기반의 통합 제어 구조**로 설계되었습니다.
 
 ### 🧱 통신 구조
 
@@ -246,8 +253,7 @@
 | UR_12 | 저장소는 가용성을 고려해 자동으로 선택되어야 한다. | O |
 | UR_13 | 저장소는 상황에 따라 동작을 정지할 수 있어야 한다. | R |
 
-> 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며,  
-> 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
+> 우선순위(R: Required / O: Optional)는 개발 당시의 시스템 구조 설계 기준이며, 대부분의 필수 요구사항은 이번 구현에 포함되어 있으며, 일부 선택 항목도 기본 동작 구조 내 포함되어 있습니다.
 
 ---
 
@@ -306,8 +312,6 @@
 <p align="center">
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/erd/erd.png?raw=true" width="85%">
 </p>
-
-> 트럭의 상태 변화, 미션 할당/완료 기록, 설비 동작 상태 등 실시간 제어 흐름을 데이터로 남기기 위한 구조입니다.
 
 ### 📊 테이블 그룹별 구성
 
@@ -368,7 +372,7 @@
 - **가독성 높은 확장형 설계**  
   → 시설 종류(FACILITY)와 관련 상태 테이블을 분리 설계하여 향후 장치 추가 시 구조 유지 가능
 
-> 전체 제어 흐름은 미션 → 트럭 할당 → 상태 변화 → 설비 동작 → 로그 저장의 구조로 연계되어 있으며, **단일 DB에서 모든 운영 상태를 추적 가능하도록 구성**되어 있습니다.
+> 미션 생성부터 트럭 운행, 설비 동작, 상태 기록까지 모든 흐름이 하나의 제어 구조로 연결되어 있으며, 관련 데이터는 단일 DB에서 통합 관리할 수 있도록 설계되었습니다.
 
 ---
 
@@ -390,7 +394,6 @@
 | **충돌 방지** | 초음파 센서를 통해 장애물을 감지하고 정지하도록 구현되어 있습니다. |
 | **트럭 소켓 자동 등록** | 미등록 상태의 트럭도 TEMP 소켓으로 임시 등록되며, 정상적인 ID로 자동 재매핑됩니다. |
 | **FSM 상태 회복 처리** | 트럭 FSM은 상태 불일치 시에도 강제로 상태를 보정하여 정상 흐름을 유지합니다. |
-| **비상 정지/복귀 기능** | EMERGENCY 상태를 통한 정지 및 RESET을 통한 복귀 기능이 구현되어 있습니다. |
 
 ---
 
@@ -412,12 +415,19 @@
 | **벨트 안전 제어 로직** | 컨테이너가 포화 상태일 경우, 벨트는 자동으로 작동을 거부하며 안전 상태를 유지합니다. |
 | **설비 테스트 모드(FakeSerial)** | 실제 장비 없이도 가상 시리얼 환경을 통해 테스트를 수행할 수 있습니다. |
 
+
+#### 🔧 고급 제어 기능 요약
+
+| 고급 기능 | 설명 |
+|-----------|------|
+| **TEMP 소켓 자동 등록** | 트럭이 등록되지 않은 상태로 TCP 연결 시, `TEMP_포트번호`로 임시 등록한 뒤 실제 트럭 ID로 자동 전환합니다. |
+| **FSM 상태 불일치 자동 보정** | 서버 재시작 등으로 상태가 어긋나도, FSM이 현재 위치와 이벤트에 따라 적절한 상태로 자동 전이됩니다. |
+| **적재 위치 유효성 검증 및 재지시** | 잘못된 위치에 도착 시, 미션 정보와 대조하여 다시 올바른 적재 위치로 RUN 명령을 보냅니다. |
+| **미션 없음 시 자동 충전 전환** | 미션이 없고 STANDBY에 있을 경우, 배터리가 100%가 아니면 자동으로 충전 상태로 전환됩니다. |
+
 ---
 
 ### 🖥 중앙 제어 서버 기능
-
-![FSM](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/state_diagram/states_1.png?raw=true)
-![Module](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/module/controllers.png?raw=true)
 
 | 기능 | 설명 |
 |------|------|
@@ -427,27 +437,29 @@
 | **상태 수집 및 기록** | 모든 트럭/설비의 실시간 상태를 주기적으로 수집하여 DB에 기록합니다. |
 | **비상 정지 및 우선 제어** | 서버에서 수동 명령으로 트럭/설비에 즉시 제어 명령을 내릴 수 있습니다. |
 | **디스펜서 위치 보정** | DISPENSER_LOADED 이벤트 시, 트럭 위치 누락을 디스펜서 상태로 자동 보정합니다. |
-| **시리얼 응답 파싱 구조화** | 문자열 응답(예: `ACK:GATE_A_OPENED`)을 구조화된 JSON으로 파싱해 처리합니다. |
+| **시리얼 응답 파싱 구조화** | 예: ACK:GATE_A_OPENED 형식의 문자열 응답을 구조화된 JSON으로 변환하여 FSM 로직과 연계합니다. |
+| **커스텀 프로토콜 구조화** | JSON 기반 메시지 외에도 `Header + Payload` 형식의 Byte 메시지를 지원. 명령어 ID, 송수신자 ID, 페이로드 길이, 내용 등으로 구조화하여 통신 효율 향상 |
+| **미션 없음 시 자동 상태 전환** | 미션 큐가 비었을 경우, 트럭이 STANDBY에 있다면 자동으로 충전 상태 진입 또는 IDLE 유지 결정 |
 
 ---
 
 ### 🧑‍💼 사용자 인터페이스
 
 #### Login Window
-![Login](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
+![로그인 화면](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
 
 #### Main Monitoring 탭
-![MM](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true)
-![MM2](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true)
+![메인 모니터링 탭 (1)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true)
+![메인 모니터링 탭 (2)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true)
 
 #### Mission Management 탭
-![Mission](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true)
+![미션 관리 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true)
 
 #### Event Log 탭
-![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true)
+![이벤트 로그 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true)
 
 #### Settings 탭
-![](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
+![설정 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
 
 
 | 기능 | 설명 |
@@ -598,37 +610,14 @@
 
 ---
 
-## 🧱 11. 한계점
+## 🧱 11. 구현 제약 및 확장 가능성
 
-본 시스템은 트럭, 설비, 관제 서버, GUI를 모두 통합하여 하나의 흐름으로 구성되었으며, 구현 범위 내 기능은 대부분 실시간 제어 및 상태 반영을 중심으로 완성되었습니다. 
-
-다만 실제 환경에서의 확장이나 고도화를 위해 다음과 같은 점들을 고려해볼 수 있습니다:
-
-### 🧩 단일 트럭 운용에 최적화된 구조
-
-- 현재 구조는 1대의 트럭 기준으로 설계되어 있으며, 모든 상태 관리, 미션 분배, GUI 시각화 등이 단일 트럭 흐름에 맞춰 구성되어 있음
-- 다수의 트럭을 동시에 운용하는 경우, **미션 큐 처리 방식 및 FSM 병렬 제어 구조 확장**이 필요함
-  > ✅ 구조적으로는 다중 트럭 운용을 지원할 수 있도록 FSM 및 상태 관리가 구현되어 있음
-
-현재 시스템은 1대의 트럭 운용을 기준으로 구성되어 있으나, FSM 로직은 트럭 ID 기반 컨텍스트(`fsm.contexts[truck_id]`)로 분리되어 있으며,  
-`TruckFSMManager`와 `TruckStatusManager`는 다수의 트럭을 병렬로 처리할 수 있도록 구현되어 있습니다.
-
-예를 들어, `get_all_truck_statuses()` 및 `get_all_truck_contexts()` 함수를 통해 복수 트럭의 상태 조회 및 FSM 흐름을 통합 관리할 수 있으며, `TRUCK_01 ~ TRUCK_03` 등 복수 트럭을 초기화 단계에서 등록하는 방식도 반영되어 있습니다.
-
-→ 향후 미션 큐 구조 및 GUI에서 다중 FSM 시각화/스케줄링 로직만 확장하면 **완전한 다중 트럭 동시 운용 시스템으로 고도화가 가능합니다.**
-
-### 📡 설비 제어 단방향 구조
-
-- 설비 컨트롤러와의 통신은 시리얼 기반이며, **명령 송신 → 상태 수신** 구조로 안정성은 확보되어 있으나, 향후 장애 복구, 에러 재전송 등의 **양방향 핸드셰이크 기능 보완** 여지가 존재함.
-
-### 🔋 배터리/충전 시뮬레이션 기반 운영
-
-- 현재 배터리 상태는 가상 데이터 기반으로 처리되며, 실제 전력 센서 연동은 아직 도입되지 않음. 추후 **INA226 기반 실시간 전류/전압 감지 기능**을 도입하면 **충전/소모 모델 고도화** 가능.
-
-### 🔄 4. 시스템 설정 저장 기능 미구현
-
-- 관제 GUI 내 설정은 현재 세션 내에서만 유지되며, **재실행 시 초기화됨**
-- 추후 **설정 파일(JSON 등) 저장/불러오기 기능**을 추가하면 사용자 편의성 향상 기대
+| 현재 상태 | 구현 한계 | 개선 가능성 |
+|------------|------------|-------------|
+| 트럭 1대 기반 FSM + GUI 구조 | 현재 GUI와 미션 큐가 하나의 FSM 흐름에만 연결되어 있어, 다중 트럭 운용에 제약이 있습니다. | `contexts[truck_id]`, `TruckFSMManager` 구조를 활용해 다중 FSM 병렬 운용 가능. GUI 시각화 및 큐 구조 확장 시, 다중 트럭 운용 시뮬레이션 가능 |
+| 배터리 상태 가상값 기반 운영 | 실제 전류/전압 센서 미연동, 잔량은 시뮬레이션 값으로 처리됨 | `INA226` 등 센서 연동 시 실시간 잔량 측정 가능. 향후 에너지 기반 경로 최적화 및 스마트 충전 로직으로 확장 가능 |
+| 설비 제어는 기본적인 양방향 구조 | ACK 수신 여부만 단순 확인하며, 미수신 시 재시도 없음 | 설비 명령에 대해 타임아웃 기반 재전송 및 오류 기록 기능 추가 시 신뢰성 강화 가능 |
+| 설정 저장 기능 미구현 | 통신 설정, 장치 등록 등이 세션 내 임시 저장. 재시작 시 초기화됨 | JSON 또는 MySQL 기반 설정 저장 구조 적용 시 운영 환경 유지 및 빠른 재가동 가능 |
 
 ---
 
@@ -638,33 +627,37 @@
 
 ```
 iot_dust/
-├── backend/ # 서버 로직 및 기능별 Python 모듈
-│ ├── auth/ # 사용자 인증 모듈 (로그인, 권한)
-│ ├── mission/ # 미션 등록 및 상태 관리 기능
-│ ├── truck_fsm/ # 트럭 FSM, 상태 전이, 제어 로직
-│ ├── tcpio/ # 트럭과의 TCP 통신 처리
-│ ├── serialio/ # 설비(Gate, Belt 등) 시리얼 통신 제어
-│ ├── rest_api/ # GUI와 연결되는 API 서버 (Flask 기반)
-│ ├── main_controller/ # 서버 전체 제어 흐름 통합 모듈
-│ ├── truck_status/ # 트럭 배터리, 위치 기록 및 상태 관리
-│ └── facility_status/ # 설비 상태 기록용 모듈
+├── backend/                 # 💡 서버 로직 및 기능별 Python 모듈
+│   ├── auth/               # 사용자 인증 기능 (로그인/권한)
+│   ├── mission/            # 미션 등록 및 상태 관리
+│   ├── truck_fsm/          # 트럭 FSM, 상태 전이 및 제어 로직
+│   ├── tcpio/              # 트럭과의 TCP 통신 수신/응답 처리
+│   ├── serialio/           # 설비(Gate, Belt 등) 제어용 시리얼 통신 모듈
+│   ├── rest_api/           # Flask 기반 GUI API 서버
+│   ├── main_controller/    # 🚀 전체 FSM 흐름 및 제어 통합 (진입점)
+│   ├── truck_status/       # 트럭 상태 기록 (배터리, 위치 등)
+│   └── facility_status/    # 설비 상태 기록 모듈
 │
-├── gui/ # PyQt6 기반 관제 인터페이스
-│ ├── tabs/ # 각 탭별 UI 및 동작 (모니터링, 미션, 로그 등)
-│ ├── ui/ # Qt Designer로 제작한 .ui 파일
-│ └── main windows/ # 관리자/오퍼레이터 전용 메인 창
+├── gui/                    # 🖥 PyQt6 기반 관제 인터페이스
+│   ├── tabs/               # 각 탭별 UI 및 동작 구현
+│   ├── ui/                 # Qt Designer로 제작한 .ui 파일들
+│   └── main_windows/       # GUI 진입점 (관리자/오퍼레이터 전용 메인 창)
 │
-├── firmware/ # 아두이노 기반 펌웨어 (ESP32, 아두이노)
-│ ├── truck/ # 트럭 주행, 센서, RFID 코드
-│ ├── gate/ # 게이트 제어 펌웨어
-│ ├── belt/ # 컨베이어 벨트 제어 펌웨어
-│ └── dispenser/ # 적재소(디스펜서) 펌웨어
+├── firmware/               # 🔌 MCU 기반 펌웨어 코드 (Arduino/ESP32)
+│   ├── truck/              # 트럭 센서/주행/RFID 관련 펌웨어
+│   ├── gate/               # 게이트 개폐 펌웨어
+│   ├── belt/               # 컨베이어 벨트 제어 펌웨어
+│   └── dispenser/          # 적재소(디스펜서) 제어 펌웨어
 │
-├── run/ # 실행 스크립트 (서버, GUI 진입점)
-├── tests/ # 주요 기능 테스트 코드 모음 (FSM, 벨트, 게이트 등)
-├── assets/ # 시연 GIF, 시스템 구조도, GUI 캡처, ERD 등 이미지/영상 자료
-├── documents/ # 발표 자료, 설계 문서, 통신 명세서, UML 다이어그램 등
-└── README.md # 프로젝트 소개 문서
+├── run/                    # ▶️ 실행 스크립트 디렉토리
+│   ├── run_main_server.py  # 서버 실행 진입점
+│   └── run_gui.py          # GUI 실행 진입점
+│
+├── tests/                  # 🧪 주요 기능 단위 테스트 코드 모음
+├── assets/                 # 📷 시연 GIF, 시스템 구조도, ERD, GUI 캡처 등
+├── documents/              # 📄 발표자료, 설계 문서, 통신 명세서 등 문서
+└── README.md               # 📘 프로젝트 소개 문서
+
 ```
 
 ---
