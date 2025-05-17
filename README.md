@@ -101,7 +101,7 @@
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%">
 </p>
 
-> ⏰ **프로젝트 기간**: 2025.05.12 ~ 2025.05.15
+> ⏰ **프로젝트 기간**: 2025.05.03 ~ 2025.05.15
 
 **D.U.S.T. (Dynamic Unified Smart Transport)** 는 소형 운송 로봇을 기반으로, **센서 입력부터 서버 FSM 제어, 트럭 주행과 설비 동작, 그리고 GUI 시각화**까지 하나의 제어 흐름으로 연결한 **IoT 기반 통합 운송 관제 시스템**입니다.
 
