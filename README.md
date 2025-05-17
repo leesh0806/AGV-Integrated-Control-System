@@ -308,8 +308,6 @@
   <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/erd/erd.png?raw=true" width="85%">
 </p>
 
-> 트럭의 상태 변화, 미션 할당/완료 기록, 설비 동작 상태 등 실시간 제어 흐름을 데이터로 남기기 위한 구조입니다.
-
 ### 📊 테이블 그룹별 구성
 
 #### 🚚 트럭 관련
