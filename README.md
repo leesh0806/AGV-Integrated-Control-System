@@ -17,7 +17,7 @@
 4. 프로젝트 목적 / 필요성
 5. 시스템 아키텍처
 6. 기술적 목적 / 설계 방향
-7. FSM 상태 다이어그램
+7. 서버 FSM 기반 AGV 상태 제어 흐름
 8. 시스템 시퀀스
 9. 기술적 문제 및 해결  
 10. 요구사항 정의 (UR / SR)
@@ -173,11 +173,11 @@ D.U.S.T. (Dynamic Unified Smart Transport)는 RFID 기반 위치 인식을 바�
 
 ---
 
-## 🔄 6. 트럭 FSM 상태 다이어그램
+## 🔄 6. 서버 FSM 기반 AGV 상태 제어 흐름
 
 AGV는 FSM(Finite State Machine)을 기반으로 동작하며, 제어 서버에서의 상태 판단, 설비 응답 처리, 통신 흐름, GUI 반영까지 하나의 FSM 구조 안에서 통합적으로 제어됩니다.
 
-아래는 트럭 FSM의 전체 흐름을 시각화한 다이어그램입니다.
+아래는 서버 FSM에서 제어되는 AGV 상태 흐름을 시각화한 다이어그램입니다.
 
 ```mermaid
 stateDiagram-v2
@@ -687,7 +687,7 @@ iot_dust/
 ├── backend/                 # 💡 서버 로직 및 기능별 Python 모듈
 │   ├── auth/               # 사용자 인증 기능 (로그인/권한)
 │   ├── mission/            # 미션 등록 및 상태 관리
-│   ├── truck_fsm/          # AGV FSM, 상태 전이 및 제어 로직
+│   ├── truck_fsm/          # 서버 FSM 흐름 중 AGV 관련 상태 전이 로직
 │   ├── tcpio/              # AGV와의 TCP 통신 수신/응답 처리
 │   ├── serialio/           # 설비(Gate, Belt 등) 제어용 시리얼 통신 모듈
 │   ├── rest_api/           # Flask 기반 GUI API 서버
