@@ -17,15 +17,16 @@
 4. 프로젝트 목적 / 필요성
 5. 시스템 아키텍처
 6. 기술적 목적 / 설계 방향
-7. 시스템 시퀀스
-8. 기술적 문제 및 해결  
-9. 요구사항 정의 (UR / SR)
-10. 데이터베이스 구성
-11. 기능 설명  
-12. 통신 구조  
-13. 구현 제약 및 확장 가능성
-14. 디렉토리 구조  
-15. 실행 방법  
+7. FSM 상태 다이어그램
+8. 시스템 시퀀스
+9. 기술적 문제 및 해결  
+10. 요구사항 정의 (UR / SR)
+11. 데이터베이스 구성
+12. 기능 설명  
+13. 통신 구조  
+14. 구현 제약 및 확장 가능성
+15. 디렉토리 구조  
+16. 실행 방법  
 
 ---
 
@@ -172,7 +173,37 @@ D.U.S.T. (Dynamic Unified Smart Transport)는 RFID 기반 위치 인식을 바�
 
 ---
 
-## 🧩 6. 시스템 아키텍처
+## 🔄 6. 트럭 FSM 상태 다이어그램
+
+AGV는 FSM(Finite State Machine)을 기반으로 동작하며, 제어 서버에서의 상태 판단, 설비 응답 처리, 통신 흐름, GUI 반영까지 하나의 FSM 구조 안에서 통합적으로 제어됩니다.
+
+아래는 트럭 FSM의 전체 흐름을 시각화한 다이어그램입니다.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> ASSIGNED : ASSIGN_MISSION
+    ASSIGNED --> MOVING : RUN
+
+    MOVING --> WAITING : ARRIVED (e.g. GATE_A)
+    WAITING --> LOADING : START_LOADING (at LOAD_A/B)
+    WAITING --> UNLOADING : START_UNLOADING (at BELT)
+
+    LOADING --> MOVING : FINISH_LOADING
+    UNLOADING --> MOVING : FINISH_UNLOADING
+
+    MOVING --> IDLE : ARRIVED @ STANDBY + NO MISSION
+    MOVING --> CHARGING : START_CHARGING
+    CHARGING --> IDLE : FINISH_CHARGING
+
+    [*] --> EMERGENCY : EMERGENCY_TRIGGERED
+    EMERGENCY --> IDLE : RESET
+```
+
+---
+
+## 🧩 7. 시스템 아키텍처
 
 이 시스템은 AGV, 서버, 설비, GUI가 유기적으로 연결된 IoT 기반 통합 제어 구조로 설계되었습니다.
 
@@ -236,7 +267,7 @@ D.U.S.T. (Dynamic Unified Smart Transport)는 RFID 기반 위치 인식을 바�
 
 ---
 
-## 🧪 8. 기술적 문제 및 해결
+## 🧪 9. 기술적 문제 및 해결
 
 본 프로젝트에서는 실제 구현 과정에서 다양한 기술적 문제가 발생했으며, 이를 직접 해결해나가는 과정을 통해 시스템의 안정성과 응답 속도를 향상시켰습니다.
 
@@ -264,7 +295,7 @@ D.U.S.T. (Dynamic Unified Smart Transport)는 RFID 기반 위치 인식을 바�
 
 ---
 
-## 🧾 9. 요구사항 정의 (UR / SR)
+## 🧾 10. 요구사항 정의 (UR / SR)
 
 본 시스템의 기능은 사용자 관점에서의 요구사항(**User Requirement, UR**)과  이를 만족시키기 위한 시스템 관점의 요구사항(**System Requirement, SR**)으로 나뉘며, 각 항목은 구현된 기능 기준으로 우선순위(Priority)를 함께 정의하였습니다.
 
@@ -336,7 +367,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
-## 🗄️ 10. 데이터베이스 구성 및 출처
+## 🗄️ 11. 데이터베이스 구성 및 출처
 
 본 시스템은 AGV, 미션, 설비, 사용자, 상태 기록 등 주요 항목을 MySQL 기반으로 테이블화하여 관리하며, 각 항목은 기능별로 나뉜 **모듈형 테이블 구조**로 구성되어 있습니다.
 
@@ -410,7 +441,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
- ## ⚙️ 11. 기능 설명
+ ## ⚙️ 12. 기능 설명
  
 
 ### 🚚 AGV 관련 기능
@@ -507,7 +538,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
-## 📡 12. 통신 구조
+## 📡 13. 통신 구조
 
 본 시스템은 AGV, 설비, GUI 간의 실시간 상호작용을 위해 **TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다.
 
@@ -636,7 +667,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
- ## 🧱 13. 구현 제약 및 확장 가능성
+ ## 🧱 14. 구현 제약 및 확장 가능성
 
 | 현재 상태 | 구현 한계 | 개선 가능성 |
 |------------|------------|-------------|
@@ -647,7 +678,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
-## 📁 14. 디렉토리 구조
+## 📁 15. 디렉토리 구조
 
 본 프로젝트는 **서버, 펌웨어, GUI, 시각 자료, 테스트, 문서**까지 전체 시스템을 구성하는 모든 요소를 기능 단위로 디렉토리화하여 구성하였습니다.
 
@@ -688,7 +719,7 @@ iot_dust/
 
 ---
 
-## 🔧 15. 실행 방법
+## 🔧 16. 실행 방법
 
 ```bash
 # 서버 실행
