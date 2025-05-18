@@ -127,16 +127,15 @@
 
 ## 🛠️ 3. 기술 스택
 
-| 분류 | 기술 구성 |  |
-|------|-----------|------|
+| 분류 | 기술 구성 | |
+|------|-----------|--|
+| **개발 환경** | Linux (Ubuntu 24.04) | ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=white) ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=Ubuntu&logoColor=white) |
 | **MCU 및 펌웨어** | ESP32-WROOM, Arduino IDE | ![ESP32](https://img.shields.io/badge/ESP32-WROOM-E7352C?style=for-the-badge&logo=espressif&logoColor=white) ![Arduino](https://img.shields.io/badge/Arduino-00979D?style=for-the-badge&logo=arduino&logoColor=white) |
-| **센서** | RFID, 초음파 센서, IR 라인트레이서 |  |
-| **통신** | TCP 소켓 통신 (JSON / Byte 프로토콜) | ![TCP](https://img.shields.io/badge/TCP%20Socket-0052CC?style=for-the-badge&logo=protocols&logoColor=white) |
-| **제어 로직** | 상태기반 FSM (Finite State Machine) | |
 | **프로그래밍 언어** | Python 3.12, C++ | ![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white) |
 | **관제 UI** | PyQt6 | ![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white) |
 | **DB 연동** | MySQL | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white) |
 | **버전 관리** | Git, GitHub | ![Git](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white) |
+| **협업 툴** | Confluence, Slack, Jira | ![Confluence](https://img.shields.io/badge/confluence-172B4D?style=for-the-badge&logo=confluence&logoColor=white) ![Slack](https://img.shields.io/badge/slack-4A154B?style=for-the-badge&logo=slack&logoColor=white) ![Jira](https://img.shields.io/badge/Jira-0052CC?style=for-the-badge&logo=Jira&logoColor=white) |
 
 ---
 
@@ -205,6 +204,10 @@ stateDiagram-v2
 
 ## 🧩 7. 시스템 아키텍처
 
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
+</p>
+
 이 시스템은 AGV, 서버, 설비, GUI가 유기적으로 연결된 IoT 기반 통합 제어 구조로 설계되었습니다.
 
 ### 🧱 통신 구조
@@ -212,10 +215,6 @@ stateDiagram-v2
 - **TCP 통신**: AGV ↔ 서버 (양방향 실시간 명령/상태 보고)
 - **시리얼 통신**: 서버 ↔ 설비 컨트롤러 (게이트/벨트/적재소)
 - **HTTP API**: GUI ↔ 서버 API 서버 (Flask 기반 REST 호출)
-
-<p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
-</p>
 
 ### 🧠 서버 소프트웨어 계층
 
@@ -228,7 +227,7 @@ stateDiagram-v2
 | **MissionManager** | 미션 등록/변경/기록 처리 |
 
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/sw.png?raw=true" width="70%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/sw.png?raw=true" width="85%">
 </p>
 
 ### 🏗 하드웨어 구성
@@ -238,7 +237,7 @@ stateDiagram-v2
 - 충전소: 배터리 상태 감지 및 응답용 구성
 
 <p align="center">
-  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/hw.png?raw=true" width="70%">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/system_architecture/hw.png?raw=true" width="85%">
 </p>
 
 ---
@@ -246,24 +245,29 @@ stateDiagram-v2
 ## 🔄 7. 시스템 시퀀스
 
 ### 1. 시스템 전체 흐름
-
-![시스템 전체 흐름](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/system.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/system.png?raw=true" width="85%">
+</p>
 
 ### 2. 배터리 상태 변화
-
-![배터리 상태 변화 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/battery.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/battery.png?raw=true" width="85%">
+</p>
 
 ### 3. **로그인 & 미션 등록**
-
-![로그인 및 미션 등록 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/login.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/login.png?raw=true" width="85%">
+</p>
 
 ### 4. **장애물 감지 및 비상 중단**
-
-![장애물 감지 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/obstacle.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/obstacle.png?raw=true" width="85%">
+</p>
 
 ### 5. **벨트 제어 및 경로 관리**
-
-![벨트 및 경로 관리 시나리오](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/belt.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/scenario/belt.png?raw=true" width="85%">
+</p>
 
 ---
 
@@ -348,7 +352,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 ---
 
 ### 🔗 UR ↔ SR 매핑 관계
-
+70
 | 사용자 요구사항 (UR) | 관련 시스템 기능 (SR) |
 |----------------------|------------------------|
 | UR_01 AGV는 특정 장소로 이동할 수 있어야 한다. | SR_06, SR_08 |
@@ -510,20 +514,32 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 ### 🧑‍💼 사용자 인터페이스
 
 #### Login Window
-![로그인 화면](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/login.png?raw=true" width="30%">
+</p>
 
 #### Main Monitoring 탭
-![메인 모니터링 탭 (1)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true)
-![메인 모니터링 탭 (2)](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="90%">
+</p>
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true" width="90%">
+</p>
 
 #### Mission Management 탭
-![미션 관리 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true" width="90%">
+</p>
 
 #### Event Log 탭
-![이벤트 로그 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true" width="90%">
+</p>
 
 #### Settings 탭
-![설정 탭](https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true)
+<p align="center">
+  <img src="https://github.com/jinhyuk2me/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true" width="90%">
+</p>
 
 
 | 기능            | 설명                                                                                                                                         |
