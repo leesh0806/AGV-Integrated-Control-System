@@ -103,7 +103,7 @@
 
 > ⏰ **프로젝트 기간**: 2025.05.03 ~ 2025.05.15
 
-D.U.S.T. (Dynamic Unified Smart Transport)는 RFID 기반 위치 인식을 바탕으로 경로를 따라 주행하는 소형 AGV를 중심으로, 게이트, 컨베이어 벨트, 적재소 등 물류 설비를 실시간으로 통합 제어하는 IoT 기반 운송 관제 시스템입니다.
+`D.U.S.T. (Dynamic Unified Smart Transport)`는 RFID 기반 위치 인식을 바탕으로 경로를 따라 주행하는 소형 AGV를 중심으로, 게이트, 컨베이어 벨트, 적재소 등 물류 설비를 실시간으로 통합 제어하는 IoT 기반 운송 관제 시스템입니다.
 
 이 시스템은 FSM(Finite State Machine) 기반의 서버 제어 흐름과 TCP/Serial 통신, 그리고 PyQt 기반 GUI 관제 화면을 통합하여, 운송 흐름을 일관되게 제어하고 시각화할 수 있도록 설계되었습니다.
 
