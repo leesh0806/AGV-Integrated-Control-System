@@ -1,4 +1,4 @@
-![배너](https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/banner.png?raw=true)
+![배너](https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/banner.png?raw=true)
 
 > **이 프로젝트는 RFID 태그를 따라 주행하는 소형 AGV가 설비와 실시간으로 통신하며 미션을 수행하는, IoT 기반 통합 운송 관제 시스템입니다.**  
 > **트럭(AGV)은 ESP32로 제어되며, 게이트/벨트/적재소 등 설비와 FSM 기반 서버를 통해 실시간 통합 제어됩니다. GUI 시스템은 운송 흐름을 시각적으로 모니터링하고 제어할 수 있도록 구현되었습니다.**
@@ -92,13 +92,13 @@
 ## 📦 2. 프로젝트 개요
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="45%">
 </p>
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/belt_2.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/load_1.gif?raw=true" width="45%">
 </p>
 
 > ⏰ **프로젝트 기간**: 2025.05.03 ~ 2025.05.15
@@ -130,7 +130,7 @@
 ### 🚚 AGV란? (Automated Guided Vehicle)
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/agv.jpg?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/agv.jpg?raw=true" width="90%">
 </p>
 
 AGV는 **사람의 개입 없이 자동으로 지정된 경로를 따라 이동하며 작업을 수행하는 무인 운반 차량**을 의미합니다. 산업 현장에서는 물류 이송, 자재 공급, 제품 이동 등 다양한 작업에 사용되며, 다음과 같은 특징을 가집니다:
@@ -143,7 +143,7 @@ AGV는 **사람의 개입 없이 자동으로 지정된 경로를 따라 이동�
 ### 🛠️ 본 프로젝트의 소형 AGV
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/truck/truck_3.jpg?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_3.jpg?raw=true" width="90%">
 </p>
 
 이번 프로젝트에서 구현된 AGV는 **ESP32 기반의 경량 무인 차량**으로, 다음과 같은 구성 요소와 기능을 포함합니다:
@@ -241,7 +241,7 @@ stateDiagram-v2
 ## 🧩 7. 시스템 아키텍처
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
 </p>
 
 이 시스템은 AGV, 서버, 설비, GUI가 유기적으로 연결된 IoT 기반 통합 제어 구조로 설계되었습니다.
@@ -263,7 +263,7 @@ stateDiagram-v2
 | **MissionManager** | 미션 등록/변경/기록 처리 |
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/system_architecture/sw.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/sw.png?raw=true" width="85%">
 </p>
 
 ### 🏗 하드웨어 구성
@@ -273,7 +273,7 @@ stateDiagram-v2
 - 충전소: 배터리 상태 감지 및 응답용 구성
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/system_architecture/hw.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/hw.png?raw=true" width="85%">
 </p>
 
 ---
@@ -282,27 +282,27 @@ stateDiagram-v2
 
 ### 1. 시스템 전체 흐름
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/scenario/system.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/system.png?raw=true" width="85%">
 </p>
 
 ### 2. 배터리 상태 변화
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/scenario/battery.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/battery.png?raw=true" width="85%">
 </p>
 
 ### 3. **로그인 & 미션 등록**
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/scenario/login.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/login.png?raw=true" width="85%">
 </p>
 
 ### 4. **장애물 감지 및 비상 중단**
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/scenario/obstacle.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/obstacle.png?raw=true" width="85%">
 </p>
 
 ### 5. **벨트 제어 및 경로 관리**
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/scenario/belt.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/belt.png?raw=true" width="85%">
 </p>
 
 ---
@@ -414,7 +414,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 ### 🧠 ERD (Entity Relationship Diagram)
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/erd/erd.png?raw=true" width="85%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/erd/erd.png?raw=true" width="85%">
 </p>
 ※ 시스템 내 모든 구성요소가 DB 기반으로 통합 관리됨
 
@@ -487,8 +487,8 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 ### 🚚 AGV 관련 기능
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/truck/truck_2.gif?raw=true" width="45%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_2.gif?raw=true" width="45%">
 </p>
 
 | 기능 | 설명 |
@@ -506,9 +506,9 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 ### 🏗 시설 제어 기능
 
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
 </p>
 
 | 기능 | 설명 |
@@ -551,30 +551,30 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 #### Login Window
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/login.png?raw=true" width="30%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/login.png?raw=true" width="30%">
 </p>
 
 #### Main Monitoring 탭
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="90%">
 </p>
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true" width="90%">
 </p>
 
 #### Mission Management 탭
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/mission%20management.gif?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/mission%20management.gif?raw=true" width="90%">
 </p>
 
 #### Event Log 탭
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/event%20log.gif?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/event%20log.gif?raw=true" width="90%">
 </p>
 
 #### Settings 탭
 <p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-dust/blob/main/assets/images/gui/settings.gif?raw=true" width="90%">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/settings.gif?raw=true" width="90%">
 </p>
 
 
