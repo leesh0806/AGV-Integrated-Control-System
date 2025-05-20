@@ -14,19 +14,18 @@
 1. [팀 구성](#1-팀-구성)  
 2. [프로젝트 개요](#2-프로젝트-개요)  
 3. [기술 스택](#3-기술-스택)  
-4. [프로젝트 목적 / 필요성](#4-프로젝트-목적--필요성)  
-5. [시스템 아키텍처](#5-시스템-아키텍처)  
-6. [기술적 목적 / 설계 방향](#6-기술적-목적--설계-방향)  
-7. [서버 FSM 기반 AGV 상태 제어 흐름](#7-서버-fsm-기반-agv-상태-제어-흐름)  
-8. [시스템 시퀀스](#8-시스템-시퀀스)  
-9. [기술적 문제 및 해결](#9-기술적-문제-및-해결)  
-10. [요구사항 정의 (UR / SR)](#10-요구사항-정의-ur--sr)  
-11. [데이터베이스 구성](#11-데이터베이스-구성)  
-12. [기능 설명](#12-기능-설명)  
-13. [통신 구조](#13-통신-구조)  
-14. [구현 제약 및 확장 가능성](#14-구현-제약-및-확장-가능성)  
-15. [디렉토리 구조](#15-디렉토리-구조)  
-16. [실행 방법](#16-실행-방법)
+4. [프로젝트 목적 / 필요성](#4-프로젝트-목적--필요성)
+5. [요구사항 정의 (UR / SR)](#5-요구사항-정의-ur--sr)  
+6. [시스템 구성](#6-시스템-구성)<br>
+   6-1 시스템 아키텍처<br>
+   6-2 시스템 시퀀스<br>
+   6-3 FSM기반 상태제어<br>
+7. [데이터베이스 구성](#7-데이터베이스-구성)
+8. [통신 구조](#8-통신-구조)  
+9. [기능 설명](#9-기능-설명)
+10.[기술적 문제 및 해결](#10-기술적-문제-및-해결)
+11. [구현 제약 및 확장 가능성](#14-구현-제약-및-확장-가능성)  
+12. [디렉토리 구조](#15-디렉토리-구조)  
 
 ---
 
@@ -64,9 +63,17 @@
     </tr>
     <tr>
       <td><strong>이승훈</strong></td>
-      <td><span style="color: gray;">-</span></td>
       <td>
-        (작성 예정)
+        <a href="https://github.com/leesh0806">
+          <img src="https://img.shields.io/badge/github-leesh0806-181717?style=flat-square&logo=github&logoColor=white">
+        </a>
+      </td>
+      <td>
+        AGV모듈 개발 및 기구설계<br>
+        AGV 회로 설계<br>
+        라인주행 제어 알고리즘 구현<br>
+        AGV FSM상태기반 주행제어 구현<br>
+        AGV TCP통신 명령 송수신 프로토콜 제작<br>
       </td>
     </tr>
     <tr>
@@ -196,146 +203,8 @@ AGV는 **사람의 개입 없이 자동으로 지정된 경로를 따라 이동�
 
 ---
 
-## 🧠 5. 기술적 목적 / 설계 방향
 
-본 프로젝트는 단순한 센서 연동이나 주행 구현 수준을 넘어서, AGV와 설비를 FSM 기반의 상태 흐름으로 통합 제어하고, 이를 GUI와 DB 연동을 통해 가시화 및 확장 가능한 구조로 구현하는 데에 기술적 목적을 두고 있습니다.
-
-### 🎯 주요 기술적 지향점
-- FSM 기반 제어 흐름 설계 → 각 구성 요소의 상태를 명확히 정의하고, 상태 전이에 따라 명령과 응답을 일관되게 처리
-- 이기종 통신 구조 통합 → TCP(AGV), Serial(설비), HTTP GUI 통신을 단일 FSM 흐름 안에서 처리
-- AGV 및 설비 간 실시간 상호작용 구현 → 설비 응답 기반으로 다음 상태로 자동 전이되는 제어 흐름 구현
-- 모듈화된 코드 구조 → AGV, 설비, 미션, 상태 기록 등 기능별 모듈 분리로 유지보수성과 확장성 강화
-
----
-
-## 🔄 6. 서버 FSM 기반 AGV 상태 제어 흐름
-
-AGV는 FSM(Finite State Machine)을 기반으로 동작하며, 제어 서버에서의 상태 판단, 설비 응답 처리, 통신 흐름, GUI 반영까지 하나의 FSM 구조 안에서 통합적으로 제어됩니다.
-
-아래는 서버 FSM에서 제어되는 AGV 상태 흐름을 시각화한 다이어그램입니다.
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE
-
-    IDLE --> ASSIGNED : ASSIGN_MISSION
-    ASSIGNED --> MOVING : RUN
-
-    MOVING --> WAITING : ARRIVED (e.g. GATE_A)
-    WAITING --> LOADING : START_LOADING (at LOAD_A/B)
-    WAITING --> UNLOADING : START_UNLOADING (at BELT)
-
-    LOADING --> MOVING : FINISH_LOADING
-    UNLOADING --> MOVING : FINISH_UNLOADING
-
-    MOVING --> IDLE : ARRIVED @ STANDBY + NO MISSION
-    MOVING --> CHARGING : START_CHARGING
-    CHARGING --> IDLE : FINISH_CHARGING
-
-    [*] --> EMERGENCY : EMERGENCY_TRIGGERED
-    EMERGENCY --> IDLE : RESET
-```
-
----
-
-## 🧩 7. 시스템 아키텍처
-
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
-</p>
-
-이 시스템은 AGV, 서버, 설비, GUI가 유기적으로 연결된 IoT 기반 통합 제어 구조로 설계되었습니다.
-
-### 🧱 통신 구조
-
-- **TCP 통신**: AGV ↔ 서버 (양방향 실시간 명령/상태 보고)
-- **시리얼 통신**: 서버 ↔ 설비 컨트롤러 (게이트/벨트/적재소)
-- **HTTP API**: GUI ↔ 서버 API 서버 (Flask 기반 REST 호출)
-
-### 🧠 서버 소프트웨어 계층
-
-| 구성 요소 | 역할 |
-|-----------|------|
-| **MainController** | 전체 FSM 흐름 제어 및 명령 분배 |
-| **TruckFSM** | AGV 상태 전이 FSM 처리 |
-| **FacilityManager** | 설비 명령 라우팅 및 제어 |
-| **StatusManager** | 상태 수집 및 DB 반영 |
-| **MissionManager** | 미션 등록/변경/기록 처리 |
-
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/sw.png?raw=true" width="85%">
-</p>
-
-### 🏗 하드웨어 구성
-
-- AGV: ESP32 제어, 센서 장착, DC 모터 구동
-- 설비: 아두이노 기반 (게이트/벨트/디스펜서)
-- 충전소: 배터리 상태 감지 및 응답용 구성
-
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/hw.png?raw=true" width="85%">
-</p>
-
----
-
-## 🔄 7. 시스템 시퀀스
-
-### 1. 시스템 전체 흐름
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/system.png?raw=true" width="85%">
-</p>
-
-### 2. 배터리 상태 변화
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/battery.png?raw=true" width="85%">
-</p>
-
-### 3. **로그인 & 미션 등록**
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/login.png?raw=true" width="85%">
-</p>
-
-### 4. **장애물 감지 및 비상 중단**
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/obstacle.png?raw=true" width="85%">
-</p>
-
-### 5. **벨트 제어 및 경로 관리**
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/belt.png?raw=true" width="85%">
-</p>
-
----
-
-## 🧪 9. 기술적 문제 및 해결
-
-본 프로젝트에서는 실제 구현 과정에서 다양한 기술적 문제가 발생했으며, 이를 직접 해결해나가는 과정을 통해 시스템의 안정성과 응답 속도를 향상시켰습니다.
-
-### 🧠 1. 통신 지연 및 처리 속도 문제
-
-- **문제**:  
-  AGV ↔ 서버 간 TCP 통신을 JSON 기반으로 설계했으나, 문자열 파싱 시간이 길어지고 `loop()` 처리 속도가 느려져 정밀한 주행 타이밍을 방해하는 문제가 발생했습니다.
-
-- **해결**:  
-  주요 명령에 대해서는 커스텀 바이트 메시지 프로토콜로 전환하여 메시지 크기를 줄이고 파싱 시간을 단축함으로써 주행 제어 명령에 대한 응답 속도를 크게 향상시켰습니다.
-  
-> ✅ 실제 통신 구조는 JSON + Byte 혼합 구조로 설계되어 유연성과 실시간성을 동시에 확보하였습니다.
-
-
-### 🚗 2. RFID 리딩 중 PWM 불안정 문제
-
-- **문제**:  
-  RFID 태그 인식 시 센서 리딩 연산이 길어져 PID 루프 내 PWM 출력이 급격히 튀는 문제가 발생했습니다. 이는 주행 안정성을 해치고, 직선 주행 시 궤도가 흔들리는 현상을 유발했습니다.
-
-- **해결**:  
-  RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PWM 출력을 유지하는 방식으로 주행 안정성을 확보했습니다.
-  
-> ✅ RFID 기반 위치 인식과 주행 제어를 충돌 없이 병행하기 위한 타이밍 제어 기법을 적용하였습니다.
-
-
----
-
-## 🧾 10. 요구사항 정의 (UR / SR)
+## 🧾 5. 요구사항 정의 (UR / SR)
 
 본 시스템의 기능은 사용자 관점에서의 요구사항(**User Requirement, UR**)과  이를 만족시키기 위한 시스템 관점의 요구사항(**System Requirement, SR**)으로 나뉘며, 각 항목은 구현된 기능 기준으로 우선순위(Priority)를 함께 정의하였습니다.
 
@@ -407,7 +276,108 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
-## 🗄️ 11. 데이터베이스 구성 및 출처
+## 🧩 6. 시스템 구성
+
+## 6-1 시스템 아키텍처
+
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/system.png?raw=true" width="85%">
+</p>
+
+이 시스템은 AGV, 서버, 설비, GUI가 유기적으로 연결된 IoT 기반 통합 제어 구조로 설계되었습니다.
+
+### 🧱 통신 구조
+
+- **TCP 통신**: AGV ↔ 서버 (양방향 실시간 명령/상태 보고)
+- **시리얼 통신**: 서버 ↔ 설비 컨트롤러 (게이트/벨트/적재소)
+- **HTTP API**: GUI ↔ 서버 API 서버 (Flask 기반 REST 호출)
+
+### 🧠 서버 소프트웨어 계층
+
+| 구성 요소 | 역할 |
+|-----------|------|
+| **MainController** | 전체 FSM 흐름 제어 및 명령 분배 |
+| **TruckFSM** | AGV 상태 전이 FSM 처리 |
+| **FacilityManager** | 설비 명령 라우팅 및 제어 |
+| **StatusManager** | 상태 수집 및 DB 반영 |
+| **MissionManager** | 미션 등록/변경/기록 처리 |
+
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/sw.png?raw=true" width="85%">
+</p>
+
+### 🏗 하드웨어 구성
+
+- AGV: ESP32 제어, 센서 장착, DC 모터 구동
+- 설비: 아두이노 기반 (게이트/벨트/디스펜서)
+- 충전소: 배터리 상태 감지 및 응답용 구성
+
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/system_architecture/hw.png?raw=true" width="85%">
+</p>
+
+---
+
+## 6-2. 시스템 시퀀스
+
+### 1. 시스템 전체 흐름
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/system.png?raw=true" width="85%">
+</p>
+
+### 2. 배터리 상태 변화
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/battery.png?raw=true" width="85%">
+</p>
+
+### 3. **로그인 & 미션 등록**
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/login.png?raw=true" width="85%">
+</p>
+
+### 4. **장애물 감지 및 비상 중단**
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/obstacle.png?raw=true" width="85%">
+</p>
+
+### 5. **벨트 제어 및 경로 관리**
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/scenario/belt.png?raw=true" width="85%">
+</p>
+
+---
+
+## 6-3. FSM기반 상태제어 흐름
+
+AGV는 FSM(Finite State Machine)을 기반으로 동작하며, 제어 서버에서의 상태 판단, 설비 응답 처리, 통신 흐름, GUI 반영까지 하나의 FSM 구조 안에서 통합적으로 제어됩니다.
+
+아래는 서버 FSM에서 제어되는 AGV 상태 흐름을 시각화한 다이어그램입니다.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> ASSIGNED : ASSIGN_MISSION
+    ASSIGNED --> MOVING : RUN
+
+    MOVING --> WAITING : ARRIVED (e.g. GATE_A)
+    WAITING --> LOADING : START_LOADING (at LOAD_A/B)
+    WAITING --> UNLOADING : START_UNLOADING (at BELT)
+
+    LOADING --> MOVING : FINISH_LOADING
+    UNLOADING --> MOVING : FINISH_UNLOADING
+
+    MOVING --> IDLE : ARRIVED @ STANDBY + NO MISSION
+    MOVING --> CHARGING : START_CHARGING
+    CHARGING --> IDLE : FINISH_CHARGING
+
+    [*] --> EMERGENCY : EMERGENCY_TRIGGERED
+    EMERGENCY --> IDLE : RESET
+```
+
+---
+
+## 🗄️ 7. 데이터베이스 구성 및 출처
 
 본 시스템은 AGV, 미션, 설비, 사용자, 상태 기록 등 주요 항목을 MySQL 기반으로 테이블화하여 관리하며, 각 항목은 기능별로 나뉜 **모듈형 테이블 구조**로 구성되어 있습니다.
 
@@ -481,116 +451,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
- ## ⚙️ 12. 기능 설명
- 
-
-### 🚚 AGV 관련 기능
-
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_2.gif?raw=true" width="45%">
-</p>
-
-| 기능 | 설명 |
-|------|------|
-| **자동 주행** | AGV는 ESP32로 제어되며, RFID 태그를 따라 지정된 경로를 자동으로 주행합니다. |
-| **위치 인식 및 보고** | RFID 태그를 인식해 현재 위치를 판단하고, 서버에 위치를 주기적으로 송신합니다. |
-| **배터리 상태 모니터링** | 배터리 잔량 및 FSM 상태를 서버에 주기적으로 보고하며, 충전 필요 여부를 판단합니다. |
-| **미션 수행** | 서버로부터 미션을 할당받고, 상태에 따라 FSM 전이 및 도착 후 하역을 자동 수행합니다. |
-| **충돌 방지** | 초음파 센서를 통해 장애물을 감지하고 정지하도록 구현되어 있습니다. |
-| **AGV 소켓 자동 등록** | 미등록 상태의 AGV도 TEMP 소켓으로 임시 등록되며, 정상적인 ID로 자동 재매핑됩니다. |
-| **FSM 상태 회복 처리** | AGV FSM은 상태 불일치 시에도 강제로 상태를 보정하여 정상 흐름을 유지합니다. |
-
----
-
-### 🏗 시설 제어 기능
-
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
-</p>
-
-| 기능 | 설명 |
-|------|------|
-| **게이트 제어** | 등록된 AGV 접근 시 자동 개방, 미등록 AGV 접근 시 차단됩니다. |
-| **벨트 작동 제어** | 서버 명령 또는 조건에 따라 컨베이어 벨트가 자동으로 작동/정지됩니다. |
-| **화물 적하 기능** | AGV 도착 시 적재소가 감지하여 자동 투하 명령을 수행하며, GUI에서 수동 전환도 가능합니다. |
-| **저장소 상태 감지** | 센서를 통해 저장소의 포화 여부를 감지하고, 서버에 상태를 보고합니다. |
-| **저장소 자동 선택** | 컨테이너 A/B 중 가용 공간이 있는 저장소를 자동으로 선택하여 적하를 수행합니다. |
-| **벨트 안전 제어 로직** | 컨테이너가 포화 상태일 경우, 벨트는 자동으로 작동을 거부하며 안전 상태를 유지합니다. |
-
----
-
-### 🖥 중앙 제어 서버 기능
-
-| 기능 | 설명 |
-|------|------|
-| **FSM 기반 제어 흐름** | AGV와 시설의 상태를 FSM으로 관리하며, 상태에 따라 명령을 자동 전송합니다. |
-| **TCP / Serial 통신 처리** | AGV와는 TCP로, 시설과는 Serial로 통신하며 양방향 명령/상태 처리를 수행합니다. |
-| **미션 관리 시스템** | 미션 생성, 할당, 상태 변경, 완료 여부 등을 종합 관리합니다. |
-| **상태 수집 및 기록** | 모든 AGV/설비의 실시간 상태를 주기적으로 수집하여 DB에 기록합니다. |
-| **비상 정지 및 우선 제어** | 서버에서 수동 명령으로 AGV/설비에 즉시 제어 명령을 내릴 수 있습니다. |
-| **디스펜서 위치 보정** | DISPENSER_LOADED 이벤트 시, AGV 위치 누락을 디스펜서 상태로 자동 보정합니다. |
-| **시리얼 응답 파싱 구조화** | 예: ACK:GATE_A_OPENED 형식의 문자열 응답을 구조화된 JSON으로 변환하여 FSM 로직과 연계합니다. |
-| **커스텀 프로토콜 구조화** | JSON 기반 메시지 외에도 `Header + Payload` 형식의 Byte 메시지를 지원. 명령어 ID, 송수신자 ID, 페이로드 길이, 내용 등으로 구조화하여 통신 효율 향상 |
-| **미션 없음 시 자동 상태 전환** | 미션 큐가 비었을 경우, AGV이 STANDBY에 있다면 자동으로 충전 상태 진입 또는 IDLE 유지 결정 |
-
-#### 🔧 고급 제어 기능 요약
-
-| 고급 기능 | 설명 |
-|-----------|------|
-| **TEMP 소켓 자동 등록** | AGV이 등록되지 않은 상태로 TCP 연결 시, `TEMP_포트번호`로 임시 등록한 뒤 실제 AGV ID로 자동 전환합니다. |
-| **FSM 상태 불일치 자동 보정** | 서버 재시작 등으로 상태가 어긋나도, FSM이 현재 위치와 이벤트에 따라 적절한 상태로 자동 전이됩니다. |
-| **적재 위치 유효성 검증 및 재지시** | 잘못된 위치에 도착 시, 미션 정보와 대조하여 다시 올바른 적재 위치로 RUN 명령을 보냅니다. |
-| **미션 없음 시 자동 충전 전환** | 미션이 없고 STANDBY에 있을 경우, 배터리가 100%가 아니면 자동으로 충전 상태로 전환됩니다. |
-
----
-
-### 🧑‍💼 사용자 인터페이스
-
-#### Login Window
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/login.png?raw=true" width="30%">
-</p>
-
-#### Main Monitoring 탭
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="90%">
-</p>
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true" width="90%">
-</p>
-
-#### Mission Management 탭
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/mission%20management.gif?raw=true" width="90%">
-</p>
-
-#### Event Log 탭
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/event%20log.gif?raw=true" width="90%">
-</p>
-
-#### Settings 탭
-<p align="center">
-  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/settings.gif?raw=true" width="90%">
-</p>
-
-
-| 기능            | 설명                                                                                                                                         |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **메인 모니터링 탭** | 전체 맵을 통해 AGV의 위치와 진행 상황을 실시간으로 시각화합니다. 사용자는 FSM 상태, 현재 위치, 미션 흐름을 직관적으로 확인하고, 필요한 경우 직접 제어할 수 있습니다.                      |
-| **미션 관리 탭**   | AGV가 수행할 미션을 수동으로 등록하거나 삭제할 수 있으며, 현재 진행 중인 미션의 상세 정보도 확인 가능합니다. 이 기능은 AGV FSM 흐름에 직접 영향을 미칩니다. 사용자는 GUI를 통해 미션 생성 → 배정 → 완료까지의 흐름을 제어할 수 있습니다. |
-| **이벤트 로그 탭**  | AGV와 설비의 상태 변화, 명령 수행, 센서 감지, 오류 발생 등의 주요 이벤트를 실시간으로 확인할 수 있어, AGV 운영 상태를 정밀하게 추적할 수 있습니다.                                                  |
-| **Setting 탭** | AGV ID, 설비 포트, 통신 설정 등을 구성하여 AGV 및 제어 서버 간 통신 환경을 설정합니다. 해당 설정은 실제 운행에 적용되는 구성으로, 시스템 시작 시 필수로 지정해야 하는 항목들입니다.                              |
-| **로그인 기능**    | 사용자 로그인 후 권한에 따라 기능 접근이 달라지며, 관리자/오퍼레이터 권한에 따라 미션 제어, 설정 변경, 긴급 정지 등 주요 기능 사용 여부가 결정됩니다. 이는 실제 AGV 제어의 안전성과 보안성을 보장하기 위한 구조입니다.            |
-
-
-
----
-
-## 📡 13. 통신 구조
+## 📡 8. 통신 구조
 
 본 시스템은 AGV, 설비, GUI 간의 실시간 상호작용을 위해 **TCP 통신**, **Serial 통신**, **HTTP API 통신**의 세 가지 방식을 조합하여 구현되었습니다.
 
@@ -719,7 +580,145 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
- ## 🧱 14. 구현 제약 및 확장 가능성
+
+ ## ⚙️ 9. 기능 설명
+ 
+
+### 🚚 AGV 관련 기능
+
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_1.gif?raw=true" width="45%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/truck/truck_2.gif?raw=true" width="45%">
+</p>
+
+| 기능 | 설명 |
+|------|------|
+| **자동 주행** | AGV는 ESP32로 제어되며, RFID 태그를 따라 지정된 경로를 자동으로 주행합니다. |
+| **위치 인식 및 보고** | RFID 태그를 인식해 현재 위치를 판단하고, 서버에 위치를 주기적으로 송신합니다. |
+| **배터리 상태 모니터링** | 배터리 잔량 및 FSM 상태를 서버에 주기적으로 보고하며, 충전 필요 여부를 판단합니다. |
+| **미션 수행** | 서버로부터 미션을 할당받고, 상태에 따라 FSM 전이 및 도착 후 하역을 자동 수행합니다. |
+| **충돌 방지** | 초음파 센서를 통해 장애물을 감지하고 정지하도록 구현되어 있습니다. |
+| **AGV 소켓 자동 등록** | 미등록 상태의 AGV도 TEMP 소켓으로 임시 등록되며, 정상적인 ID로 자동 재매핑됩니다. |
+| **FSM 상태 회복 처리** | AGV FSM은 상태 불일치 시에도 강제로 상태를 보정하여 정상 흐름을 유지합니다. |
+
+---
+
+### 🏗 시설 제어 기능
+
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/gate_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/load_1.gif?raw=true" width="30%" style="margin-right:10px;">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/facilities/belt_1.gif?raw=true" width="30%">
+</p>
+
+| 기능 | 설명 |
+|------|------|
+| **게이트 제어** | 등록된 AGV 접근 시 자동 개방, 미등록 AGV 접근 시 차단됩니다. |
+| **벨트 작동 제어** | 서버 명령 또는 조건에 따라 컨베이어 벨트가 자동으로 작동/정지됩니다. |
+| **화물 적하 기능** | AGV 도착 시 적재소가 감지하여 자동 투하 명령을 수행하며, GUI에서 수동 전환도 가능합니다. |
+| **저장소 상태 감지** | 센서를 통해 저장소의 포화 여부를 감지하고, 서버에 상태를 보고합니다. |
+| **저장소 자동 선택** | 컨테이너 A/B 중 가용 공간이 있는 저장소를 자동으로 선택하여 적하를 수행합니다. |
+| **벨트 안전 제어 로직** | 컨테이너가 포화 상태일 경우, 벨트는 자동으로 작동을 거부하며 안전 상태를 유지합니다. |
+
+---
+
+### 🖥 중앙 제어 서버 기능
+
+| 기능 | 설명 |
+|------|------|
+| **FSM 기반 제어 흐름** | AGV와 시설의 상태를 FSM으로 관리하며, 상태에 따라 명령을 자동 전송합니다. |
+| **TCP / Serial 통신 처리** | AGV와는 TCP로, 시설과는 Serial로 통신하며 양방향 명령/상태 처리를 수행합니다. |
+| **미션 관리 시스템** | 미션 생성, 할당, 상태 변경, 완료 여부 등을 종합 관리합니다. |
+| **상태 수집 및 기록** | 모든 AGV/설비의 실시간 상태를 주기적으로 수집하여 DB에 기록합니다. |
+| **비상 정지 및 우선 제어** | 서버에서 수동 명령으로 AGV/설비에 즉시 제어 명령을 내릴 수 있습니다. |
+| **디스펜서 위치 보정** | DISPENSER_LOADED 이벤트 시, AGV 위치 누락을 디스펜서 상태로 자동 보정합니다. |
+| **시리얼 응답 파싱 구조화** | 예: ACK:GATE_A_OPENED 형식의 문자열 응답을 구조화된 JSON으로 변환하여 FSM 로직과 연계합니다. |
+| **커스텀 프로토콜 구조화** | JSON 기반 메시지 외에도 `Header + Payload` 형식의 Byte 메시지를 지원. 명령어 ID, 송수신자 ID, 페이로드 길이, 내용 등으로 구조화하여 통신 효율 향상 |
+| **미션 없음 시 자동 상태 전환** | 미션 큐가 비었을 경우, AGV이 STANDBY에 있다면 자동으로 충전 상태 진입 또는 IDLE 유지 결정 |
+
+#### 🔧 고급 제어 기능 요약
+
+| 고급 기능 | 설명 |
+|-----------|------|
+| **TEMP 소켓 자동 등록** | AGV이 등록되지 않은 상태로 TCP 연결 시, `TEMP_포트번호`로 임시 등록한 뒤 실제 AGV ID로 자동 전환합니다. |
+| **FSM 상태 불일치 자동 보정** | 서버 재시작 등으로 상태가 어긋나도, FSM이 현재 위치와 이벤트에 따라 적절한 상태로 자동 전이됩니다. |
+| **적재 위치 유효성 검증 및 재지시** | 잘못된 위치에 도착 시, 미션 정보와 대조하여 다시 올바른 적재 위치로 RUN 명령을 보냅니다. |
+| **미션 없음 시 자동 충전 전환** | 미션이 없고 STANDBY에 있을 경우, 배터리가 100%가 아니면 자동으로 충전 상태로 전환됩니다. |
+
+---
+
+### 🧑‍💼 사용자 인터페이스
+
+#### Login Window
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/login.png?raw=true" width="30%">
+</p>
+
+#### Main Monitoring 탭
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_1.gif?raw=true" width="90%">
+</p>
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/main_monitoring_2.gif?raw=true" width="90%">
+</p>
+
+#### Mission Management 탭
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/mission%20management.gif?raw=true" width="90%">
+</p>
+
+#### Event Log 탭
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/event%20log.gif?raw=true" width="90%">
+</p>
+
+#### Settings 탭
+<p align="center">
+  <img src="https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/gui/settings.gif?raw=true" width="90%">
+</p>
+
+
+| 기능            | 설명                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **메인 모니터링 탭** | 전체 맵을 통해 AGV의 위치와 진행 상황을 실시간으로 시각화합니다. 사용자는 FSM 상태, 현재 위치, 미션 흐름을 직관적으로 확인하고, 필요한 경우 직접 제어할 수 있습니다.                      |
+| **미션 관리 탭**   | AGV가 수행할 미션을 수동으로 등록하거나 삭제할 수 있으며, 현재 진행 중인 미션의 상세 정보도 확인 가능합니다. 이 기능은 AGV FSM 흐름에 직접 영향을 미칩니다. 사용자는 GUI를 통해 미션 생성 → 배정 → 완료까지의 흐름을 제어할 수 있습니다. |
+| **이벤트 로그 탭**  | AGV와 설비의 상태 변화, 명령 수행, 센서 감지, 오류 발생 등의 주요 이벤트를 실시간으로 확인할 수 있어, AGV 운영 상태를 정밀하게 추적할 수 있습니다.                                                  |
+| **Setting 탭** | AGV ID, 설비 포트, 통신 설정 등을 구성하여 AGV 및 제어 서버 간 통신 환경을 설정합니다. 해당 설정은 실제 운행에 적용되는 구성으로, 시스템 시작 시 필수로 지정해야 하는 항목들입니다.                              |
+| **로그인 기능**    | 사용자 로그인 후 권한에 따라 기능 접근이 달라지며, 관리자/오퍼레이터 권한에 따라 미션 제어, 설정 변경, 긴급 정지 등 주요 기능 사용 여부가 결정됩니다. 이는 실제 AGV 제어의 안전성과 보안성을 보장하기 위한 구조입니다.            |
+
+
+
+---
+
+## 🧪 10. 기술적 문제 및 해결
+
+본 프로젝트에서는 실제 구현 과정에서 다양한 기술적 문제가 발생했으며, 이를 직접 해결해나가는 과정을 통해 시스템의 안정성과 응답 속도를 향상시켰습니다.
+
+### 🧠 1. 통신 지연 및 처리 속도 문제
+
+- **문제**:  
+  AGV ↔ 서버 간 TCP 통신을 JSON 기반으로 설계했으나, 문자열 파싱 시간이 길어지고 `loop()` 처리 속도가 느려져 정밀한 주행 타이밍을 방해하는 문제가 발생했습니다.
+
+- **해결**:  
+  주요 명령에 대해서는 커스텀 바이트 메시지 프로토콜로 전환하여 메시지 크기를 줄이고 파싱 시간을 단축함으로써 주행 제어 명령에 대한 응답 속도를 크게 향상시켰습니다.
+  
+> ✅ 실제 통신 구조는 JSON + Byte 혼합 구조로 설계되어 유연성과 실시간성을 동시에 확보하였습니다.
+
+
+### 🚗 2. RFID 리딩 중 PWM 불안정 문제
+
+- **문제**:  
+  RFID 태그 인식 시 센서 리딩 연산이 길어져 PID 루프 내 PWM 출력이 급격히 튀는 문제가 발생했습니다. 이는 주행 안정성을 해치고, 직선 주행 시 궤도가 흔들리는 현상을 유발했습니다.
+
+- **해결**:  
+  RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PWM 출력을 유지하는 방식으로 주행 안정성을 확보했습니다.
+  
+> ✅ RFID 기반 위치 인식과 주행 제어를 충돌 없이 병행하기 위한 타이밍 제어 기법을 적용하였습니다.
+
+
+---
+
+ ## 🧱 11. 구현 제약 및 확장 가능성
 
 | 현재 상태 | 구현 한계 | 개선 가능성 |
 |------------|------------|-------------|
@@ -730,7 +729,7 @@ RFID 인식 직전에 약 0.5초간 PID 제어를 일시 정지하고, 기존 PW
 
 ---
 
-## 📁 15. 디렉토리 구조
+## 📁 12. 디렉토리 구조
 
 본 프로젝트는 **서버, 펌웨어, GUI, 시각 자료, 테스트, 문서**까지 전체 시스템을 구성하는 모든 요소를 기능 단위로 디렉토리화하여 구성하였습니다.
 
@@ -770,13 +769,3 @@ iot_dust/
 ```
 
 ---
-
-## 🔧 16. 실행 방법
-
-```bash
-# 서버 실행
-python run/run_main_server.py
-
-# 관제 GUI 실행
-python run/run_gui.py
-```
