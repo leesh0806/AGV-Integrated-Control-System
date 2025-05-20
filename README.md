@@ -1,27 +1,27 @@
 ![배너](https://github.com/addinedu-ros-9th/iot-repo-4/blob/main/assets/images/banner.png?raw=true)
 
-> **이 프로젝트는 RFID 태그를 따라 주행하는 소형 AGV가 설비와 실시간으로 통신하며 미션을 수행하는, IoT 기반 통합 운송 관제 시스템입니다.**  
-> **트럭(AGV)은 ESP32로 제어되며, 게이트/벨트/적재소 등 설비와 FSM 기반 서버를 통해 실시간 통합 제어됩니다. GUI 시스템은 운송 흐름을 시각적으로 모니터링하고 제어할 수 있도록 구현되었습니다..**
+> **This project is an IoT-based integrated transport control system where small AGVs driving along RFID tags communicate with the facility in real time and perform missions.**.
+> **Trucks (AGVs) are controlled by ESP32 and are integrated in real time via facilities such as gates/belt/lackage and FSM-based servers. The GUI system is implemented to visually monitor and control transport flows.**..
 
-[시스템 소개 영상](https://youtu.be/AI76I9BiS1k?si=EfL9UZIdROXblnkd)
+[System Introduction Video](https://youtu.be/AI76I9BiS1k?si=EfL9UZIdROXblnkd)
 
-[전체 구동 영상](https://youtu.be/LJ2RT1eQdgk)
+[Full Drive Image](https://youtu.be/LJ2RT1eQdgk)
 
 ---
 
-## 📚 목차
+## 📚 INDEX
 
 
-| 순서 | 항목 |
+| Index | Category |
 |------|------|
-| **1** | **팀 구성** |
-| **2** | **프로젝트 개요** |
-| **3** | **기술 스택** |
-| **4** | **프로젝트 목적** |
-| **5** | **요구사항 정의** |
-| **6** | **시스템 구성** |
-| **7** | **데이터베이스 구성** |
-| **8** | **통신 구조** |
+| **1** | **Team composition** |
+| **2** | **Project Overview** |
+| **3** | **Technology stack** |
+| **4** | **Project Purpose** |
+| **5** | **Defining Requirements** |
+| **6** | **System Configuration** |
+| **7** | **Database Configuration** |
+| **8** | **communication structure** |
 | **9** | **기능 설명** |
 | **10** | **기술적 문제 및 해결** |
 | **11** | **구현 제약 및 확장 가능성** |
